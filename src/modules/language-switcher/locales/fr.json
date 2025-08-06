@@ -1,0 +1,12 @@
+{
+  "common": {
+    "title": "Rolz"
+  },
+  "navigation": {
+    "home": "Accueil"
+  },
+  "home": {
+    "not_logged_in_title": "Hello World!",
+    "not_logged_in_message": ":)"
+  }
+}
