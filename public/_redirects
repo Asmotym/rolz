@@ -1,0 +1,5 @@
+# API redirects
+/api/test /.netlify/functions/test 200
+
+# SPA fallback
+/* /index.html 200
