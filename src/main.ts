@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import 'assets/styles/_vendor.scss'
 import 'vuetify/dist/vuetify.css'
 import '@mdi/font/css/materialdesignicons.css'
 import App from './App.vue'
