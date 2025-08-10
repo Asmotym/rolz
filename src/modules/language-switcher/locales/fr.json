@@ -1,6 +1,7 @@
 {
   "common": {
-    "title": "Rolz"
+    "title": "Rolz",
+    "disconnect": "Se déconnecter"
   },
   "navigation": {
     "home": "Accueil"

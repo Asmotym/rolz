@@ -6,6 +6,13 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# API redirects - must come before SPA fallback
+[[redirects]]
+  from = "/api/discord"
+  to = "/.netlify/functions/discord"
+  status = 200
+  force = true
+
 # SPA fallback - must be last
 [[redirects]]
   from = "/*"

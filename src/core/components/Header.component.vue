@@ -12,6 +12,7 @@
 
         <template v-slot:append>    
             <LanguageSwitcher />
+            <DiscordAuth />
         </template>
     </v-app-bar>
 </template>
@@ -19,7 +20,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import LanguageSwitcher from 'modules/language-switcher/components/LanguageSwitcher.vue';
-import { HomeRoutes } from '../routes';
+import DiscordAuth from 'modules/discord-auth/components/DiscordAuth.vue';
+import { HomeRoutes } from 'core/routes';
 
 const { t } = useI18n();
 </script>
