@@ -72,17 +72,11 @@ export function rollDiceNotation(
   const rolls = rollDice(count, sides);
   const total = rolls.reduce((sum, roll) => sum + roll, 0) + (options.modifier || 0) + modifier;
   
-  let critical = false;
-  let fumble = false;
-  
-  // Handle critical hits and fumbles for d20 rolls
-  if (sides === 20 && count === 1) {
-    const criticalRange = options.criticalRange || 20;
-    const fumbleRange = options.fumbleRange || 1;
-    
-    critical = rolls[0] >= criticalRange;
-    fumble = rolls[0] <= fumbleRange;
-  }
+  // Handle critical hits and fumbles
+  const criticalRange = options.criticalRange || 20;
+  const fumbleRange = options.fumbleRange || 1;
+  const critical = rolls[0] <= criticalRange;
+  const fumble = rolls[0] >= fumbleRange;
   
   return {
     dice: notation,
@@ -91,46 +85,6 @@ export function rollDiceNotation(
     total,
     critical,
     fumble
-  };
-}
-
-/**
- * Rolls with advantage (roll 2d20, take highest)
- * @param modifier - Modifier to add to the result
- * @returns Dice roll result with advantage
- */
-export function rollWithAdvantage(modifier: number = 0): DiceRoll {
-  const rolls = rollDice(2, 20);
-  const highest = Math.max(...rolls);
-  const total = highest + modifier;
-  
-  return {
-    dice: `2d20 (advantage)`,
-    result: total,
-    rolls,
-    total,
-    critical: highest === 20,
-    fumble: highest === 1
-  };
-}
-
-/**
- * Rolls with disadvantage (roll 2d20, take lowest)
- * @param modifier - Modifier to add to the result
- * @returns Dice roll result with disadvantage
- */
-export function rollWithDisadvantage(modifier: number = 0): DiceRoll {
-  const rolls = rollDice(2, 20);
-  const lowest = Math.min(...rolls);
-  const total = lowest + modifier;
-  
-  return {
-    dice: `2d20 (disadvantage)`,
-    result: total,
-    rolls,
-    total,
-    critical: lowest === 20,
-    fumble: lowest === 1
   };
 }
 

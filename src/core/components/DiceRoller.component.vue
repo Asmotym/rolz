@@ -45,36 +45,6 @@
         </div>
       </div>
 
-      <!-- Modifier Input -->
-      <div class="mb-4">
-        <v-card-subtitle class="px-0">Modifiers</v-card-subtitle>
-        <div class="d-flex gap-2 align-center">
-          <v-text-field
-            v-model.number="modifier"
-            label="Modifier"
-            type="number"
-            variant="outlined"
-            density="compact"
-            class="flex-grow-1"
-            placeholder="0"
-          />
-          <v-btn
-            @click="withAdvantage"
-            variant="outlined"
-            color="success"
-          >
-            Advantage
-          </v-btn>
-          <v-btn
-            @click="withDisadvantage"
-            variant="outlined"
-            color="warning"
-          >
-            Disadvantage
-          </v-btn>
-        </div>
-      </div>
-
       <!-- Results Display -->
       <div v-if="rollHistory.length > 0" class="mb-4">
         <v-card-subtitle class="px-0">Roll History</v-card-subtitle>
@@ -118,8 +88,6 @@
 import { ref, computed } from 'vue';
 import {
   rollDiceNotation,
-  rollWithAdvantage,
-  rollWithDisadvantage,
   formatDiceRoll,
   COMMON_DICE,
   type DiceRoll,
@@ -130,6 +98,13 @@ import {
 const customDice = ref('1d20');
 const modifier = ref(0);
 const rollHistory = ref<DiceRoll[]>([]);
+const rollOptions = ref<DiceRollOptions>({
+    advantage: false,
+    disadvantage: false,    
+    modifier: 0,
+    criticalRange: 10,
+    fumbleRange: 91
+})
 
 // Computed properties
 const totalModifier = computed(() => modifier.value || 0);
@@ -137,7 +112,7 @@ const totalModifier = computed(() => modifier.value || 0);
 // Methods
 function quickRoll(notation: string) {
   try {
-    const roll = rollDiceNotation(notation, { modifier: totalModifier.value });
+    const roll = rollDiceNotation(notation, { ...rollOptions.value, ...{ modifier: totalModifier.value } });
     addRollToHistory(roll);
   } catch (error) {
     console.error('Invalid dice notation:', error);
@@ -148,21 +123,11 @@ function rollCustomDice() {
   if (!customDice.value.trim()) return;
   
   try {
-    const roll = rollDiceNotation(customDice.value, { modifier: totalModifier.value });
+    const roll = rollDiceNotation(customDice.value, { ...rollOptions.value, ...{ modifier: totalModifier.value } });
     addRollToHistory(roll);
   } catch (error) {
     console.error('Invalid dice notation:', error);
   }
-}
-
-function withAdvantage() {
-  const roll = rollWithAdvantage(totalModifier.value);
-  addRollToHistory(roll);
-}
-
-function withDisadvantage() {
-  const roll = rollWithDisadvantage(totalModifier.value);
-  addRollToHistory(roll);
 }
 
 function addRollToHistory(roll: DiceRoll) {
@@ -196,9 +161,9 @@ function getDiceColor(notation: string): string {
 }
 
 function getRollResultClass(roll: DiceRoll): string {
-  if (roll.critical) return 'bg-success-lighten-5 border-success';
-  if (roll.fumble) return 'bg-error-lighten-5 border-error';
-  return 'bg-grey-lighten-5';
+  if (roll.critical) return 'bg-grey-darken-4 border-success';
+  if (roll.fumble) return 'bg-grey-darken-4 border-error';
+  return 'bg-grey-darken-4';
 }
 </script>
 
@@ -215,7 +180,7 @@ function getRollResultClass(roll: DiceRoll): string {
 
 .roll-result {
   border: 1px solid #e0e0e0;
-  background-color: #fafafa;
+  background-color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
 }
 
 .border-success {
