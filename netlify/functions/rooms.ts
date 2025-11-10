@@ -162,6 +162,7 @@ async function handleSendMessage(payload: { roomId: string; userId: string; cont
 
     await upsertMember(payload.roomId, payload.userId);
 
+    const trimmedContent = payload.content?.trim();
     const diceNotation = payload.dice?.notation?.trim();
     const diceTotal = payload.dice ? Number(payload.dice.total) : undefined;
     const diceRolls = payload.dice ? payload.dice.rolls.map((roll) => Number(roll)) : undefined;
@@ -169,7 +170,9 @@ async function handleSendMessage(payload: { roomId: string; userId: string; cont
     const saved = await insertMessage({
         room_id: payload.roomId,
         user_id: payload.userId,
-        content: payload.type === 'text' ? payload.content?.trim() ?? '' : `Rolled ${payload.dice?.notation}`,
+        content: payload.type === 'text'
+            ? trimmedContent ?? ''
+            : trimmedContent ?? null,
         type: payload.type,
         dice_notation: diceNotation,
         dice_total: diceTotal,

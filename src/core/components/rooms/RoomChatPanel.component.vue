@@ -57,8 +57,11 @@
                   </div>
                   <div v-else class="dice-message pa-3">
                     <div class="d-flex align-center gap-2 mb-1">
-                      <v-icon color="amber">mdi-dice-multiple</v-icon>
-                      <span class="font-weight-medium">
+                      <v-icon color="amber" class="mr-2">mdi-dice-multiple</v-icon>
+                      <span v-if="message.content" class="font-weight-medium">
+                        {{ message.username || 'Someone' }} rolled {{ message.diceNotation }} ({{ message.content }})
+                      </span>
+                      <span v-else class="font-weight-medium">
                         {{ message.username || 'Someone' }} rolled {{ message.diceNotation }}
                       </span>
                     </div>
@@ -67,9 +70,6 @@
                     </div>
                     <div class="text-caption">
                       Rolls: {{ (message.diceRolls || []).join(', ') }}
-                    </div>
-                    <div v-if="message.content" class="text-caption mt-1">
-                      {{ message.content }}
                     </div>
                   </div>
                 </div>
