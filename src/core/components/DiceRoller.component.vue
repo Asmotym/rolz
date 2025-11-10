@@ -111,6 +111,10 @@ import {
   type DiceRollOptions
 } from 'core/utils/dice.utils';
 
+const emit = defineEmits<{
+  (e: 'rolled', roll: DiceRoll): void;
+}>();
+
 // Reactive data
 const customDice = ref('1d20');
 const modifier = ref(0);
@@ -162,6 +166,7 @@ function addRollToHistory(roll: DiceRoll) {
   if (rollHistory.value.length > 10) {
     rollHistory.value = rollHistory.value.slice(0, 10);
   }
+  emit('rolled', roll);
 }
 
 function removeRoll(index: number) {

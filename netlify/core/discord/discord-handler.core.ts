@@ -1,6 +1,7 @@
 import type { DiscordAuth } from "../types/discord.types";
 import { HandlerEvent, HandlerResponse } from "@netlify/functions";
 import { DiscordClient } from "./client";
+import { ensureDatabaseSetup } from "../database/schema";
 import { getUser, insertUser, updateUser } from "../database/tables/users.table";
 import { createLogger } from "../utils/logger";
 
@@ -37,6 +38,7 @@ export class DiscordHandler {
         if (this.event.httpMethod !== 'POST') return this.returnMethodNotAllowedResponse();
 
         try {
+            await ensureDatabaseSetup();
             if (this.event.httpMethod === 'POST' && typeof this.event.body === 'string') {
                 const body: DiscordAuth & { queryType: string } = JSON.parse(this.event.body);
                 this.body = body;
