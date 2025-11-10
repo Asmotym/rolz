@@ -25,7 +25,7 @@
       <!-- Custom Dice Input -->
       <div class="mb-4">
         <v-card-subtitle class="px-0">Custom Roll</v-card-subtitle>
-        <div class="d-flex gap-2 align-center">
+        <div class="d-flex gap-2 align-center custom-roll-row">
           <v-text-field
             v-model="customDice"
             label="Dice Notation (e.g., 2d6+3)"
@@ -202,6 +202,16 @@ function getRollResultClass(roll: DiceRoll): string {
 .dice-roller {
   max-width: 600px;
   margin: 0 auto;
+}
+
+.custom-roll-row {
+  align-items: stretch !important;
+}
+
+.custom-roll-row :deep(.v-btn) {
+  align-self: stretch;
+  height: 100%;
+  min-height: 56px;
 }
 
 .roll-history {
