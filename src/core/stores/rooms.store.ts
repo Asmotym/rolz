@@ -39,9 +39,6 @@ export const useRoomsStore = defineStore('rooms', {
             try {
                 const rooms = await RoomsService.fetchRooms();
                 this.rooms = rooms.sort(sortRoomsByActivity);
-                if (!this.selectedRoomId && this.rooms.length > 0) {
-                    await this.selectRoom(this.rooms[0].id);
-                }
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : 'Unable to load rooms');
                 throw error;

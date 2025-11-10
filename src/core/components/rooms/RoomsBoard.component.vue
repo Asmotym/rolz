@@ -18,7 +18,7 @@
     </v-alert>
 
     <v-row>
-      <v-col cols="12" md="4">
+      <v-col v-if="!selectedRoom" cols="12" md="4">
         <RoomsSidebar
           :rooms="rooms"
           :selected-room-id="roomsStore.selectedRoomId"
@@ -30,7 +30,7 @@
           @join="handleJoinRoom"
         />
       </v-col>
-      <v-col cols="12" md="8">
+      <v-col cols="12" :md="selectedRoom ? 12 : 8">
         <RoomChatPanel
           :room="selectedRoom"
           :messages="messages"
@@ -46,21 +46,30 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { isNavigationFailure, useRoute, useRouter } from 'vue-router';
 import RoomsSidebar from './RoomsSidebar.component.vue';
 import RoomChatPanel from './RoomChatPanel.component.vue';
 import { useRoomsStore } from 'core/stores/rooms.store';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import type { DiceRoll } from 'core/utils/dice.utils';
+import { HomeRoutes } from 'core/routes';
 
 const roomsStore = useRoomsStore();
 const discordService = DiscordService.getInstance();
 const route = useRoute();
+const router = useRouter();
 
 const currentUser = computed(() => discordService.user.value);
 const rooms = computed(() => roomsStore.rooms);
 const selectedRoom = computed(() => roomsStore.selectedRoom);
 const messages = computed(() => roomsStore.messages);
+const routeRoomId = computed(() => {
+  const param = route.params.roomId;
+  if (Array.isArray(param)) {
+    return param[0] ?? null;
+  }
+  return param ? String(param) : null;
+});
 
 const feedback = ref<{ type: 'success' | 'info'; message: string } | null>(null);
 const pendingInvite = ref<string | null>(null);
@@ -92,11 +101,26 @@ onUnmounted(() => {
 });
 
 watch(
+  routeRoomId,
+  async (roomId) => {
+    if (roomId && !currentUser.value) {
+      navigateHome();
+      return;
+    }
+    await roomsStore.selectRoom(roomId);
+  },
+  { immediate: true }
+);
+
+watch(
   () => discordService.user.value,
   async (user, previous) => {
     if (user && !previous) {
       await ensureRoomsLoaded();
       attemptInviteJoin();
+    } else if (!user && previous) {
+      await roomsStore.selectRoom(null);
+      navigateHome();
     }
   }
 );
@@ -127,10 +151,13 @@ async function attemptInviteJoin() {
 async function handleCreateRoom(payload: { name: string; password?: string | null }) {
   if (!currentUser.value) return;
   try {
-    await roomsStore.createRoom({
+    const room = await roomsStore.createRoom({
       ...payload,
       userId: currentUser.value.id,
     });
+    if (room) {
+      navigateToRoom(room.id);
+    }
     showFeedback('success', 'Room created successfully');
   } catch (error) {
     console.error(error);
@@ -140,11 +167,15 @@ async function handleCreateRoom(payload: { name: string; password?: string | nul
 async function handleJoinRoom(payload: { inviteCode: string; password?: string | null }) {
   if (!currentUser.value) return;
   try {
-    await roomsStore.joinRoom({
+    const room = await roomsStore.joinRoom({
       ...payload,
       userId: currentUser.value.id,
     });
+    if (room) {
+      navigateToRoom(room.id);
+    }
     showFeedback('success', 'Joined room');
+    return room;
   } catch (error) {
     console.error(error);
     throw error;
@@ -181,7 +212,23 @@ async function handleDiceRoll(roll: DiceRoll) {
 }
 
 function handleSelectRoom(roomId: string) {
-  roomsStore.selectRoom(roomId).catch(console.error);
+  navigateToRoom(roomId);
+}
+
+function navigateToRoom(roomId: string) {
+  router.push({ name: HomeRoutes.Room, params: { roomId } }).catch((error) => {
+    if (!isNavigationFailure(error)) {
+      console.error(error);
+    }
+  });
+}
+
+function navigateHome() {
+  router.push({ name: HomeRoutes.Base }).catch((error) => {
+    if (!isNavigationFailure(error)) {
+      console.error(error);
+    }
+  });
 }
 </script>
 

@@ -137,7 +137,7 @@ const messageContainer = ref<HTMLElement | null>(null);
 const inviteLink = computed(() => {
   if (!props.room) return '';
   if (typeof window === 'undefined') return '';
-  return `${window.location.origin}?invite=${props.room.inviteCode}`;
+  return `${window.location.origin}/rooms/${props.room.id}?invite=${props.room.inviteCode}`;
 });
 
 watch(
