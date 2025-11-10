@@ -43,6 +43,15 @@
             Roll
           </v-btn>
         </div>
+        <v-text-field
+          v-model="rollDescription"
+          label="Description (optional)"
+          placeholder="e.g., Attack roll"
+          variant="outlined"
+          density="compact"
+          class="mt-2"
+          clearable
+        />
       </div>
 
       <!-- Results Display -->
@@ -56,7 +65,15 @@
             :class="getRollResultClass(roll)"
           >
             <div class="d-flex justify-space-between align-center">
-              <span class="text-body-1">{{ formatDiceRoll(roll) }}</span>
+              <div class="flex-grow-1 mr-2">
+                <div
+                  v-if="roll.description"
+                  class="roll-description text-medium-emphasis"
+                >
+                  {{ roll.description }}
+                </div>
+                <span class="text-body-1">{{ formatDiceRoll(roll) }}</span>
+              </div>
               <v-btn
                 icon="mdi-delete"
                 size="small"
@@ -97,6 +114,7 @@ import {
 // Reactive data
 const customDice = ref('1d20');
 const modifier = ref(0);
+const rollDescription = ref('');
 const rollHistory = ref<DiceRoll[]>([]);
 const rollOptions = ref<DiceRollOptions>({
     advantage: false,
@@ -112,7 +130,11 @@ const totalModifier = computed(() => modifier.value || 0);
 // Methods
 function quickRoll(notation: string) {
   try {
-    const roll = rollDiceNotation(notation, { ...rollOptions.value, ...{ modifier: totalModifier.value } });
+    const roll = rollDiceNotation(
+      notation,
+      { ...rollOptions.value, ...{ modifier: totalModifier.value } },
+      rollDescription.value
+    );
     addRollToHistory(roll);
   } catch (error) {
     console.error('Invalid dice notation:', error);
@@ -123,7 +145,11 @@ function rollCustomDice() {
   if (!customDice.value.trim()) return;
   
   try {
-    const roll = rollDiceNotation(customDice.value, { ...rollOptions.value, ...{ modifier: totalModifier.value } });
+    const roll = rollDiceNotation(
+      customDice.value,
+      { ...rollOptions.value, ...{ modifier: totalModifier.value } },
+      rollDescription.value
+    );
     addRollToHistory(roll);
   } catch (error) {
     console.error('Invalid dice notation:', error);
@@ -181,6 +207,11 @@ function getRollResultClass(roll: DiceRoll): string {
 .roll-result {
   border: 1px solid #e0e0e0;
   background-color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity));
+}
+
+.roll-description {
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .border-success {

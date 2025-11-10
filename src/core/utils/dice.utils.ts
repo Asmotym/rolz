@@ -5,6 +5,7 @@ export interface DiceRoll {
   total: number;
   critical?: boolean;
   fumble?: boolean;
+  description?: string;
 }
 
 export interface DiceRollOptions {
@@ -66,11 +67,13 @@ export function parseDiceNotation(notation: string): {
  */
 export function rollDiceNotation(
   notation: string, 
-  options: DiceRollOptions = {}
+  options: DiceRollOptions = {},
+  description?: string
 ): DiceRoll {
   const { count, sides, modifier } = parseDiceNotation(notation);
   const rolls = rollDice(count, sides);
   const total = rolls.reduce((sum, roll) => sum + roll, 0) + (options.modifier || 0) + modifier;
+  const normalizedDescription = description?.trim() || undefined;
   
   // Handle critical hits and fumbles
   const criticalRange = options.criticalRange || 20;
@@ -84,7 +87,8 @@ export function rollDiceNotation(
     rolls,
     total,
     critical,
-    fumble
+    fumble,
+    description: normalizedDescription
   };
 }
 
