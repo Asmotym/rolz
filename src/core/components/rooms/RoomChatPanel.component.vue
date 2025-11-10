@@ -25,74 +25,78 @@
       <v-divider />
 
       <v-card-text>
-        <div ref="messageContainer" class="messages-container">
-          <div
-            v-for="message in messages"
-            :key="message.id"
-            class="message-row"
-            :class="{ 'is-self': message.userId === currentUser?.id }"
-          >
-            <v-avatar size="36" class="mr-3">
-              <template v-if="message.avatar">
-                <v-img :src="message.avatar" :alt="message.username" />
-              </template>
-              <template v-else>
-                <v-icon>mdi-account</v-icon>
-              </template>
-            </v-avatar>
-            <div class="message-content">
-              <div class="message-meta">
-                <span class="text-subtitle-2">{{ message.username || 'Unknown Adventurer' }}</span>
-                <small class="text-medium-emphasis">{{ formatTimestamp(message.createdAt) }}</small>
-              </div>
-              <div v-if="message.type === 'text'">
-                {{ message.content || '...' }}
-              </div>
-              <div v-else class="dice-message pa-3">
-                <div class="d-flex align-center gap-2 mb-1">
-                  <v-icon color="amber">mdi-dice-multiple</v-icon>
-                  <span class="font-weight-medium">
-                    {{ message.username || 'Someone' }} rolled {{ message.diceNotation }}
-                  </span>
-                </div>
-                <div class="text-body-2">
-                  Result: <strong>{{ message.diceTotal }}</strong>
-                </div>
-                <div class="text-caption">
-                  Rolls: {{ (message.diceRolls || []).join(', ') }}
-                </div>
-                <div v-if="message.content" class="text-caption mt-1">
-                  {{ message.content }}
+        <div class="chat-layout">
+          <div class="chat-section">
+            <div ref="messageContainer" class="messages-container">
+              <div
+                v-for="message in messages"
+                :key="message.id"
+                class="message-row"
+                :class="{ 'is-self': message.userId === currentUser?.id }"
+              >
+                <v-avatar size="36" class="mr-3">
+                  <template v-if="message.avatar">
+                    <v-img :src="message.avatar" :alt="message.username" />
+                  </template>
+                  <template v-else>
+                    <v-icon>mdi-account</v-icon>
+                  </template>
+                </v-avatar>
+                <div class="message-content">
+                  <div class="message-meta">
+                    <span class="text-subtitle-2">{{ message.username || 'Unknown Adventurer' }}</span>
+                    <small class="text-medium-emphasis">{{ formatTimestamp(message.createdAt) }}</small>
+                  </div>
+                  <div v-if="message.type === 'text'">
+                    {{ message.content || '...' }}
+                  </div>
+                  <div v-else class="dice-message pa-3">
+                    <div class="d-flex align-center gap-2 mb-1">
+                      <v-icon color="amber">mdi-dice-multiple</v-icon>
+                      <span class="font-weight-medium">
+                        {{ message.username || 'Someone' }} rolled {{ message.diceNotation }}
+                      </span>
+                    </div>
+                    <div class="text-body-2">
+                      Result: <strong>{{ message.diceTotal }}</strong>
+                    </div>
+                    <div class="text-caption">
+                      Rolls: {{ (message.diceRolls || []).join(', ') }}
+                    </div>
+                    <div v-if="message.content" class="text-caption mt-1">
+                      {{ message.content }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <div class="chat-input mt-4">
+              <v-text-field
+                v-model="messageText"
+                label="Send a message"
+                variant="outlined"
+                density="comfortable"
+                @keyup.enter="sendMessage"
+                :disabled="sending"
+              >
+                <template #append-inner>
+                  <v-btn
+                    icon="mdi-send"
+                    variant="text"
+                    :disabled="!messageText.trim()"
+                    :loading="sending"
+                    @click="sendMessage"
+                  />
+                </template>
+              </v-text-field>
+            </div>
           </div>
-        </div>
 
-        <div class="chat-input mt-4">
-          <v-text-field
-            v-model="messageText"
-            label="Send a message"
-            variant="outlined"
-            density="comfortable"
-            @keyup.enter="sendMessage"
-            :disabled="sending"
-          >
-            <template #append-inner>
-              <v-btn
-                icon="mdi-send"
-                variant="text"
-                :disabled="!messageText.trim()"
-                :loading="sending"
-                @click="sendMessage"
-              />
-            </template>
-          </v-text-field>
-        </div>
-
-        <div class="mt-6">
-          <h3 class="text-subtitle-1 mb-2">Quick dice roll</h3>
-          <DiceRollerComponent @rolled="forwardDiceRoll" />
+          <div class="dice-section">
+            <h3 class="text-subtitle-1 mb-2">Quick dice roll</h3>
+            <DiceRollerComponent @rolled="forwardDiceRoll" />
+          </div>
         </div>
       </v-card-text>
     </template>
@@ -194,6 +198,31 @@ function formatTimestamp(value: string) {
   max-height: 360px;
   overflow-y: auto;
   padding-right: 8px;
+}
+
+.chat-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.chat-section {
+  flex: 2;
+}
+
+.dice-section {
+  flex: 1;
+}
+
+@media (min-width: 960px) {
+  .chat-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .dice-section {
+    max-width: 360px;
+  }
 }
 
 .message-row {
