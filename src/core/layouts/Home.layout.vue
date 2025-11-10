@@ -31,7 +31,8 @@ const userLoggedIn = computed(() => {
 
 <style scoped>
 .home-container {
-  max-width: 1440px;
+  max-width: 1800px;
   width: 100%;
+  margin: 0 auto;
 }
 </style>

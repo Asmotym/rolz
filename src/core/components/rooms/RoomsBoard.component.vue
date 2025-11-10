@@ -17,7 +17,7 @@
       {{ feedback.message }}
     </v-alert>
 
-    <v-row>
+    <v-row class="justify-center">
       <v-col v-if="!selectedRoom" cols="12" md="4">
         <RoomsSidebar
           :rooms="rooms"
@@ -30,7 +30,7 @@
           @join="handleJoinRoom"
         />
       </v-col>
-      <v-col cols="12" :md="selectedRoom ? 12 : 8">
+      <v-col v-if="selectedRoom" cols="12">
         <RoomChatPanel
           :room="selectedRoom"
           :messages="messages"
