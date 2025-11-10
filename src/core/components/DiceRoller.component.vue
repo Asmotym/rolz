@@ -24,25 +24,6 @@
 
       <!-- Custom Dice Input -->
       <div class="mb-4">
-        <v-card-subtitle class="px-0">Custom Roll</v-card-subtitle>
-        <div class="d-flex gap-2 align-center custom-roll-row">
-          <v-text-field
-            v-model="customDice"
-            label="Dice Notation (e.g., 2d6+3)"
-            placeholder="1d20"
-            variant="outlined"
-            density="compact"
-            class="flex-grow-1"
-            @keyup.enter="rollCustomDice"
-          />
-          <v-btn
-            @click="rollCustomDice"
-            color="primary"
-            :disabled="!customDice"
-          >
-            Roll
-          </v-btn>
-        </div>
         <v-text-field
           v-model="rollDescription"
           label="Description (optional)"
@@ -53,50 +34,6 @@
           clearable
         />
       </div>
-
-      <!-- Results Display -->
-      <div v-if="rollHistory.length > 0" class="mb-4">
-        <v-card-subtitle class="px-0">Roll History</v-card-subtitle>
-        <div class="roll-history">
-          <div
-            v-for="(roll, index) in rollHistory"
-            :key="index"
-            class="roll-result pa-2 mb-2 rounded"
-            :class="getRollResultClass(roll)"
-          >
-            <div class="d-flex justify-space-between align-center">
-              <div class="flex-grow-1 mr-2">
-                <div
-                  v-if="roll.description"
-                  class="roll-description text-medium-emphasis"
-                >
-                  {{ roll.description }}
-                </div>
-                <span class="text-body-1">{{ formatDiceRoll(roll) }}</span>
-              </div>
-              <v-btn
-                icon="mdi-delete"
-                size="small"
-                variant="text"
-                @click="removeRoll(index)"
-                color="error"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Clear Button -->
-      <div v-if="rollHistory.length > 0" class="text-center">
-        <v-btn
-          @click="clearHistory"
-          variant="outlined"
-          color="error"
-          size="small"
-        >
-          Clear History
-        </v-btn>
-      </div>
     </v-card>
   </div>
 </template>
@@ -105,7 +42,6 @@
 import { ref, computed } from 'vue';
 import {
   rollDiceNotation,
-  formatDiceRoll,
   COMMON_DICE,
   type DiceRoll,
   type DiceRollOptions
@@ -116,7 +52,6 @@ const emit = defineEmits<{
 }>();
 
 // Reactive data
-const customDice = ref('1d20');
 const modifier = ref(0);
 const rollDescription = ref('');
 const rollHistory = ref<DiceRoll[]>([]);
@@ -145,21 +80,6 @@ function quickRoll(notation: string) {
   }
 }
 
-function rollCustomDice() {
-  if (!customDice.value.trim()) return;
-  
-  try {
-    const roll = rollDiceNotation(
-      customDice.value,
-      { ...rollOptions.value, ...{ modifier: totalModifier.value } },
-      rollDescription.value
-    );
-    addRollToHistory(roll);
-  } catch (error) {
-    console.error('Invalid dice notation:', error);
-  }
-}
-
 function addRollToHistory(roll: DiceRoll) {
   rollHistory.value.unshift(roll);
   // Keep only last 10 rolls
@@ -167,14 +87,6 @@ function addRollToHistory(roll: DiceRoll) {
     rollHistory.value = rollHistory.value.slice(0, 10);
   }
   emit('rolled', roll);
-}
-
-function removeRoll(index: number) {
-  rollHistory.value.splice(index, 1);
-}
-
-function clearHistory() {
-  rollHistory.value = [];
 }
 
 function getDiceColor(notation: string): string {
@@ -189,12 +101,6 @@ function getDiceColor(notation: string): string {
   };
   
   return diceColors[notation] || 'primary';
-}
-
-function getRollResultClass(roll: DiceRoll): string {
-  if (roll.critical) return 'bg-grey-darken-4 border-success';
-  if (roll.fumble) return 'bg-grey-darken-4 border-error';
-  return 'bg-grey-darken-4';
 }
 </script>
 
