@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
-import cors, { type CorsOptions } from 'cors';
+import type { CorsOptions } from 'cors';
 import { createLogger } from './core/utils/logger';
 import { handleRoomsAction, type RoomsAction } from './services/rooms.service';
 import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/discord-handler.core';
@@ -14,9 +14,28 @@ const corsOptions: CorsOptions = {
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 };
+const allowedMethodsHeader = Array.isArray(corsOptions.methods) ? corsOptions.methods.join(',') : (corsOptions.methods ?? 'GET,POST,OPTIONS');
+const allowedHeadersHeader = Array.isArray(corsOptions.allowedHeaders)
+    ? corsOptions.allowedHeaders.join(',')
+    : (corsOptions.allowedHeaders ?? 'Content-Type, Authorization');
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use((req, res, next) => {
+    const origin = resolveAllowedOrigin(req.headers.origin);
+    if (origin) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Vary', 'Origin');
+    }
+
+    if (req.method === 'OPTIONS') {
+        res.header('Access-Control-Allow-Methods', allowedMethodsHeader);
+        const requestHeaders = req.header('Access-Control-Request-Headers');
+        res.header('Access-Control-Allow-Headers', requestHeaders ?? allowedHeadersHeader);
+        return origin ? res.sendStatus(204) : res.sendStatus(403);
+    }
+
+    next();
+});
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => {
@@ -83,6 +102,26 @@ function getAllowedOrigins(): CorsOptions['origin'] {
         return true;
     }
     return rawOrigins;
+}
+
+function resolveAllowedOrigin(origin: string | undefined): string | undefined {
+    if (!origin) {
+        return undefined;
+    }
+
+    if (corsOptions.origin === true) {
+        return origin;
+    }
+
+    if (typeof corsOptions.origin === 'string') {
+        return corsOptions.origin === origin ? origin : undefined;
+    }
+
+    if (Array.isArray(corsOptions.origin) && corsOptions.origin.includes(origin)) {
+        return origin;
+    }
+
+    return undefined;
 }
 
 export { app };
