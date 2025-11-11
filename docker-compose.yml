@@ -29,6 +29,36 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     restart: unless-stopped
+    develop:
+      watch:
+        - path: package.json
+          action: rebuild
+        - path: package-lock.json
+          action: rebuild
+        - path: vite.config.ts
+          action: rebuild
+        - path: tsconfig.json
+          action: rebuild
+        - path: tsconfig.app.json
+          action: rebuild
+        - path: tsconfig.node.json
+          action: rebuild
+        - path: tsconfig.server.json
+          action: rebuild
+        - path: tsup.config.ts
+          action: rebuild
+        - path: src
+          target: /app/src
+          action: sync
+        - path: server
+          target: /app/server
+          action: sync
+        - path: public
+          target: /app/public
+          action: sync
+        - path: docker/entrypoint.sh
+          target: /app/docker/entrypoint.sh
+          action: sync
 
 volumes:
   mysql-data:
