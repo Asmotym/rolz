@@ -11,15 +11,16 @@ export async function upsertMember(roomId: string, userId: string): Promise<void
 }
 
 export async function countMembers(roomId: string): Promise<number> {
-    const result = await sql<{ count: string }[]>`
+    const result = await sql`
         SELECT COUNT(*)::text AS count FROM room_members WHERE room_id = ${roomId}
     `;
-    return Number(result[0]?.count ?? 0);
+    const rows = result as Array<{ count: string }>;
+    return Number(rows[0]?.count ?? 0);
 }
 
 export async function getMembers(roomId: string): Promise<DatabaseRoomMember[]> {
-    const result = await sql<DatabaseRoomMember[]>`
+    const result = await sql`
         SELECT * FROM room_members WHERE room_id = ${roomId}
     `;
-    return result;
+    return result as DatabaseRoomMember[];
 }

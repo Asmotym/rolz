@@ -54,9 +54,9 @@ export interface NewRoomMessage {
     id?: string;
     room_id: string;
     user_id: string;
-    content?: string;
+    content?: string | null;
     type: 'text' | 'dice';
-    dice_notation?: string;
-    dice_total?: number;
+    dice_notation?: string | null;
+    dice_total?: number | null;
     dice_rolls?: number[];
 }

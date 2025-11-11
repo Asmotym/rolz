@@ -6,7 +6,7 @@
     "paths": {
       "core/*": ["src/core/*"],
       "modules/*": ["src/modules/*"],
-      "netlify/*": ["netlify/*"],
+      "netlify/*": ["server/*"],
       "assets/*": ["src/assets/*"]
     },
 

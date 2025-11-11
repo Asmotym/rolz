@@ -2,30 +2,30 @@ import { sql } from '../client';
 import type { DatabaseRoom, NewRoom } from '../../types/database.types';
 
 export async function insertRoom(room: NewRoom): Promise<DatabaseRoom> {
-    const result = await sql<DatabaseRoom[]>`
+    const result = await sql`
         INSERT INTO rooms (id, name, invite_code, password_hash, password_salt, created_by)
         VALUES (${room.id}, ${room.name}, ${room.invite_code}, ${room.password_hash ?? null}, ${room.password_salt ?? null}, ${room.created_by ?? null})
         RETURNING *
     `;
-    return result[0];
+    return (result as DatabaseRoom[])[0];
 }
 
 export async function getRoomByInviteCode(inviteCode: string): Promise<DatabaseRoom | undefined> {
-    const result = await sql<DatabaseRoom[]>`
+    const result = await sql`
         SELECT * FROM rooms WHERE invite_code = ${inviteCode} LIMIT 1
     `;
-    return result[0];
+    return (result as DatabaseRoom[])[0];
 }
 
 export async function getRoomById(roomId: string): Promise<DatabaseRoom | undefined> {
-    const result = await sql<DatabaseRoom[]>`
+    const result = await sql`
         SELECT * FROM rooms WHERE id = ${roomId} LIMIT 1
     `;
-    return result[0];
+    return (result as DatabaseRoom[])[0];
 }
 
 export async function listRooms(): Promise<DatabaseRoom[]> {
-    const result = await sql<DatabaseRoom[]>`
+    const result = await sql`
         SELECT
             r.*,
             COALESCE(members.member_count, 0)::INT AS member_count,
@@ -43,7 +43,7 @@ export async function listRooms(): Promise<DatabaseRoom[]> {
         ) messages ON messages.room_id = r.id
         ORDER BY last_activity DESC NULLS LAST
     `;
-    return result;
+    return result as DatabaseRoom[];
 }
 
 export async function touchRoom(roomId: string): Promise<void> {

@@ -1,4 +1,3 @@
-import type { Handler } from '@netlify/functions';
 import { ensureDatabaseSetup } from '../core/database/schema';
 import { insertRoom, listRooms, getRoomByInviteCode, getRoomById, touchRoom } from '../core/database/tables/rooms.table';
 import { upsertMember, countMembers } from '../core/database/tables/room-members.table';
@@ -8,70 +7,40 @@ import type { DatabaseRoom, DatabaseRoomMessage } from '../core/types/database.t
 import type { RoomDetails, RoomMessage } from '../core/types/data.types';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
-import { createLogger } from '../core/utils/logger';
 
-const logger = createLogger('RoomsFunction');
-const headers = {
-    'Access-Control-Allow-Origin': process.env.FRONTEND_URL || '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true'
-};
-
-type RoomsAction =
+export type RoomsAction =
     | { action: 'list' }
     | { action: 'create'; payload: { name: string; password?: string | null; userId: string } }
     | { action: 'join'; payload: { inviteCode: string; password?: string | null; userId: string } }
     | { action: 'messages'; payload: { roomId: string; limit?: number; since?: string } }
     | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } } };
 
-export const handler: Handler = async (event) => {
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: '' };
-    }
+export type RoomsActionResponse =
+    | { rooms: RoomDetails[] }
+    | { room: RoomDetails }
+    | { roomId: string; messages: RoomMessage[] }
+    | { message: RoomMessage };
 
-    if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            headers,
-            body: JSON.stringify({ success: false, error: 'Method not allowed' })
-        };
-    }
+export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActionResponse> {
+    await ensureDatabaseSetup();
 
-    try {
-        await ensureDatabaseSetup();
-
-        if (!event.body) {
-            return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Missing body' }) };
+    switch (payload.action) {
+        case 'list': {
+            const rooms = await listRooms();
+            return { rooms: rooms.map(mapRoomToSummary) };
         }
-
-        const payload = JSON.parse(event.body) as RoomsAction;
-
-        switch (payload.action) {
-            case 'list': {
-                const rooms = await listRooms();
-                return successResponse({ rooms: rooms.map(mapRoomToSummary) });
-            }
-            case 'create':
-                return successResponse({ room: await handleCreateRoom(payload.payload) });
-            case 'join':
-                return successResponse({ room: await handleJoinRoom(payload.payload) });
-            case 'messages':
-                return successResponse({ roomId: payload.payload.roomId, messages: await handleListMessages(payload.payload) });
-            case 'message':
-                return successResponse({ message: await handleSendMessage(payload.payload) });
-            default:
-                return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Unknown action' }) };
-        }
-    } catch (error) {
-        logger.error(error instanceof Error ? error.message : 'Unknown error');
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' })
-        };
+        case 'create':
+            return { room: await handleCreateRoom(payload.payload) };
+        case 'join':
+            return { room: await handleJoinRoom(payload.payload) };
+        case 'messages':
+            return { roomId: payload.payload.roomId, messages: await handleListMessages(payload.payload) };
+        case 'message':
+            return { message: await handleSendMessage(payload.payload) };
+        default:
+            throw new Error('Unknown action');
     }
-};
+}
 
 async function handleCreateRoom(payload: { name: string; password?: string | null; userId: string }): Promise<RoomDetails> {
     if (!payload.name?.trim()) {
@@ -228,13 +197,5 @@ function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
         diceTotal,
         diceRolls,
         createdAt: record.created_at
-    };
-}
-
-function successResponse(data: Record<string, unknown>) {
-    return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ success: true, data })
     };
 }

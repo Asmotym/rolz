@@ -2,13 +2,13 @@ import { sql } from '../client';
 import type { DatabaseUser } from '../../types/database.types';
 
 export async function getUser(discordUserId: string): Promise<DatabaseUser | undefined> {
-    const result = await sql<DatabaseUser[]>`
+    const result = await sql`
         SELECT discord_user_id, username, avatar, rights_update, rights_testing_ground
         FROM users
         WHERE discord_user_id = ${discordUserId}
         LIMIT 1
     `;
-    return result[0];
+    return (result as DatabaseUser[])[0];
 }
 
 export async function insertUser(user: DatabaseUser): Promise<void> {
@@ -20,23 +20,14 @@ export async function insertUser(user: DatabaseUser): Promise<void> {
 }
 
 export async function updateUser(discordUserId: string, data: Partial<DatabaseUser>): Promise<void> {
-    const fields = Object.entries(data).filter(([, value]) => value !== undefined);
-    if (fields.length === 0) return;
-
-    const setFragments: string[] = [];
-    const values: unknown[] = [];
-
-    fields.forEach(([key, value], index) => {
-        setFragments.push(`${key} = $${index + 1}`);
-        values.push(value);
-    });
-    values.push(discordUserId);
-
-    const query = `
+    await sql`
         UPDATE users
-        SET ${setFragments.join(', ')}, updated_at = NOW()
-        WHERE discord_user_id = $${fields.length + 1}
+        SET
+            username = COALESCE(${data.username ?? null}, username),
+            avatar = COALESCE(${data.avatar ?? null}, avatar),
+            rights_update = COALESCE(${data.rights_update ?? null}, rights_update),
+            rights_testing_ground = COALESCE(${data.rights_testing_ground ?? null}, rights_testing_ground),
+            updated_at = NOW()
+        WHERE discord_user_id = ${discordUserId}
     `;
-
-    await sql(query, values as never);
 }
