@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => {
         netlify: path.resolve(__dirname, 'server'),
         assets: path.resolve(__dirname, 'src/assets'),
       }
+    },
+    preview: {
+      allowedHosts: ['rolz.asmotym.fr']
     }
   };
 });
