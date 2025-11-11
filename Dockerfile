@@ -1,6 +1,6 @@
 FROM node:20-slim AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json ./
 # npm ci currently fails to install rollup's optional native binaries on arm64 builders;
 # npm install works around https://github.com/npm/cli/issues/4828 until the bug is fixed.
 RUN npm install
