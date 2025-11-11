@@ -177,9 +177,17 @@ function mapRoomToSummary(room: DatabaseRoom): RoomDetails {
 }
 
 function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
-    const diceRolls = Array.isArray(record.dice_rolls)
-        ? (record.dice_rolls as number[])
-        : undefined;
+    let diceRolls: number[] | undefined;
+    if (Array.isArray(record.dice_rolls)) {
+        diceRolls = record.dice_rolls as number[];
+    } else if (typeof record.dice_rolls === 'string') {
+        try {
+            const parsed = JSON.parse(record.dice_rolls);
+            diceRolls = Array.isArray(parsed) ? parsed.map((value) => Number(value)) : undefined;
+        } catch {
+            diceRolls = undefined;
+        }
+    }
 
     const diceTotal = record.dice_total !== null && record.dice_total !== undefined
         ? Number(record.dice_total)

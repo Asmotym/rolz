@@ -44,7 +44,7 @@ export interface DatabaseRoomMessage {
     type: 'text' | 'dice';
     dice_notation?: string | null;
     dice_total?: number | null;
-    dice_rolls?: number[] | null;
+    dice_rolls?: number[] | string | null;
     created_at: string;
     username?: string | null;
     avatar?: string | null;

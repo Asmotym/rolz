@@ -1,60 +1,88 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PG_MAJOR="${PG_MAJOR:-15}"
-PGDATA="${PGDATA:-/var/lib/postgresql/data}"
-PG_BIN="/usr/lib/postgresql/${PG_MAJOR}/bin"
-POSTGRES_LOG="/var/log/postgresql/postgres.log"
-POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+MYSQL_DATA_DIR="${MYSQL_DATA_DIR:-/var/lib/mysql}"
+MYSQL_LOG="${MYSQL_LOG:-/var/log/mysql/mariadb.log}"
+MYSQL_SOCKET="${MYSQL_SOCKET:-/run/mysqld/mysqld.sock}"
+MYSQL_PORT="${MYSQL_PORT:-3306}"
+MYSQL_USER_NAME="${MYSQL_USER:-rolz}"
+MYSQL_USER_PASSWORD="${MYSQL_PASSWORD:-rolz}"
+MYSQL_DATABASE_NAME="${MYSQL_DATABASE:-rolz}"
 
-mkdir -p "$PGDATA" "$(dirname "$POSTGRES_LOG")"
-touch "$POSTGRES_LOG"
-chown -R postgres:postgres /var/lib/postgresql "$(dirname "$POSTGRES_LOG")"
+mkdir -p "$MYSQL_DATA_DIR" "$(dirname "$MYSQL_LOG")" /run/mysqld
+chown -R mysql:mysql "$MYSQL_DATA_DIR" /run/mysqld "$(dirname "$MYSQL_LOG")"
 
-if [[ ! -s "$PGDATA/PG_VERSION" ]]; then
-  su - postgres -c "${PG_BIN}/initdb -D '$PGDATA'"
-  cat <<'EOF' >> "$PGDATA/postgresql.conf"
-listen_addresses = '*'
-EOF
-  cat <<'EOF' >> "$PGDATA/pg_hba.conf"
-host all all 0.0.0.0/0 scram-sha-256
-host all all ::/0 scram-sha-256
-EOF
+if [[ ! -d "$MYSQL_DATA_DIR/mysql" ]]; then
+  mariadb-install-db --datadir="$MYSQL_DATA_DIR" --auth-root-authentication-method=normal --skip-test-db >/dev/null
 fi
 
-start_postgres() {
-  su - postgres -c "${PG_BIN}/pg_ctl -D '$PGDATA' -l '$POSTGRES_LOG' -o \"-c listen_addresses='*' -p ${POSTGRES_PORT}\" -w start"
-}
-
-stop_postgres() {
-  su - postgres -c "${PG_BIN}/pg_ctl -D '$PGDATA' -m fast -w stop"
-}
-
+mysql_pid=""
 backend_pid=""
 frontend_pid=""
+
+mysql_exec() {
+  mysql --protocol=socket --socket="$MYSQL_SOCKET" --user=root --skip-password --execute "$1"
+}
+
+start_mysql() {
+  mysqld \
+    --datadir="$MYSQL_DATA_DIR" \
+    --socket="$MYSQL_SOCKET" \
+    --port="$MYSQL_PORT" \
+    --bind-address=0.0.0.0 \
+    --log-error="$MYSQL_LOG" \
+    --skip-name-resolve \
+    --user=mysql &
+  mysql_pid=$!
+
+  for _ in $(seq 1 30); do
+    if mysqladmin --protocol=socket --socket="$MYSQL_SOCKET" --user=root --skip-password ping >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "MySQL failed to start" >&2
+  exit 1
+}
+
+stop_mysql() {
+  if [[ -n "$mysql_pid" ]]; then
+    mysqladmin --protocol=socket --socket="$MYSQL_SOCKET" --user=root --skip-password shutdown >/dev/null 2>&1 || true
+    wait "$mysql_pid" 2>/dev/null || true
+  fi
+}
 
 cleanup() {
   set +e
   [[ -n "$backend_pid" ]] && kill "$backend_pid" 2>/dev/null || true
   [[ -n "$frontend_pid" ]] && kill "$frontend_pid" 2>/dev/null || true
-  stop_postgres >/dev/null 2>&1 || true
+  stop_mysql
 }
 
 trap cleanup SIGINT SIGTERM EXIT
 
-start_postgres
+start_mysql
 
-ROLE_EXISTS=$(su - postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='${POSTGRES_USER:-rolz}'\"")
-if [[ "$ROLE_EXISTS" != "1" ]]; then
-  su - postgres -c "psql -c \"CREATE ROLE ${POSTGRES_USER:-rolz} LOGIN PASSWORD '${POSTGRES_PASSWORD:-rolz}'\""
-fi
+escape_identifier() {
+  printf '%s' "$1" | sed 's/`/``/g'
+}
 
-DB_EXISTS=$(su - postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname='${POSTGRES_DB:-rolz}'\"")
-if [[ "$DB_EXISTS" != "1" ]]; then
-  su - postgres -c "createdb --owner=${POSTGRES_USER:-rolz} ${POSTGRES_DB:-rolz}"
-fi
+escape_literal() {
+  printf '%s' "$1" | sed "s/'/''/g"
+}
 
-export DATABASE_URL="${DATABASE_URL:-postgresql://${POSTGRES_USER:-rolz}:${POSTGRES_PASSWORD:-rolz}@localhost:${POSTGRES_PORT}/${POSTGRES_DB:-rolz}}"
+db_identifier=$(escape_identifier "$MYSQL_DATABASE_NAME")
+user_identifier=$(escape_literal "$MYSQL_USER_NAME")
+password_literal=$(escape_literal "$MYSQL_USER_PASSWORD")
+
+mysql_exec "CREATE DATABASE IF NOT EXISTS \`${db_identifier}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql_exec "CREATE USER IF NOT EXISTS '${user_identifier}'@'%' IDENTIFIED BY '${password_literal}';"
+mysql_exec "GRANT ALL PRIVILEGES ON \`${db_identifier}\`.* TO '${user_identifier}'@'%';"
+mysql_exec 'FLUSH PRIVILEGES;'
+
+export DATABASE_URL="${DATABASE_URL:-mysql://${MYSQL_USER_NAME}:${MYSQL_USER_PASSWORD}@localhost:${MYSQL_PORT}/${MYSQL_DATABASE_NAME}}"
+export MYSQL_HOST="${MYSQL_HOST:-localhost}"
 export BACKEND_PORT="${BACKEND_PORT:-4000}"
 export PORT="$BACKEND_PORT"
 export FRONTEND_PORT="${FRONTEND_PORT:-5173}"
