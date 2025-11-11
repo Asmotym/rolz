@@ -68,3 +68,29 @@ export async function listMessages(roomId: string, options?: { limit?: number; s
         [roomId, limit]
     );
 }
+
+export async function listDiceMessages(roomId: string, options?: { limit?: number; since?: string }): Promise<DatabaseRoomMessage[]> {
+    const limit = options?.limit ?? 50;
+
+    if (options?.since) {
+        return query<DatabaseRoomMessage[]>(
+            `SELECT rm.*, u.username, u.avatar
+             FROM room_messages rm
+             LEFT JOIN users u ON u.discord_user_id = rm.user_id
+             WHERE rm.room_id = ? AND rm.type = 'dice' AND rm.created_at > ?
+             ORDER BY rm.created_at ASC
+             LIMIT ?`,
+            [roomId, options.since, limit]
+        );
+    }
+
+    return query<DatabaseRoomMessage[]>(
+        `SELECT rm.*, u.username, u.avatar
+         FROM room_messages rm
+         LEFT JOIN users u ON u.discord_user_id = rm.user_id
+         WHERE rm.room_id = ? AND rm.type = 'dice'
+         ORDER BY rm.created_at DESC
+         LIMIT ?`,
+        [roomId, limit]
+    );
+}

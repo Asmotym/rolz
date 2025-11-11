@@ -1,7 +1,7 @@
 import { ensureDatabaseSetup } from '../core/database/schema';
 import { insertRoom, listRooms, getRoomByInviteCode, getRoomById, touchRoom } from '../core/database/tables/rooms.table';
 import { upsertMember, countMembers } from '../core/database/tables/room-members.table';
-import { insertMessage, listMessages } from '../core/database/tables/room-messages.table';
+import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
 import { getUser } from '../core/database/tables/users.table';
 import type { DatabaseRoom, DatabaseRoomMessage } from '../core/types/database.types';
 import type { RoomDetails, RoomMessage } from '../core/types/data.types';
@@ -110,6 +110,27 @@ async function handleListMessages(payload: { roomId: string; limit?: number; sin
     if (!room) throw new Error('Room not found');
 
     const rows = await listMessages(payload.roomId, { limit: payload.limit, since: payload.since });
+    return rows.map(mapMessageRecord);
+}
+
+const DEFAULT_DICE_LIMIT = 50;
+const MAX_DICE_LIMIT = 200;
+
+function sanitizeDiceLimit(limit?: number): number {
+    const parsed = Number(limit);
+    if (!Number.isFinite(parsed)) return DEFAULT_DICE_LIMIT;
+    return Math.min(Math.max(Math.floor(parsed), 1), MAX_DICE_LIMIT);
+}
+
+export async function listRoomDiceRolls(payload: { roomId: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
+    await ensureDatabaseSetup();
+
+    if (!payload.roomId) throw new Error('Room id missing');
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+
+    const limit = sanitizeDiceLimit(payload.limit);
+    const rows = await listDiceMessages(payload.roomId, { limit, since: payload.since });
     return rows.map(mapMessageRecord);
 }
 

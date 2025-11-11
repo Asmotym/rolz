@@ -11,6 +11,15 @@ interface ApiResponse<T> {
     error?: string;
 }
 
+function parseJson<T>(value: string): T | null {
+    if (!value) return null;
+    try {
+        return JSON.parse(value) as T;
+    } catch {
+        return null;
+    }
+}
+
 async function request<T>(body: RequestPayload): Promise<T> {
     const response = await fetch(ROOMS_ENDPOINT, {
         method: 'POST',
@@ -20,11 +29,18 @@ async function request<T>(body: RequestPayload): Promise<T> {
         body: JSON.stringify(body)
     });
 
+    const text = await response.text();
+    const payload = parseJson<ApiResponse<T>>(text);
+
     if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
+        const fallbackMessage = payload?.error ?? (text.trim() || `Request failed with status ${response.status}`);
+        throw new Error(fallbackMessage);
     }
 
-    const payload = await response.json() as ApiResponse<T>;
+    if (!payload) {
+        throw new Error('Invalid server response');
+    }
+
     if (!payload.success) {
         throw new Error(payload.error || 'Unknown error');
     }

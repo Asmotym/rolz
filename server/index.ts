@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import type { CorsOptions } from 'cors';
 import { createLogger } from './core/utils/logger';
-import { handleRoomsAction, type RoomsAction } from './services/rooms.service';
+import { handleRoomsAction, listRoomDiceRolls, type RoomsAction } from './services/rooms.service';
 import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/discord-handler.core';
 import { cors } from './middlewares/cors'
 
@@ -48,6 +48,24 @@ app.post('/api/discord', async (req, res) => {
         res.json({ success: true, data, queryType });
     } catch (error) {
         logger.error(`Discord endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+    }
+});
+
+app.get('/api/rooms/:roomId/dice-rolls', async (req, res) => {
+    const { roomId } = req.params;
+    const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : undefined;
+    const since = typeof req.query.since === 'string' ? req.query.since : undefined;
+
+    if (!roomId) {
+        return res.status(400).json({ success: false, error: 'Room id is required' });
+    }
+
+    try {
+        const diceRolls = await listRoomDiceRolls({ roomId, limit, since });
+        res.json({ success: true, data: { roomId, diceRolls } });
+    } catch (error) {
+        logger.error(`Dice rolls endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
     }
 });
