@@ -13,6 +13,7 @@ export function cors(request: Request, response: Response, next: NextFunction) {
 
     response.header('Access-Control-Allow-Credentials', 'true');
     response.header('Access-Control-Allow-Methods', allowedMethods.join(', '));
+    response.header('Access-Control-Allow-Headers', 'Content-Type');
 
     if (request.method === 'OPTIONS') {
         response.sendStatus(200);
