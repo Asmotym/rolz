@@ -22,8 +22,7 @@ COMPOSE_CMD := $(COMPOSE) -f $(COMPOSE_FILE) $(ENV_FILE_FLAG)
 build:
 	$(COMPOSE_CMD) build $(SERVICE)
 
-run:
-	$(COMPOSE_CMD) up --build $(SERVICE)
+run: up
 
 up:
 	$(COMPOSE_CMD) up -d --build $(SERVICE)
