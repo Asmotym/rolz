@@ -4,38 +4,12 @@ import type { CorsOptions } from 'cors';
 import { createLogger } from './core/utils/logger';
 import { handleRoomsAction, type RoomsAction } from './services/rooms.service';
 import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/discord-handler.core';
+import { cors } from './middlewares/cors'
 
 const logger = createLogger('Server');
 const app = express();
 
-const corsOptions: CorsOptions = {
-    origin: getAllowedOrigins(),
-    credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-};
-const allowedMethodsHeader = Array.isArray(corsOptions.methods) ? corsOptions.methods.join(',') : (corsOptions.methods ?? 'GET,POST,OPTIONS');
-const allowedHeadersHeader = Array.isArray(corsOptions.allowedHeaders)
-    ? corsOptions.allowedHeaders.join(',')
-    : (corsOptions.allowedHeaders ?? 'Content-Type, Authorization');
-
-app.use((req, res, next) => {
-    const origin = resolveAllowedOrigin(req.headers.origin);
-    if (origin) {
-        res.header('Access-Control-Allow-Origin', origin);
-        res.header('Access-Control-Allow-Credentials', 'true');
-        res.header('Vary', 'Origin');
-    }
-
-    if (req.method === 'OPTIONS') {
-        res.header('Access-Control-Allow-Methods', allowedMethodsHeader);
-        const requestHeaders = req.header('Access-Control-Request-Headers');
-        res.header('Access-Control-Allow-Headers', requestHeaders ?? allowedHeadersHeader);
-        return origin ? res.sendStatus(204) : res.sendStatus(403);
-    }
-
-    next();
-});
+app.use(cors);
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => {
@@ -95,33 +69,5 @@ app.listen(port, host, () => {
     const displayHost = host === '0.0.0.0' ? 'localhost' : host;
     logger.success(`API server listening on http://${displayHost}:${port}`);
 });
-
-function getAllowedOrigins(): CorsOptions['origin'] {
-    const rawOrigins = process.env.FRONTEND_URL?.split(',').map((origin) => origin.trim()).filter(Boolean);
-    if (!rawOrigins || rawOrigins.length === 0) {
-        return true;
-    }
-    return rawOrigins;
-}
-
-function resolveAllowedOrigin(origin: string | undefined): string | undefined {
-    if (!origin) {
-        return undefined;
-    }
-
-    if (corsOptions.origin === true) {
-        return origin;
-    }
-
-    if (typeof corsOptions.origin === 'string') {
-        return corsOptions.origin === origin ? origin : undefined;
-    }
-
-    if (Array.isArray(corsOptions.origin) && corsOptions.origin.includes(origin)) {
-        return origin;
-    }
-
-    return undefined;
-}
 
 export { app };
