@@ -16,7 +16,8 @@ cp .env.example .env
 
 Fill in the `.env` file with:
 
-- `DATABASE_URL` – Neon/PostgreSQL connection string  
+- `DATABASE_URL` – PostgreSQL connection string (works for Neon or local Docker)  
+- `DATABASE_SSL` – Set to `true` if the connection requires SSL (e.g., Neon)  
 - `BACKEND_PORT` – Port for the API server (default `4000`)  
 - `FRONTEND_URL` – Comma-separated origins that should be allowed to call the API  
 - `VITE_BACKEND_URL` – Base URL the Vue app uses when talking to the API
@@ -49,7 +50,7 @@ docker run --rm -it \
   rolz-all
 ```
 
-Environment variables such as `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `BACKEND_PORT`, and `FRONTEND_PORT` can be overridden at `docker run` time. Persistent database storage can be mapped by binding `/var/lib/postgresql/data` to a local volume.
+Environment variables such as `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `BACKEND_PORT`, and `FRONTEND_PORT` can be overridden at `docker run` time. Set `DATABASE_SSL=false` for the bundled PostgreSQL instance; external providers like Neon should use `true`. Persistent database storage can be mapped by binding `/var/lib/postgresql/data` to a local volume.
 
 ### Make targets
 

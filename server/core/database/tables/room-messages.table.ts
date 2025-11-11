@@ -3,7 +3,7 @@ import { sql } from '../client';
 import type { DatabaseRoomMessage, NewRoomMessage } from '../../types/database.types';
 
 export async function insertMessage(message: NewRoomMessage): Promise<DatabaseRoomMessage> {
-    const result = await sql`
+    const result = await sql<DatabaseRoomMessage[]>`
         WITH inserted AS (
             INSERT INTO room_messages (
                 id,
@@ -31,13 +31,13 @@ export async function insertMessage(message: NewRoomMessage): Promise<DatabaseRo
         FROM inserted
         LEFT JOIN users u ON u.discord_user_id = inserted.user_id
     `;
-    return (result as DatabaseRoomMessage[])[0];
+    return result[0];
 }
 
 export async function listMessages(roomId: string, options?: { limit?: number; since?: string }): Promise<DatabaseRoomMessage[]> {
     const limit = options?.limit ?? 50;
     if (options?.since) {
-        const result = await sql`
+        return sql<DatabaseRoomMessage[]>`
             SELECT rm.*, u.username, u.avatar
             FROM room_messages rm
             LEFT JOIN users u ON u.discord_user_id = rm.user_id
@@ -45,10 +45,9 @@ export async function listMessages(roomId: string, options?: { limit?: number; s
             ORDER BY rm.created_at ASC
             LIMIT ${limit}
         `;
-        return result as DatabaseRoomMessage[];
     }
 
-    const result = await sql`
+    return sql<DatabaseRoomMessage[]>`
         SELECT rm.*, u.username, u.avatar
         FROM room_messages rm
         LEFT JOIN users u ON u.discord_user_id = rm.user_id
@@ -56,5 +55,4 @@ export async function listMessages(roomId: string, options?: { limit?: number; s
         ORDER BY rm.created_at DESC
         LIMIT ${limit}
     `;
-    return result as DatabaseRoomMessage[];
 }
