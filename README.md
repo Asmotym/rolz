@@ -35,3 +35,30 @@ Run both commands in separate terminals for a full-stack dev experience.
 - `npm run server:start` – Run the compiled server (`dist-server/index.js`).
 
 Deploy the static assets (e.g. Netlify) and host the Express server anywhere that can expose Node.js + access to the database.
+
+## Docker (all-in-one)
+
+To run the frontend, backend, and an embedded PostgreSQL instance inside a single container:
+
+```bash
+docker build -t rolz-all .
+docker run --rm -it \
+  -p 5173:5173 \
+  -p 4000:4000 \
+  -p 5432:5432 \
+  rolz-all
+```
+
+Environment variables such as `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `BACKEND_PORT`, and `FRONTEND_PORT` can be overridden at `docker run` time. Persistent database storage can be mapped by binding `/var/lib/postgresql/data` to a local volume.
+
+### Make targets
+
+The included `Makefile` wraps common Docker commands:
+
+- `make build` – build (or rebuild) the image.
+- `make run` – run the stack interactively with logs in the foreground.
+- `make up` – run the stack in the background (detached).
+- `make stop` – stop the detached container.
+- `make logs` – follow container logs.
+
+Variables such as `IMAGE`, `CONTAINER`, or the exposed ports (`FRONTEND_PORT`, `BACKEND_PORT`, `POSTGRES_PORT`) can be overridden inline, e.g. `make run BACKEND_PORT=5000`. The Makefile automatically mounts a persistent Docker volume for PostgreSQL data and, if a `.env` file exists, passes it through to the container.
