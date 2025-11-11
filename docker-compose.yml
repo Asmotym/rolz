@@ -1,0 +1,30 @@
+services:
+  rolz:
+    build:
+      context: .
+      target: runner
+    image: rolz-all:latest
+    container_name: rolz-stack
+    env_file:
+      - .env
+    environment:
+      MYSQL_USER: ${MYSQL_USER:-rolz}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rolz}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-rolz}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      BACKEND_PORT: ${BACKEND_PORT:-4000}
+      FRONTEND_PORT: ${FRONTEND_PORT:-5173}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
+      DATABASE_URL: ${DATABASE_URL:-mysql://rolz:rolz@localhost:3306/rolz}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+      - "${BACKEND_PORT:-4000}:4000"
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

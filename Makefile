@@ -1,37 +1,44 @@
-IMAGE ?= rolz-all
-TAG ?= latest
-CONTAINER ?= rolz-stack
-DATA_VOLUME ?= rolz-mysql-data
+COMPOSE ?= docker compose
+COMPOSE_FILE ?= docker-compose.yml
+SERVICE ?= rolz
 ENV_FILE ?= .env
-FRONTEND_PORT ?= 5173
-BACKEND_PORT ?= 4000
-MYSQL_PORT ?= 3306
+
+export FRONTEND_PORT ?= 5173
+export BACKEND_PORT ?= 4000
+export MYSQL_PORT ?= 3306
+export MYSQL_USER ?= rolz
+export MYSQL_PASSWORD ?= rolz
+export MYSQL_DATABASE ?= rolz
+export FRONTEND_URL ?= http://localhost:5173
+export VITE_BACKEND_URL ?= http://localhost:4000
+export DATABASE_URL ?= mysql://rolz:rolz@localhost:3306/rolz
+export DATABASE_SSL ?= false
 
 ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")
-PORT_FLAGS := -p $(FRONTEND_PORT):5173 -p $(BACKEND_PORT):4000 -p $(MYSQL_PORT):3306
-VOLUME_FLAGS := -v $(DATA_VOLUME):/var/lib/mysql
-RUN_FLAGS := $(PORT_FLAGS) $(VOLUME_FLAGS) $(ENV_FILE_FLAG)
+COMPOSE_CMD := $(COMPOSE) -f $(COMPOSE_FILE) $(ENV_FILE_FLAG)
 
-.PHONY: build run up stop logs clean shell
+.PHONY: build run up stop logs clean shell down
 
 build:
-	docker build -t $(IMAGE):$(TAG) .
+	$(COMPOSE_CMD) build $(SERVICE)
 
 run:
-	docker run --rm -it --name $(CONTAINER) $(RUN_FLAGS) $(IMAGE):$(TAG)
+	$(COMPOSE_CMD) up --build $(SERVICE)
 
 up:
-	docker run -d --name $(CONTAINER) $(RUN_FLAGS) $(IMAGE):$(TAG)
+	$(COMPOSE_CMD) up -d --build $(SERVICE)
 
 stop:
-	-docker stop $(CONTAINER)
+	-$(COMPOSE_CMD) stop $(SERVICE)
+
+down:
+	$(COMPOSE_CMD) down
 
 logs:
-	docker logs -f $(CONTAINER)
+	$(COMPOSE_CMD) logs -f $(SERVICE)
 
 shell:
-	docker exec -it $(CONTAINER) /bin/bash
+	$(COMPOSE_CMD) exec $(SERVICE) /bin/bash
 
-clean: stop
-	-docker rm $(CONTAINER)
-	-docker volume rm $(DATA_VOLUME)
+clean:
+	$(COMPOSE_CMD) down -v
