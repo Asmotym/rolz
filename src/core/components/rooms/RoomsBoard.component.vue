@@ -52,6 +52,7 @@ import RoomChatPanel from './RoomChatPanel.component.vue';
 import { useRoomsStore } from 'core/stores/rooms.store';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import type { DiceRoll } from 'core/utils/dice.utils';
+import { parseInlineDiceCommand, rollDiceNotation } from 'core/utils/dice.utils';
 import { HomeRoutes } from 'core/routes';
 
 const roomsStore = useRoomsStore();
@@ -186,6 +187,21 @@ async function handleSendMessage(content: string) {
   if (!currentUser.value || !roomsStore.selectedRoomId) return;
   const trimmed = content.trim();
   if (!trimmed) return;
+
+  const inlineDice = parseInlineDiceCommand(trimmed);
+  if (inlineDice) {
+    try {
+      const roll = rollDiceNotation(inlineDice.notation, undefined, inlineDice.description);
+      await roomsStore.sendDiceRoll({
+        roomId: roomsStore.selectedRoomId,
+        userId: currentUser.value.id,
+        roll,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+    return;
+  }
 
   try {
     await roomsStore.sendChatMessage({

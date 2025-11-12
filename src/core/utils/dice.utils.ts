@@ -132,3 +132,36 @@ export function formatDiceRoll(roll: DiceRoll): string {
   
   return result;
 }
+
+export interface InlineDiceCommand {
+  notation: string;
+  description?: string;
+}
+
+/**
+ * Attempts to extract an inline dice command from a free-form message.
+ * Supports inputs like "1d20 Attack roll" or just "1d20".
+ */
+export function parseInlineDiceCommand(input: string | null | undefined): InlineDiceCommand | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(/^([0-9]*d[0-9]+(?:[+-][0-9]+)?)(?:\s+(.*))?$/i);
+  if (!match) {
+    return null;
+  }
+
+  const notation = match[1];
+  try {
+    parseDiceNotation(notation);
+  } catch {
+    return null;
+  }
+
+  const description = match[2]?.trim();
+  return {
+    notation: notation.toLowerCase(),
+    description: description?.length ? description : undefined,
+  };
+}
