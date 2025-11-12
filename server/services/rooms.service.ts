@@ -2,14 +2,18 @@ import { ensureDatabaseSetup } from '../core/database/schema';
 import { insertRoom, listRooms, getRoomByInviteCode, getRoomById, touchRoom, updateRoomName } from '../core/database/tables/rooms.table';
 import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname } from '../core/database/tables/room-members.table';
 import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
+import { deleteRoomDice, getRoomDice, insertRoomDice, listRoomDices, updateRoomDice as updateRoomDiceRecord } from '../core/database/tables/room-dices.table';
 import { getUser } from '../core/database/tables/users.table';
-import type { DatabaseRoom, DatabaseRoomMemberWithUser, DatabaseRoomMessage } from '../core/types/database.types';
-import type { RoomDetails, RoomMemberDetails, RoomMessage } from '../core/types/data.types';
+import type { DatabaseRoom, DatabaseRoomDice, DatabaseRoomMemberWithUser, DatabaseRoomMessage } from '../core/types/database.types';
+import type { RoomDetails, RoomDice, RoomMemberDetails, RoomMessage } from '../core/types/data.types';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
 
 const ROOM_NAME_MAX_LENGTH = 80;
 const NICKNAME_MAX_LENGTH = 40;
+const DICE_NOTATION_MAX_LENGTH = 64;
+const DICE_DESCRIPTION_MAX_LENGTH = 255;
+const DICE_NOTATION_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
 
 export type RoomsAction =
     | { action: 'list' }
@@ -20,7 +24,11 @@ export type RoomsAction =
     | { action: 'member'; payload: { roomId: string; userId: string } }
     | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
     | { action: 'updateNickname'; payload: { roomId: string; userId: string; nickname?: string | null } }
-    | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } } };
+    | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } } }
+    | { action: 'roomDices'; payload: { roomId: string; userId: string } }
+    | { action: 'createDice'; payload: { roomId: string; userId: string; notation: string; description?: string | null } }
+    | { action: 'updateDice'; payload: { roomId: string; userId: string; diceId: string; notation: string; description?: string | null } }
+    | { action: 'deleteDice'; payload: { roomId: string; userId: string; diceId: string } };
 
 export type RoomsActionResponse =
     | { rooms: RoomDetails[] }
@@ -28,7 +36,10 @@ export type RoomsActionResponse =
     | { roomId: string; messages: RoomMessage[] }
     | { roomId: string; members: RoomMemberDetails[] }
     | { member: RoomMemberDetails }
-    | { message: RoomMessage };
+    | { message: RoomMessage }
+    | { roomId: string; dices: RoomDice[] }
+    | { dice: RoomDice }
+    | { diceId: string };
 
 export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActionResponse> {
     await ensureDatabaseSetup();
@@ -54,6 +65,15 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
             return { member: await handleUpdateNickname(payload.payload) };
         case 'message':
             return { message: await handleSendMessage(payload.payload) };
+        case 'roomDices':
+            return { roomId: payload.payload.roomId, dices: await handleListRoomDices(payload.payload) };
+        case 'createDice':
+            return { dice: await handleCreateRoomDice(payload.payload) };
+        case 'updateDice':
+            return { dice: await handleUpdateRoomDice(payload.payload) };
+        case 'deleteDice':
+            await handleDeleteRoomDice(payload.payload);
+            return { diceId: payload.payload.diceId };
         default:
             throw new Error('Unknown action');
     }
@@ -208,6 +228,49 @@ async function handleUpdateNickname(payload: { roomId: string; userId: string; n
     return mapMemberRecord(refreshed);
 }
 
+async function handleListRoomDices(payload: { roomId: string; userId: string }): Promise<RoomDice[]> {
+    const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
+    const rows = await listRoomDices(room.id);
+    return rows.map(mapRoomDiceRecord);
+}
+
+async function handleCreateRoomDice(payload: { roomId: string; userId: string; notation: string; description?: string | null }): Promise<RoomDice> {
+    const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
+    const notation = normalizeDiceNotation(payload.notation);
+    const description = normalizeDiceDescription(payload.description);
+    const created = await insertRoomDice({
+        room_id: room.id,
+        created_by: payload.userId,
+        notation,
+        description,
+    });
+    return mapRoomDiceRecord(created);
+}
+
+async function handleUpdateRoomDice(payload: { roomId: string; userId: string; diceId: string; notation: string; description?: string | null }): Promise<RoomDice> {
+    if (!payload.diceId) throw new Error('Dice id missing');
+    const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
+    const existing = await getRoomDice(payload.diceId);
+    if (!existing || existing.room_id !== room.id) {
+        throw new Error('Dice not found');
+    }
+    const notation = normalizeDiceNotation(payload.notation);
+    const description = normalizeDiceDescription(payload.description);
+    const updated = await updateRoomDiceRecord(payload.diceId, { notation, description });
+    if (!updated) throw new Error('Failed to update dice');
+    return mapRoomDiceRecord(updated);
+}
+
+async function handleDeleteRoomDice(payload: { roomId: string; userId: string; diceId: string }): Promise<void> {
+    if (!payload.diceId) throw new Error('Dice id missing');
+    const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
+    const existing = await getRoomDice(payload.diceId);
+    if (!existing || existing.room_id !== room.id) {
+        throw new Error('Dice not found');
+    }
+    await deleteRoomDice(payload.diceId);
+}
+
 const DEFAULT_DICE_LIMIT = 50;
 const MAX_DICE_LIMIT = 200;
 
@@ -278,6 +341,44 @@ async function generateUniqueInviteCode(): Promise<string> {
     throw new Error('Failed to generate invite code, please retry');
 }
 
+async function ensureRoomMembership(roomId: string, userId: string) {
+    if (!roomId) throw new Error('Room id missing');
+    if (!userId) throw new Error('User id missing');
+
+    const room = await getRoomById(roomId);
+    if (!room) throw new Error('Room not found');
+
+    const member = await getMember(roomId, userId);
+    if (!member) {
+        throw new Error('You must join this room to manage dice');
+    }
+
+    return { room, member };
+}
+
+function normalizeDiceNotation(value: string): string {
+    const trimmed = value?.trim().toLowerCase();
+    if (!trimmed) {
+        throw new Error('Dice notation is required');
+    }
+    if (trimmed.length > DICE_NOTATION_MAX_LENGTH) {
+        throw new Error(`Dice notation is too long (max ${DICE_NOTATION_MAX_LENGTH} characters)`);
+    }
+    if (!DICE_NOTATION_REGEX.test(trimmed)) {
+        throw new Error('Invalid dice notation');
+    }
+    return trimmed;
+}
+
+function normalizeDiceDescription(value?: string | null): string | null {
+    const trimmed = value?.trim() ?? '';
+    if (!trimmed) return null;
+    if (trimmed.length > DICE_DESCRIPTION_MAX_LENGTH) {
+        throw new Error(`Description is too long (max ${DICE_DESCRIPTION_MAX_LENGTH} characters)`);
+    }
+    return trimmed;
+}
+
 function mapRoomToSummary(room: DatabaseRoom): RoomDetails {
     const lastActivity = room.last_activity ?? room.updated_at ?? room.created_at ?? null;
     return {
@@ -289,6 +390,18 @@ function mapRoomToSummary(room: DatabaseRoom): RoomDetails {
         lastActivity,
         createdBy: room.created_by,
         createdAt: room.created_at ?? undefined
+    };
+}
+
+function mapRoomDiceRecord(record: DatabaseRoomDice): RoomDice {
+    return {
+        id: record.id,
+        roomId: record.room_id,
+        notation: record.notation,
+        description: record.description ?? undefined,
+        createdBy: record.created_by ?? undefined,
+        createdAt: record.created_at ?? undefined,
+        updatedAt: record.updated_at ?? undefined,
     };
 }
 

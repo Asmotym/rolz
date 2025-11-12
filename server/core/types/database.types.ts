@@ -67,3 +67,21 @@ export interface NewRoomMessage {
     dice_total?: number | null;
     dice_rolls?: number[];
 }
+
+export interface DatabaseRoomDice {
+    id: string;
+    room_id: string;
+    created_by?: string | null;
+    notation: string;
+    description?: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface NewRoomDice {
+    id?: string;
+    room_id: string;
+    created_by?: string | null;
+    notation: string;
+    description?: string | null;
+}

@@ -1,5 +1,5 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
-import type { RoomDetails, RoomMemberDetails, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomDetails, RoomMemberDetails, RoomMessage, RoomDice } from 'netlify/core/types/data.types';
 
 const ROOMS_ENDPOINT = getApiUrl('/rooms');
 
@@ -120,5 +120,36 @@ export class RoomsService {
             payload
         });
         return data.message;
+    }
+
+    static async fetchRoomDices(roomId: string, userId: string): Promise<RoomDice[]> {
+        const data = await request<{ roomId: string; dices: RoomDice[] }>({
+            action: 'roomDices',
+            payload: { roomId, userId }
+        });
+        return data.dices;
+    }
+
+    static async createRoomDice(payload: { roomId: string; userId: string; notation: string; description?: string | null }): Promise<RoomDice> {
+        const data = await request<{ dice: RoomDice }>({
+            action: 'createDice',
+            payload
+        });
+        return data.dice;
+    }
+
+    static async updateRoomDice(payload: { roomId: string; userId: string; diceId: string; notation: string; description?: string | null }): Promise<RoomDice> {
+        const data = await request<{ dice: RoomDice }>({
+            action: 'updateDice',
+            payload
+        });
+        return data.dice;
+    }
+
+    static async deleteRoomDice(payload: { roomId: string; userId: string; diceId: string }): Promise<void> {
+        await request<{ diceId: string }>({
+            action: 'deleteDice',
+            payload
+        });
     }
 }

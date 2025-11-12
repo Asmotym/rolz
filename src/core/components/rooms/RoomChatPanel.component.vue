@@ -197,7 +197,60 @@
 
           <div class="dice-section">
             <h3 class="text-subtitle-1 mb-2">🎲 Dice Roll</h3>
-            <DiceRollerComponent @rolled="forwardDiceRoll" />
+            <template v-if="!currentUser">
+              <v-alert type="info" variant="tonal" density="comfortable">
+                Sign in to manage and roll this room's custom dice.
+              </v-alert>
+            </template>
+            <template v-else>
+              <v-progress-linear
+                v-if="roomDicesLoading"
+                indeterminate
+                color="primary"
+                class="mb-3"
+              />
+              <v-alert
+                v-else-if="roomDicesError"
+                type="error"
+                variant="tonal"
+                density="comfortable"
+                class="mb-3"
+              >
+                {{ roomDicesError }}
+                <template #append>
+                  <v-btn variant="text" size="small" @click="ensureRoomDicesLoaded(true)">Retry</v-btn>
+                </template>
+              </v-alert>
+              <v-alert v-else-if="customDices.length === 0" type="info" variant="tonal" density="comfortable">
+                No room dice yet. Add one from Settings → Dices.
+              </v-alert>
+              <template v-else>
+                <div class="custom-dice-chip-group">
+                  <v-chip
+                    v-for="dice in customDices"
+                    :key="dice.id"
+                    variant="tonal"
+                    class="custom-dice-chip"
+                    size="large"
+                    @click="rollCustomDice(dice)"
+                  >
+                    <div class="custom-dice-chip__content">
+                      <span class="custom-dice-chip__notation">{{ dice.notation }}</span>
+                      <span v-if="dice.description" class="custom-dice-chip__description">{{ dice.description }}</span>
+                    </div>
+                  </v-chip>
+                </div>
+              </template>
+            </template>
+            <v-alert
+              v-if="diceRollError"
+              type="error"
+              variant="tonal"
+              density="comfortable"
+              class="mt-3"
+            >
+              {{ diceRollError }}
+            </v-alert>
           </div>
         </div>
       </v-card-text>
@@ -215,7 +268,7 @@
   <v-dialog v-model="settingsDialog" max-width="520">
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">
-        <span>Room settings</span>
+        <span>Settings</span>
         <v-btn icon="mdi-close" variant="text" @click="closeSettingsPanel" />
       </v-card-title>
       <v-divider />
@@ -229,79 +282,247 @@
         >
           {{ settingsFeedback.message }}
         </v-alert>
+        <v-tabs
+          v-model="settingsTab"
+          density="comfortable"
+          align-tabs="start"
+          class="mb-4"
+        >
+          <v-tab value="room">Room</v-tab>
+          <v-tab value="dices">Dices</v-tab>
+        </v-tabs>
 
-        <section class="mb-6">
-          <div class="text-subtitle-2 mb-2">Room details</div>
-          <p class="text-caption text-medium-emphasis mb-3">
-            {{ isRoomCreator ? 'You can rename this room for everyone.' : 'Only the creator can rename this room.' }}
-          </p>
-          <v-text-field
-            v-model="roomNameInput"
-            label="Room name"
-            variant="outlined"
-            density="comfortable"
-            :counter="80"
-            maxlength="80"
-            :disabled="!isRoomCreator || settingsSaving"
-            :error-messages="roomNameError ? [roomNameError] : []"
-            hint="Max 80 characters"
-            persistent-hint
-          />
-        </section>
+        <v-window v-model="settingsTab">
+          <v-window-item value="room">
+            <section class="mb-6">
+              <div class="text-subtitle-2 mb-2">Room details</div>
+              <p class="text-caption text-medium-emphasis mb-3">
+                {{ isRoomCreator ? 'You can rename this room for everyone.' : 'Only the creator can rename this room.' }}
+              </p>
+              <v-text-field
+                v-model="roomNameInput"
+                label="Room name"
+                variant="outlined"
+                density="comfortable"
+                :counter="80"
+                maxlength="80"
+                :disabled="!isRoomCreator || settingsSaving"
+                :error-messages="roomNameError ? [roomNameError] : []"
+                hint="Max 80 characters"
+                persistent-hint
+              />
+            </section>
 
-        <v-divider class="my-4" />
+            <v-divider class="my-4" />
 
-        <section>
-          <div class="text-subtitle-2 mb-2">My nickname</div>
-          <p class="text-caption text-medium-emphasis mb-3">
-            Set a display nickname for this room only. Leave blank to use your Discord username.
-          </p>
-          <v-alert
-            v-if="memberSettingsError"
-            type="error"
-            variant="tonal"
-            density="comfortable"
-            class="mb-3"
-          >
-            {{ memberSettingsError }}
-            <v-btn
-              variant="text"
-              size="small"
-              class="ml-2"
-              @click="ensureMemberSettingsLoaded(true)"
-            >
-              Retry
-            </v-btn>
-          </v-alert>
-          <v-progress-linear
-            v-if="memberSettingsLoading"
-            indeterminate
-            color="primary"
-            class="mb-3"
-          />
-          <v-text-field
-            v-model="nicknameInput"
-            label="Nickname"
-            variant="outlined"
-            density="comfortable"
-            :counter="40"
-            maxlength="40"
-            :disabled="memberSettingsLoading || settingsSaving"
-            :error-messages="nicknameError ? [nicknameError] : []"
-            hint="Max 40 characters"
-            persistent-hint
-          />
-          <div class="text-caption text-medium-emphasis mb-3">
-            Preview: {{ nicknamePreview }}
-          </div>
-        </section>
+            <section>
+              <div class="text-subtitle-2 mb-2">My nickname</div>
+              <p class="text-caption text-medium-emphasis mb-3">
+                Set a display nickname for this room only. Leave blank to use your Discord username.
+              </p>
+              <v-alert
+                v-if="memberSettingsError"
+                type="error"
+                variant="tonal"
+                density="comfortable"
+                class="mb-3"
+              >
+                {{ memberSettingsError }}
+                <v-btn
+                  variant="text"
+                  size="small"
+                  class="ml-2"
+                  @click="ensureMemberSettingsLoaded(true)"
+                >
+                  Retry
+                </v-btn>
+              </v-alert>
+              <v-progress-linear
+                v-if="memberSettingsLoading"
+                indeterminate
+                color="primary"
+                class="mb-3"
+              />
+              <v-text-field
+                v-model="nicknameInput"
+                label="Nickname"
+                variant="outlined"
+                density="comfortable"
+                :counter="40"
+                maxlength="40"
+                :disabled="memberSettingsLoading || settingsSaving"
+                :error-messages="nicknameError ? [nicknameError] : []"
+                hint="Max 40 characters"
+                persistent-hint
+              />
+              <div class="text-caption text-medium-emphasis mb-3">
+                Preview: {{ nicknamePreview }}
+              </div>
+            </section>
+          </v-window-item>
+
+          <v-window-item value="dices">
+            <section class="mb-6">
+              <div class="text-subtitle-2 mb-2">Create a custom dice</div>
+              <template v-if="!currentUser">
+                <v-alert type="info" variant="tonal" density="comfortable">
+                  Sign in to manage this room's dice.
+                </v-alert>
+              </template>
+              <template v-else>
+                <p class="text-caption text-medium-emphasis mb-3">
+                  Provide a dice notation (e.g., 1d20+3) and optionally a description to remember what it is for.
+                </p>
+                <v-text-field
+                  v-model="newDiceNotation"
+                  label="Dice notation"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="e.g., 2d6+1"
+                  :disabled="diceMutationLoading"
+                  :error-messages="newDiceError ? [newDiceError] : []"
+                />
+                <v-text-field
+                  v-model="newDiceDescription"
+                  label="Description (optional)"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="e.g., Longsword attack"
+                  :disabled="diceMutationLoading"
+                  class="mt-3"
+                />
+                <v-alert
+                  v-if="diceManagementError"
+                  type="error"
+                  variant="tonal"
+                  density="comfortable"
+                  class="mt-3"
+                >
+                  {{ diceManagementError }}
+                </v-alert>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <v-btn
+                      color="primary"
+                      :disabled="diceMutationLoading"
+                      :loading="diceMutationLoading"
+                      @click="addCustomDice"
+                    >
+                    Add dice
+                  </v-btn>
+                  <v-btn variant="text" :disabled="diceMutationLoading" @click="clearNewDiceForm">
+                    Clear
+                  </v-btn>
+                </div>
+              </template>
+            </section>
+
+            <section>
+              <div class="text-subtitle-2 mb-2">My dice</div>
+              <template v-if="!currentUser">
+                <p class="text-caption text-medium-emphasis">
+                  Room dice are tied to your account access. Sign in to view them.
+                </p>
+              </template>
+              <template v-else>
+                <v-progress-linear
+                  v-if="roomDicesLoading"
+                  indeterminate
+                  color="primary"
+                  class="mb-3"
+                />
+                <v-alert
+                  v-else-if="roomDicesError"
+                  type="error"
+                  variant="tonal"
+                  density="comfortable"
+                  class="mb-3"
+                >
+                  {{ roomDicesError }}
+                  <template #append>
+                    <v-btn variant="text" size="small" @click="ensureRoomDicesLoaded(true)">Retry</v-btn>
+                  </template>
+                </v-alert>
+                <template v-else-if="customDices.length === 0">
+                  <p class="text-caption text-medium-emphasis">
+                    No custom dice yet. Use the form above to add one.
+                  </p>
+                </template>
+                <template v-else>
+                  <div class="custom-dice-list">
+                    <v-card
+                      v-for="dice in customDices"
+                      :key="dice.id"
+                      variant="tonal"
+                      class="custom-dice-card mb-3"
+                    >
+                      <div v-if="editingDiceId !== dice.id" class="custom-dice-card__content">
+                        <div>
+                          <div class="text-subtitle-2">{{ dice.notation }}</div>
+                          <div v-if="dice.description" class="text-body-2 text-medium-emphasis">
+                            {{ dice.description }}
+                          </div>
+                        </div>
+                        <div class="custom-dice-card__actions">
+                          <v-btn
+                            icon="mdi-pencil"
+                            variant="text"
+                            size="small"
+                            :disabled="diceMutationLoading"
+                            @click="startEditingDice(dice)"
+                          />
+                          <v-btn
+                            icon="mdi-delete"
+                            variant="text"
+                            size="small"
+                            color="error"
+                            :disabled="diceMutationLoading"
+                            @click="deleteCustomDice(dice.id)"
+                          />
+                        </div>
+                      </div>
+                      <div v-else>
+                        <v-text-field
+                          v-model="editDiceNotation"
+                          label="Dice notation"
+                          variant="outlined"
+                          density="comfortable"
+                          :disabled="diceMutationLoading"
+                          :error-messages="editDiceError ? [editDiceError] : []"
+                        />
+                        <v-text-field
+                          v-model="editDiceDescription"
+                          label="Description (optional)"
+                          variant="outlined"
+                          density="comfortable"
+                          class="mt-3"
+                          :disabled="diceMutationLoading"
+                        />
+                        <div class="d-flex justify-end gap-2 mt-3">
+                          <v-btn variant="text" :disabled="diceMutationLoading" @click="cancelEditingDice">Cancel</v-btn>
+                          <v-btn
+                            color="primary"
+                            :disabled="diceMutationLoading"
+                            :loading="diceMutationLoading"
+                            @click="saveEditingDice"
+                          >
+                            Save
+                          </v-btn>
+                        </div>
+                      </div>
+                    </v-card>
+                  </div>
+                </template>
+              </template>
+            </section>
+          </v-window-item>
+        </v-window>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn variant="text" @click="closeSettingsPanel">Close</v-btn>
         <v-btn
           color="primary"
-          :disabled="settingsSaving || !hasPendingChanges"
+          :disabled="settingsTab !== 'room' || settingsSaving || !hasPendingChanges"
           :loading="settingsSaving"
           @click="saveSettings"
         >
@@ -314,10 +535,9 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-import DiceRollerComponent from 'core/components/DiceRoller.component.vue';
-import type { RoomDetails, RoomMemberDetails, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomDetails, RoomMemberDetails, RoomMessage, RoomDice } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
-import type { DiceRoll } from 'core/utils/dice.utils';
+import { parseDiceNotation, rollDiceNotation, type DiceRoll } from 'core/utils/dice.utils';
 import { RoomsService } from 'core/services/rooms.service';
 import { useRoomsStore } from 'core/stores/rooms.store';
 
@@ -328,6 +548,9 @@ const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
 const roomsStore = useRoomsStore();
+
+type SettingsTab = 'room' | 'dices';
+type CustomDice = RoomDice;
 
 function loadInitialWidth() {
   if (typeof window === 'undefined') return DEFAULT_CHAT_PERCENT;
@@ -372,6 +595,21 @@ const memberSettingsError = ref<string | null>(null);
 const memberSettingsLoadedRoomId = ref<string | null>(null);
 const settingsSaving = ref(false);
 const settingsFeedback = ref<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+const settingsTab = ref<SettingsTab>('room');
+const customDices = ref<CustomDice[]>([]);
+const newDiceNotation = ref('');
+const newDiceDescription = ref('');
+const newDiceError = ref<string | null>(null);
+const editingDiceId = ref<string | null>(null);
+const editDiceNotation = ref('');
+const editDiceDescription = ref('');
+const editDiceError = ref<string | null>(null);
+const diceRollError = ref<string | null>(null);
+const roomDicesLoading = ref(false);
+const roomDicesError = ref<string | null>(null);
+const roomDicesLoadedRoomId = ref<string | null>(null);
+const diceMutationLoading = ref(false);
+const diceManagementError = ref<string | null>(null);
 let settingsFeedbackTimer: number | null = null;
 let resizeRaf: number | null = null;
 let pendingClientX: number | null = null;
@@ -381,6 +619,7 @@ const inviteLink = computed(() => {
   if (typeof window === 'undefined') return '';
   return `${window.location.origin}/rooms/${props.room.id}?invite=${props.room.inviteCode}`;
 });
+
 
 const chatLayoutStyles = computed(() => ({
   '--chat-panel-width': `${chatWidth.value}%`,
@@ -430,11 +669,23 @@ watch(membersMenu, async (open) => {
 
 watch(settingsDialog, async (open) => {
   if (open) {
+    settingsTab.value = 'room';
     await initializeSettingsPanel();
   } else {
     clearSettingsFeedback();
   }
 });
+
+watch(
+  () => ({ roomId: props.room?.id, userId: props.currentUser?.id }),
+  async ({ roomId, userId }) => {
+    resetCustomDiceState();
+    if (roomId && userId) {
+      await ensureRoomDicesLoaded(true);
+    }
+  },
+  { immediate: true }
+);
 
 function scrollToBottom() {
   if (!messageContainer.value) return;
@@ -447,10 +698,6 @@ function sendMessage() {
   messageText.value = '';
 }
 
-function forwardDiceRoll(roll: DiceRoll) {
-  emit('send-dice', roll);
-}
-
 async function copyInviteLink() {
   if (!inviteLink.value) return;
   try {
@@ -459,6 +706,166 @@ async function copyInviteLink() {
     console.error('Unable to copy invite link', error);
   }
 }
+
+async function ensureRoomDicesLoaded(force = false) {
+  if (!props.room || !props.currentUser) return;
+  if (!force && roomDicesLoadedRoomId.value === props.room.id) return;
+  roomDicesLoading.value = true;
+  roomDicesError.value = null;
+  try {
+    const dices = await RoomsService.fetchRoomDices(props.room.id, props.currentUser.id);
+    customDices.value = dices;
+    roomDicesLoadedRoomId.value = props.room.id;
+  } catch (error) {
+    roomDicesError.value = error instanceof Error ? error.message : 'Unable to load room dice';
+  } finally {
+    roomDicesLoading.value = false;
+  }
+}
+
+function resetCustomDiceState() {
+  customDices.value = [];
+  newDiceNotation.value = '';
+  newDiceDescription.value = '';
+  newDiceError.value = null;
+  diceRollError.value = null;
+  roomDicesLoadedRoomId.value = null;
+  roomDicesError.value = null;
+  roomDicesLoading.value = false;
+  diceMutationLoading.value = false;
+  diceManagementError.value = null;
+  cancelEditingDice();
+}
+
+function clearNewDiceForm() {
+  newDiceNotation.value = '';
+  newDiceDescription.value = '';
+  newDiceError.value = null;
+  diceManagementError.value = null;
+}
+
+async function addCustomDice() {
+  if (!props.room || !props.currentUser) {
+    newDiceError.value = 'You need to be in a room to add dice.';
+    return;
+  }
+  const notation = newDiceNotation.value.trim().toLowerCase();
+  const description = newDiceDescription.value.trim();
+  if (!notation) {
+    newDiceError.value = 'Dice notation is required.';
+    return;
+  }
+  try {
+    parseDiceNotation(notation);
+  } catch {
+    newDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3).';
+    return;
+  }
+  diceMutationLoading.value = true;
+  diceManagementError.value = null;
+  try {
+    const created = await RoomsService.createRoomDice({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      notation,
+      description: description || undefined,
+    });
+    customDices.value = [...customDices.value, created];
+    roomDicesLoadedRoomId.value = props.room.id;
+    clearNewDiceForm();
+  } catch (error) {
+    diceManagementError.value = error instanceof Error ? error.message : 'Unable to add dice.';
+  } finally {
+    diceMutationLoading.value = false;
+  }
+}
+
+function startEditingDice(dice: CustomDice) {
+  editingDiceId.value = dice.id;
+  editDiceNotation.value = dice.notation;
+  editDiceDescription.value = dice.description ?? '';
+  editDiceError.value = null;
+  diceManagementError.value = null;
+}
+
+function cancelEditingDice() {
+  editingDiceId.value = null;
+  editDiceNotation.value = '';
+  editDiceDescription.value = '';
+  editDiceError.value = null;
+  diceManagementError.value = null;
+}
+
+async function saveEditingDice() {
+  if (!editingDiceId.value || !props.room || !props.currentUser) return;
+  const notation = editDiceNotation.value.trim().toLowerCase();
+  const description = editDiceDescription.value.trim();
+  if (!notation) {
+    editDiceError.value = 'Dice notation is required.';
+    return;
+  }
+  try {
+    parseDiceNotation(notation);
+  } catch {
+    editDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3).';
+    return;
+  }
+  diceMutationLoading.value = true;
+  diceManagementError.value = null;
+  try {
+    const updated = await RoomsService.updateRoomDice({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      diceId: editingDiceId.value,
+      notation,
+      description: description || undefined,
+    });
+    customDices.value = customDices.value.map((dice) => (dice.id === updated.id ? updated : dice));
+    cancelEditingDice();
+  } catch (error) {
+    diceManagementError.value = error instanceof Error ? error.message : 'Unable to update dice.';
+  } finally {
+    diceMutationLoading.value = false;
+  }
+}
+
+async function deleteCustomDice(id: string) {
+  if (!props.room || !props.currentUser) return;
+  if (typeof window !== 'undefined') {
+    const confirmed = window.confirm('Delete this dice?');
+    if (!confirmed) {
+      return;
+    }
+  }
+  diceMutationLoading.value = true;
+  diceManagementError.value = null;
+  try {
+    await RoomsService.deleteRoomDice({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      diceId: id,
+    });
+    customDices.value = customDices.value.filter((dice) => dice.id !== id);
+    if (editingDiceId.value === id) {
+      cancelEditingDice();
+    }
+  } catch (error) {
+    diceManagementError.value = error instanceof Error ? error.message : 'Unable to delete dice.';
+  } finally {
+    diceMutationLoading.value = false;
+  }
+}
+
+function rollCustomDice(dice: CustomDice) {
+  diceRollError.value = null;
+  try {
+    const roll = rollDiceNotation(dice.notation, {}, dice.description ?? undefined);
+    emit('send-dice', roll);
+  } catch (error) {
+    diceRollError.value = error instanceof Error ? error.message : 'Unable to roll this dice.';
+  }
+}
+
 
 function formatDisplayName(username?: string | null, nickname?: string | null, fallback = 'Unknown Adventurer') {
   const hasUsername = typeof username === 'string' && username.trim().length > 0;
@@ -478,6 +885,7 @@ function openSettingsPanel() {
 
 function closeSettingsPanel() {
   settingsDialog.value = false;
+  settingsTab.value = 'room';
 }
 
 async function initializeSettingsPanel() {
@@ -842,6 +1250,56 @@ onUnmounted(() => {
 .dice-section :deep(.v-card) {
   width: 100%;
   box-sizing: border-box;
+}
+
+.custom-dice-chip-group {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.custom-dice-chip {
+  cursor: pointer;
+  text-transform: none;
+  display: flex;
+  text-align: left;
+}
+
+.custom-dice-chip__content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  line-height: 1.2;
+  gap: 4px;
+}
+
+.custom-dice-chip__notation {
+  font-weight: 600;
+}
+
+.custom-dice-chip__description {
+  font-size: 0.78rem;
+  opacity: 0.75;
+  margin-top: 2px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.custom-dice-card {
+  padding: 16px;
+}
+
+.custom-dice-card__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.custom-dice-card__actions {
+  display: flex;
+  gap: 4px;
 }
 
 .resize-handle {

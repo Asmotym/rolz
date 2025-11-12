@@ -37,3 +37,13 @@ export interface RoomMessage {
     diceRolls?: number[] | null;
     createdAt: string;
 }
+
+export interface RoomDice {
+    id: string;
+    roomId: string;
+    notation: string;
+    description?: string | null;
+    createdBy?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+}

@@ -1,0 +1,55 @@
+import { randomUUID } from 'crypto';
+import { execute, query } from '../client';
+import type { DatabaseRoomDice, NewRoomDice } from '../../types/database.types';
+
+export async function listRoomDices(roomId: string): Promise<DatabaseRoomDice[]> {
+    return query<DatabaseRoomDice[]>(
+        `SELECT * FROM room_dices WHERE room_id = ? ORDER BY created_at ASC`,
+        [roomId]
+    );
+}
+
+export async function getRoomDice(id: string): Promise<DatabaseRoomDice | undefined> {
+    const rows = await query<DatabaseRoomDice[]>(
+        `SELECT * FROM room_dices WHERE id = ? LIMIT 1`,
+        [id]
+    );
+    return rows[0];
+}
+
+export async function insertRoomDice(payload: NewRoomDice): Promise<DatabaseRoomDice> {
+    const id = payload.id ?? randomUUID();
+
+    await execute(
+        `INSERT INTO room_dices (id, room_id, created_by, notation, description)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+            id,
+            payload.room_id,
+            payload.created_by ?? null,
+            payload.notation,
+            payload.description ?? null
+        ]
+    );
+
+    const created = await getRoomDice(id);
+    if (!created) {
+        throw new Error('Failed to create dice');
+    }
+    return created;
+}
+
+export async function updateRoomDice(
+    id: string,
+    payload: { notation: string; description?: string | null }
+): Promise<DatabaseRoomDice | undefined> {
+    await execute(
+        `UPDATE room_dices SET notation = ?, description = ? WHERE id = ? LIMIT 1`,
+        [payload.notation, payload.description ?? null, id]
+    );
+    return getRoomDice(id);
+}
+
+export async function deleteRoomDice(id: string): Promise<void> {
+    await execute(`DELETE FROM room_dices WHERE id = ? LIMIT 1`, [id]);
+}
