@@ -9,9 +9,86 @@
           </small>
         </div>
         <div class="d-flex align-center gap-2">
-          <v-chip variant="tonal" color="secondary">
-            {{ room.memberCount ?? 0 }} members
-          </v-chip>
+          <v-menu
+            v-model="membersMenu"
+            :close-on-content-click="false"
+            location="bottom"
+            offset="8"
+            max-width="420"
+          >
+            <template #activator="{ props: menuActivatorProps }">
+              <v-chip
+                v-bind="menuActivatorProps"
+                variant="tonal"
+                color="secondary"
+                class="members-chip"
+                :append-icon="membersMenu ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                @click="handleMembersChipClick"
+              >
+                {{ room.memberCount ?? 0 }} members
+              </v-chip>
+            </template>
+
+            <v-card class="members-popover pa-3" elevation="8">
+              <div class="members-popover__header">
+                <div>
+                  <div class="text-subtitle-2">Room members</div>
+                  <small class="text-medium-emphasis">{{ members.length }} total</small>
+                </div>
+                <v-btn
+                  icon="mdi-refresh"
+                  variant="text"
+                  size="small"
+                  :disabled="membersLoading"
+                  :loading="membersLoading"
+                  @click="refreshMembers"
+                />
+              </div>
+
+              <template v-if="membersError">
+                <v-alert
+                  type="error"
+                  variant="tonal"
+                  density="comfortable"
+                  class="mb-3"
+                >
+                  {{ membersError }}
+                </v-alert>
+              </template>
+              <template v-else>
+                <v-progress-linear v-if="membersLoading" indeterminate color="secondary" class="mb-3" />
+
+                <v-list v-else-if="members.length > 0" density="comfortable" class="members-popover__list">
+                  <v-list-item
+                    v-for="member in members"
+                    :key="member.userId"
+                    class="members-popover__item"
+                  >
+                    <template #prepend>
+                      <v-avatar size="36" class="mr-3">
+                        <template v-if="member.avatar">
+                          <v-img :src="member.avatar" :alt="member.username || member.userId" />
+                        </template>
+                        <template v-else>
+                          <v-icon>mdi-account</v-icon>
+                        </template>
+                      </v-avatar>
+                    </template>
+                    <v-list-item-title>{{ member.username || 'Unknown Adventurer' }}</v-list-item-title>
+                    <v-list-item-subtitle class="text-caption">
+                      <span>Joined {{ formatTimestamp(member.joinedAt) }}</span>
+                      <span class="dot-separator" aria-hidden="true">•</span>
+                      <span>Last seen {{ formatTimestamp(member.lastSeen) }}</span>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+
+                <div v-else class="text-medium-emphasis text-caption">
+                  No members yet. Invite a friend to get started.
+                </div>
+              </template>
+            </v-card>
+          </v-menu>
           <v-btn
             icon="mdi-content-copy"
             variant="text"
@@ -133,9 +210,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import DiceRollerComponent from 'core/components/DiceRoller.component.vue';
-import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomDetails, RoomMemberDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import type { DiceRoll } from 'core/utils/dice.utils';
+import { RoomsService } from 'core/services/rooms.service';
 
 const RESIZE_STORAGE_KEY = 'rolz-room-chat-width';
 const DEFAULT_CHAT_PERCENT = 65;
@@ -171,6 +249,11 @@ const chatLayout = ref<HTMLElement | null>(null);
 const chatWidth = ref(loadInitialWidth());
 const isResizing = ref(false);
 const layoutBounds = ref<{ left: number; width: number } | null>(null);
+const membersMenu = ref(false);
+const members = ref<RoomMemberDetails[]>([]);
+const membersLoading = ref(false);
+const membersError = ref<string | null>(null);
+const membersLoadedRoomId = ref<string | null>(null);
 let resizeRaf: number | null = null;
 let pendingClientX: number | null = null;
 
@@ -190,6 +273,7 @@ watch(
   () => {
     messageText.value = '';
     scrollToBottom();
+    resetMembersState();
   }
 );
 
@@ -197,6 +281,12 @@ watch(
   () => props.messages.length,
   () => nextTick(scrollToBottom)
 );
+
+watch(membersMenu, async (open) => {
+  if (open) {
+    await ensureMembersLoaded();
+  }
+});
 
 function scrollToBottom() {
   if (!messageContainer.value) return;
@@ -222,7 +312,56 @@ async function copyInviteLink() {
   }
 }
 
-function formatTimestamp(value: string) {
+async function handleMembersChipClick() {
+  if (!props.room) return;
+  if (!membersMenu.value) {
+    await ensureMembersLoaded();
+  }
+}
+
+async function refreshMembers() {
+  if (!props.room) return;
+  await ensureMembersLoaded(true);
+}
+
+async function ensureMembersLoaded(force = false) {
+  if (!props.room) return;
+  if (!force && membersLoadedRoomId.value === props.room.id && members.value.length > 0) {
+    return;
+  }
+  await fetchMembers(props.room.id);
+}
+
+async function fetchMembers(roomId: string) {
+  membersLoading.value = true;
+  membersError.value = null;
+  try {
+    const list = await RoomsService.fetchMembers(roomId);
+    if (props.room?.id === roomId) {
+      members.value = list;
+      membersLoadedRoomId.value = roomId;
+    }
+  } catch (error) {
+    if (props.room?.id === roomId) {
+      membersError.value = error instanceof Error ? error.message : 'Unable to load members';
+    }
+  } finally {
+    if (props.room?.id === roomId) {
+      membersLoading.value = false;
+    }
+  }
+}
+
+function resetMembersState() {
+  membersMenu.value = false;
+  members.value = [];
+  membersError.value = null;
+  membersLoadedRoomId.value = null;
+  membersLoading.value = false;
+}
+
+function formatTimestamp(value?: string | null) {
+  if (!value) return 'Unknown date';
   try {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: 'short',
@@ -337,6 +476,36 @@ onUnmounted(() => {
 <style scoped>
 .room-chat-panel {
   min-height: 600px;
+}
+
+.members-chip {
+  cursor: pointer;
+}
+
+.members-popover {
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.members-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.members-popover__list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.members-popover__item:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dot-separator {
+  margin: 0 6px;
+  opacity: 0.6;
 }
 
 .messages-container {

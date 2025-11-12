@@ -12,6 +12,14 @@ export interface RoomDetails extends RoomSummary {
     createdAt?: string;
 }
 
+export interface RoomMemberDetails {
+    userId: string;
+    username?: string;
+    avatar?: string;
+    joinedAt?: string;
+    lastSeen?: string;
+}
+
 export type RoomMessageType = 'text' | 'dice';
 
 export interface RoomMessage {

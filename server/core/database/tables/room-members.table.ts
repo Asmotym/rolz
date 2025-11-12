@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { execute, query } from '../client';
-import type { DatabaseRoomMember } from '../../types/database.types';
+import type { DatabaseRoomMemberWithUser } from '../../types/database.types';
 
 export async function upsertMember(roomId: string, userId: string): Promise<void> {
     await execute(
@@ -19,9 +19,13 @@ export async function countMembers(roomId: string): Promise<number> {
     return Number(rows[0]?.count ?? 0);
 }
 
-export async function getMembers(roomId: string): Promise<DatabaseRoomMember[]> {
-    return query<DatabaseRoomMember[]>(
-        'SELECT * FROM room_members WHERE room_id = ?',
+export async function listMembers(roomId: string): Promise<DatabaseRoomMemberWithUser[]> {
+    return query<DatabaseRoomMemberWithUser[]>(
+        `SELECT rm.*, u.username, u.avatar
+         FROM room_members rm
+         LEFT JOIN users u ON u.discord_user_id = rm.user_id
+         WHERE rm.room_id = ?
+         ORDER BY rm.joined_at ASC`,
         [roomId]
     );
 }

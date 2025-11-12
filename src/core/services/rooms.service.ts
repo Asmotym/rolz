@@ -1,5 +1,5 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
-import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomDetails, RoomMemberDetails, RoomMessage } from 'netlify/core/types/data.types';
 
 const ROOMS_ENDPOINT = getApiUrl('/rooms');
 
@@ -80,6 +80,14 @@ export class RoomsService {
             }
         });
         return data.messages;
+    }
+
+    static async fetchMembers(roomId: string): Promise<RoomMemberDetails[]> {
+        const data = await request<{ members: RoomMemberDetails[] }>({
+            action: 'members',
+            payload: { roomId }
+        });
+        return data.members;
     }
 
     static async sendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } }): Promise<RoomMessage> {

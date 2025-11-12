@@ -20,6 +20,21 @@ mysql_pid=""
 backend_pid=""
 frontend_pid=""
 
+is_truthy() {
+  local value="${1:-}"
+  case "${value,,}" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+DEV_MODE=false
+if is_truthy "${ROLZ_DEV_MODE:-}"; then
+  DEV_MODE=true
+elif [[ "${NODE_ENV:-}" != "" ]] && [[ "${NODE_ENV,,}" == "development" ]]; then
+  DEV_MODE=true
+fi
+
 mysql_exec() {
   mysql --protocol=socket --socket="$MYSQL_SOCKET" --user=root --skip-password --execute "$1"
 }
@@ -90,10 +105,31 @@ export FRONTEND_URL="${FRONTEND_URL:-http://localhost:${FRONTEND_PORT}}"
 export VITE_BACKEND_URL="${VITE_BACKEND_URL:-http://localhost:${BACKEND_PORT}}"
 export HOST="${HOST:-0.0.0.0}"
 
-node dist-server/index.js &
-backend_pid=$!
+if [[ "$DEV_MODE" == "true" ]]; then
+  export NODE_ENV=development
+else
+  export NODE_ENV="${NODE_ENV:-production}"
+fi
 
-npm run preview -- --host 0.0.0.0 --port "$FRONTEND_PORT" &
-frontend_pid=$!
+start_backend() {
+  if [[ "$DEV_MODE" == "true" ]]; then
+    npm run server:dev &
+  else
+    node dist-server/index.js &
+  fi
+  backend_pid=$!
+}
+
+start_frontend() {
+  if [[ "$DEV_MODE" == "true" ]]; then
+    npm run dev -- --host 0.0.0.0 --port "$FRONTEND_PORT" &
+  else
+    npm run preview -- --host 0.0.0.0 --port "$FRONTEND_PORT" &
+  fi
+  frontend_pid=$!
+}
+
+start_backend
+start_frontend
 
 wait -n

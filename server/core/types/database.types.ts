@@ -36,6 +36,11 @@ export interface DatabaseRoomMember {
     last_seen?: string;
 }
 
+export interface DatabaseRoomMemberWithUser extends DatabaseRoomMember {
+    username?: string | null;
+    avatar?: string | null;
+}
+
 export interface DatabaseRoomMessage {
     id: string;
     room_id: string;

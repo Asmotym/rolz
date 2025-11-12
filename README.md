@@ -52,6 +52,10 @@ docker run --rm -it \
 
 Environment variables such as `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, `BACKEND_PORT`, and `FRONTEND_PORT` can be overridden at `docker run` time. Set `DATABASE_SSL=false` for the bundled MySQL instance; hosted providers should use `true`. Persistent database storage can be mapped by binding `/var/lib/mysql` to a local volume.
 
+### Live reload inside Docker
+
+`docker compose up --build` now gives you a full dev stack without rebuilding the image for every edit. The compose file bind-mounts the source tree and sets `ROLZ_DEV_MODE=true` so the entrypoint runs `npm run server:dev` and `npm run dev -- --host 0.0.0.0`. Any change under `server/`, `src/`, or the Vite/TypeScript configs is picked up instantly. If you want the previous production-style behavior, set `ROLZ_DEV_MODE=false` (or unset it) before starting Compose.
+
 ### Make targets
 
 The included `Makefile` wraps common Docker commands:

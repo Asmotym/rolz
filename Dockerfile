@@ -34,6 +34,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package*.json ./
 COPY tsconfig*.json ./
 COPY vite.config.ts ./
+COPY index.html ./
+COPY src ./src
+COPY server ./server
+COPY public ./public
+COPY tsup.config.ts ./
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server
 COPY docker/entrypoint.sh ./docker/entrypoint.sh

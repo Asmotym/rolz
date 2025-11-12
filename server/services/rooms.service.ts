@@ -1,10 +1,10 @@
 import { ensureDatabaseSetup } from '../core/database/schema';
 import { insertRoom, listRooms, getRoomByInviteCode, getRoomById, touchRoom } from '../core/database/tables/rooms.table';
-import { upsertMember, countMembers } from '../core/database/tables/room-members.table';
+import { upsertMember, countMembers, listMembers } from '../core/database/tables/room-members.table';
 import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
 import { getUser } from '../core/database/tables/users.table';
-import type { DatabaseRoom, DatabaseRoomMessage } from '../core/types/database.types';
-import type { RoomDetails, RoomMessage } from '../core/types/data.types';
+import type { DatabaseRoom, DatabaseRoomMemberWithUser, DatabaseRoomMessage } from '../core/types/database.types';
+import type { RoomDetails, RoomMemberDetails, RoomMessage } from '../core/types/data.types';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
 
@@ -13,12 +13,14 @@ export type RoomsAction =
     | { action: 'create'; payload: { name: string; password?: string | null; userId: string } }
     | { action: 'join'; payload: { inviteCode: string; password?: string | null; userId: string } }
     | { action: 'messages'; payload: { roomId: string; limit?: number; since?: string } }
+    | { action: 'members'; payload: { roomId: string } }
     | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } } };
 
 export type RoomsActionResponse =
     | { rooms: RoomDetails[] }
     | { room: RoomDetails }
     | { roomId: string; messages: RoomMessage[] }
+    | { roomId: string; members: RoomMemberDetails[] }
     | { message: RoomMessage };
 
 export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActionResponse> {
@@ -35,6 +37,8 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
             return { room: await handleJoinRoom(payload.payload) };
         case 'messages':
             return { roomId: payload.payload.roomId, messages: await handleListMessages(payload.payload) };
+        case 'members':
+            return { roomId: payload.payload.roomId, members: await handleListMembers(payload.payload) };
         case 'message':
             return { message: await handleSendMessage(payload.payload) };
         default:
@@ -111,6 +115,15 @@ async function handleListMessages(payload: { roomId: string; limit?: number; sin
 
     const rows = await listMessages(payload.roomId, { limit: payload.limit, since: payload.since });
     return rows.map(mapMessageRecord);
+}
+
+async function handleListMembers(payload: { roomId: string }): Promise<RoomMemberDetails[]> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+
+    const rows = await listMembers(payload.roomId);
+    return rows.map(mapMemberRecord);
 }
 
 const DEFAULT_DICE_LIMIT = 50;
@@ -226,5 +239,15 @@ function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
         diceTotal,
         diceRolls,
         createdAt: record.created_at
+    };
+}
+
+function mapMemberRecord(record: DatabaseRoomMemberWithUser): RoomMemberDetails {
+    return {
+        userId: record.user_id,
+        username: record.username ?? undefined,
+        avatar: record.avatar ?? undefined,
+        joinedAt: record.joined_at ?? undefined,
+        lastSeen: record.last_seen ?? undefined
     };
 }
