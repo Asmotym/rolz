@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5D2EE6"/>
+      <stop offset="100%" stop-color="#2D168C"/>
+    </linearGradient>
+    <linearGradient id="grad-edges" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#C7B8FF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#E3DCFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#07040F"/>
+  <polygon points="32 6 50.5 12.5 58 30 50.5 47.5 32 54 13.5 47.5 6 30 13.5 12.5" fill="url(#grad-body)" stroke="#E6DBFF" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="32 11 47 16 52 30 47 44 32 49 17 44 12 30 17 16" fill="none" stroke="url(#grad-edges)" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M32 18 L40 24 L40 40 L32 46 L24 40 L24 24 Z" fill="none" stroke="#FDFBFF" stroke-width="1.2" stroke-linejoin="round"/>
+  <text x="32" y="33.5" font-family="Trebuchet MS, Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#FFFFFF" stroke="#120736" stroke-width="0.8" paint-order="stroke" letter-spacing="0.5">100</text>
+</svg>

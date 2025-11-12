@@ -2,7 +2,14 @@
   <v-app-bar>
     <template #prepend>
       <v-app-bar-title class="ml-2 d-flex align-center gap-2">
-        <span>{{ t('common.title') }}</span>
+        <div class="main-title">
+          <img
+            src="/rolz-d100.svg"
+            alt="Rolz d100 icon"
+            class="header-logo"
+          />
+          <span>{{ t('common.title') }}</span>
+        </div>
       </v-app-bar-title>
     </template>
 
@@ -47,5 +54,18 @@ const activeRoomId = computed(() => roomsStore.selectedRoomId);
     font-size: 1.8rem;
     font-weight: bold;
     margin: 0;
+}
+
+.header-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 6px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.35);
+}
+
+.main-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
