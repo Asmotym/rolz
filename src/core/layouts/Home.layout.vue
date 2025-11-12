@@ -1,11 +1,6 @@
 <template>
     <HeaderComponent />
     <v-container v-if="userLoggedIn" class="py-6 home-container">
-        <div class="text-center mb-6">
-            <h1 class="text-h3 mb-2">🎲 Dice Rolz RPG</h1>
-            <p class="text-body-1 text-medium-emphasis">Your ultimate tabletop gaming companion</p>
-        </div>
-
         <RoomsBoard />
     </v-container>
     <v-container v-else class="d-flex justify-center align-center" style="height: 100vh">
