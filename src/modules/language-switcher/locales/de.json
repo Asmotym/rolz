@@ -15,10 +15,34 @@
   "settings": {
     "tabs": {
       "general": "Allgemein",
-      "rooms": "Räume"
+      "rooms": "Räume",
+      "api": "API"
     },
     "general": {
       "placeholder": "Dieser Bereich befindet sich noch in Arbeit."
+    },
+    "api": {
+      "description": "Erstelle einen persönlichen API-Schlüssel, um Rolz in eigene Skripte oder Bots einzubinden.",
+      "enforcement": "Anfragen, die nicht von rolz.asmotym.fr oder localhost:5173 stammen, müssen diesen Schlüssel im X-API-Key-Header mitsenden.",
+      "apiKeyLabel": "API-Schlüssel",
+      "emptyPlaceholder": "Noch kein Schlüssel",
+      "emptyState": "Erzeuge einen Schlüssel, um die API zu verwenden.",
+      "show": "Anzeigen",
+      "hide": "Ausblenden",
+      "copy": "Kopieren",
+      "copySuccess": "API-Schlüssel wurde kopiert.",
+      "copyError": "API-Schlüssel konnte nicht kopiert werden. Bitte manuell kopieren.",
+      "generate": "API-Schlüssel erstellen",
+      "regenerate": "API-Schlüssel neu erstellen",
+      "generateSuccess": "Neuer API-Schlüssel erstellt.",
+      "generateError": "API-Schlüssel konnte nicht erstellt werden.",
+      "revoke": "API-Schlüssel widerrufen",
+      "revokeSuccess": "API-Schlüssel wurde widerrufen.",
+      "revokeError": "API-Schlüssel konnte nicht widerrufen werden.",
+      "confirmRevoke": "Das Widerrufen deaktiviert alle bestehenden Integrationen. Fortfahren?",
+      "loadError": "API-Schlüssel konnte nicht geladen werden.",
+      "generatedAt": "Erstellt am {date}",
+      "lastUsed": "Zuletzt verwendet {date}"
     },
     "rooms": {
       "activeTitle": "Aktive Räume",

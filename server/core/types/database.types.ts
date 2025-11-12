@@ -6,6 +6,15 @@ export interface DatabaseUser {
     rights_testing_ground?: boolean;
 }
 
+export interface DatabaseUserApiKey {
+    user_id: string;
+    api_key_hash: string;
+    api_key_encrypted: string;
+    created_at?: string;
+    updated_at?: string;
+    last_used_at?: string | null;
+}
+
 export interface DatabaseRoom {
     id: string;
     name: string;

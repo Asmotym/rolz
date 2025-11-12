@@ -15,10 +15,34 @@
   "settings": {
     "tabs": {
       "general": "General",
-      "rooms": "Salas"
+      "rooms": "Salas",
+      "api": "API"
     },
     "general": {
       "placeholder": "Esta sección está en progreso."
+    },
+    "api": {
+      "description": "Genera una clave API personal para integrar Rolz con tus scripts o bots.",
+      "enforcement": "Las solicitudes que no provengan de rolz.asmotym.fr o localhost:5173 deben incluir esta clave en el encabezado X-API-Key.",
+      "apiKeyLabel": "Clave API",
+      "emptyPlaceholder": "Aún no hay clave",
+      "emptyState": "Genera una clave para empezar a usar la API.",
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "copy": "Copiar",
+      "copySuccess": "Clave API copiada en el portapapeles.",
+      "copyError": "No se pudo copiar la clave API. Copia el valor manualmente.",
+      "generate": "Generar clave API",
+      "regenerate": "Regenerar clave API",
+      "generateSuccess": "Se generó una nueva clave API.",
+      "generateError": "No se pudo generar la clave API.",
+      "revoke": "Revocar clave API",
+      "revokeSuccess": "Clave API revocada.",
+      "revokeError": "No se pudo revocar la clave API.",
+      "confirmRevoke": "Revocar esta clave desactivará las integraciones existentes. ¿Continuar?",
+      "loadError": "No se pudo cargar tu clave API.",
+      "generatedAt": "Generada {date}",
+      "lastUsed": "Último uso {date}"
     },
     "rooms": {
       "activeTitle": "Salas activas",

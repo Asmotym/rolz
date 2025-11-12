@@ -1,19 +1,94 @@
 import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
-import type { CorsOptions } from 'cors';
 import { createLogger } from './core/utils/logger';
 import { handleRoomsAction, listRoomDiceRolls, type RoomsAction } from './services/rooms.service';
 import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/discord-handler.core';
-import { cors } from './middlewares/cors'
+import { cors } from './middlewares/cors';
+import { requireApiKeyForUntrustedOrigins } from './middlewares/api-key';
+import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/api-keys.service';
 
 const logger = createLogger('Server');
 const app = express();
 
 app.use(cors);
 app.use(express.json({ limit: '1mb' }));
+app.use('/api', requireApiKeyForUntrustedOrigins);
 
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+function ensureSameUser(res: Response, userId: string): boolean {
+    const apiKeyUserId = res.locals.apiKeyUserId as string | undefined;
+    if (apiKeyUserId && apiKeyUserId !== userId) {
+        res.status(403).json({ success: false, error: 'API key does not belong to this user' });
+        return false;
+    }
+    return true;
+}
+
+app.get('/api/users/:userId/api-key', async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User id is required' });
+    }
+
+    if (!ensureSameUser(res, userId)) {
+        return;
+    }
+
+    try {
+        const payload = await getUserApiKey(userId);
+        res.json({
+            success: true,
+            data: {
+                apiKey: payload?.apiKey ?? null,
+                createdAt: payload?.createdAt ?? null,
+                lastUsedAt: payload?.lastUsedAt ?? null
+            }
+        });
+    } catch (error) {
+        logger.error(`Failed to fetch API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unable to fetch API key' });
+    }
+});
+
+app.post('/api/users/:userId/api-key', async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User id is required' });
+    }
+
+    if (!ensureSameUser(res, userId)) {
+        return;
+    }
+
+    try {
+        const payload = await generateUserApiKey(userId);
+        res.json({ success: true, data: payload });
+    } catch (error) {
+        logger.error(`Failed to generate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unable to generate API key' });
+    }
+});
+
+app.delete('/api/users/:userId/api-key', async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User id is required' });
+    }
+
+    if (!ensureSameUser(res, userId)) {
+        return;
+    }
+
+    try {
+        await revokeUserApiKey(userId);
+        res.json({ success: true, data: { apiKey: null } });
+    } catch (error) {
+        logger.error(`Failed to revoke API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unable to revoke API key' });
+    }
 });
 
 app.post('/api/rooms', async (req, res) => {

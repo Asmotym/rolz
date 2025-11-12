@@ -15,10 +15,34 @@
   "settings": {
     "tabs": {
       "general": "Général",
-      "rooms": "Salles"
+      "rooms": "Salles",
+      "api": "API"
     },
     "general": {
       "placeholder": "Cette section est en cours de préparation."
+    },
+    "api": {
+      "description": "Générez une clé API personnelle pour intégrer Rolz avec vos scripts ou bots.",
+      "enforcement": "Les requêtes provenant d'un domaine autre que rolz.asmotym.fr ou localhost:5173 doivent inclure cette clé dans l'en-tête X-API-Key.",
+      "apiKeyLabel": "Clé API",
+      "emptyPlaceholder": "Aucune clé générée",
+      "emptyState": "Générez une clé pour commencer à utiliser l'API.",
+      "show": "Afficher",
+      "hide": "Masquer",
+      "copy": "Copier",
+      "copySuccess": "Clé API copiée dans le presse-papiers.",
+      "copyError": "Impossible de copier la clé API. Copiez-la manuellement.",
+      "generate": "Générer une clé API",
+      "regenerate": "Régénérer la clé API",
+      "generateSuccess": "Nouvelle clé API générée.",
+      "generateError": "Impossible de générer la clé API.",
+      "revoke": "Révoquer la clé API",
+      "revokeSuccess": "Clé API révoquée.",
+      "revokeError": "Impossible de révoquer la clé API.",
+      "confirmRevoke": "Révoquer cette clé désactivera les intégrations existantes. Continuer ?",
+      "loadError": "Impossible de charger votre clé API.",
+      "generatedAt": "Générée le {date}",
+      "lastUsed": "Dernière utilisation le {date}"
     },
     "rooms": {
       "activeTitle": "Salles actives",

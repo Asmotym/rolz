@@ -15,10 +15,34 @@
   "settings": {
     "tabs": {
       "general": "General",
-      "rooms": "Rooms"
+      "rooms": "Rooms",
+      "api": "API"
     },
     "general": {
       "placeholder": "This section is in progress."
+    },
+    "api": {
+      "description": "Generate a personal API key to integrate Rolz with custom scripts or bots.",
+      "enforcement": "Requests coming from domains other than rolz.asmotym.fr or localhost:5173 must include this key in the X-API-Key header.",
+      "apiKeyLabel": "API Key",
+      "emptyPlaceholder": "No key generated yet",
+      "emptyState": "Generate a key to start using the API.",
+      "show": "Show",
+      "hide": "Hide",
+      "copy": "Copy",
+      "copySuccess": "API key copied to clipboard.",
+      "copyError": "Unable to copy the API key. Please copy it manually.",
+      "generate": "Generate API Key",
+      "regenerate": "Regenerate API Key",
+      "generateSuccess": "New API key generated.",
+      "generateError": "Unable to generate the API key.",
+      "revoke": "Revoke API Key",
+      "revokeSuccess": "API key revoked.",
+      "revokeError": "Unable to revoke the API key.",
+      "confirmRevoke": "Revoking this key will break existing integrations. Continue?",
+      "loadError": "Unable to load your API key.",
+      "generatedAt": "Generated {date}",
+      "lastUsed": "Last used {date}"
     },
     "rooms": {
       "activeTitle": "Active rooms",

@@ -90,6 +90,19 @@ export async function ensureDatabaseSetup(): Promise<void> {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
+    await query(`
+        CREATE TABLE IF NOT EXISTS user_api_keys (
+            user_id VARCHAR(64) PRIMARY KEY,
+            api_key_hash CHAR(64) NOT NULL,
+            api_key_encrypted TEXT NOT NULL,
+            last_used_at TIMESTAMP NULL DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_user_api_keys_user FOREIGN KEY (user_id) REFERENCES users(discord_user_id) ON DELETE CASCADE,
+            UNIQUE KEY uniq_api_keys_hash (api_key_hash)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
     initialized = true;
     logger.success('Database schema ready');
 }
