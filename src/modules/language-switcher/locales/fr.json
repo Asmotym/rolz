@@ -23,7 +23,7 @@
     },
     "api": {
       "description": "Générez une clé API personnelle pour intégrer Rolz avec vos scripts ou bots.",
-      "enforcement": "Les requêtes provenant d'un domaine autre que rolz.asmotym.fr ou localhost:5173 doivent inclure cette clé dans l'en-tête X-API-Key.",
+      "enforcement": "Les requêtes provenant d'un domaine autre que rolz.asmotym.fr doivent inclure cette clé dans l'en-tête X-API-Key.",
       "apiKeyLabel": "Clé API",
       "emptyPlaceholder": "Aucune clé générée",
       "emptyState": "Générez une clé pour commencer à utiliser l'API.",
@@ -42,7 +42,27 @@
       "confirmRevoke": "Révoquer cette clé désactivera les intégrations existantes. Continuer ?",
       "loadError": "Impossible de charger votre clé API.",
       "generatedAt": "Générée le {date}",
-      "lastUsed": "Dernière utilisation le {date}"
+      "lastUsed": "Dernière utilisation le {date}",
+      "doc": {
+        "title": "Endpoint d'historique des jets",
+        "description": "Récupérez l'activité des dés d'une salle dans vos propres outils en appelant l'endpoint de lecture seule ci-dessous.",
+        "endpointLabel": "Point de terminaison",
+        "endpointHelp": "Retourne uniquement les messages de type dé pour la salle sélectionnée. Associez-le à votre clé API lorsque la requête ne provient pas de rolz.asmotym.fr.",
+        "authTitle": "Authentification",
+        "authDescription": "Envoyez la clé API générée ci-dessus dans l'en-tête X-API-Key et demandez une réponse JSON avec Accept: application/json.",
+        "apiKeyPlaceholder": "votre-cle-api",
+        "pathTitle": "Paramètre de chemin",
+        "pathRoomId": "roomId",
+        "pathRoomIdDescription": "Identifiant de la salle que vous souhaitez consulter. Vous pouvez le copier depuis l'URL de la salle ou depuis des réponses API précédentes.",
+        "queryTitle": "Paramètres de requête",
+        "queryLimit": "limit",
+        "queryLimitDescription": "Entier optionnel qui limite le nombre de jets renvoyés. Défaut 50 et maximum 200. Sans autre filtre, les résultats sont triés du plus récent au plus ancien.",
+        "querySince": "since",
+        "querySinceDescription": "Horodatage ISO 8601 optionnel (ex. 2024-01-01T00:00:00Z). Lorsqu'il est fourni, seuls les jets créés après ce moment sont renvoyés et ils sont triés du plus ancien au plus récent.",
+        "exampleTitle": "Requête d'exemple",
+        "responseTitle": "Charge utile de réponse",
+        "responseDescription": "Les réponses suivent toujours { success, data }. L'objet data répète le roomId et expose diceRolls, un tableau de messages de dés (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...)."
+      }
     },
     "rooms": {
       "activeTitle": "Salles actives",

@@ -23,7 +23,7 @@
     },
     "api": {
       "description": "Erstelle einen persönlichen API-Schlüssel, um Rolz in eigene Skripte oder Bots einzubinden.",
-      "enforcement": "Anfragen, die nicht von rolz.asmotym.fr oder localhost:5173 stammen, müssen diesen Schlüssel im X-API-Key-Header mitsenden.",
+      "enforcement": "Anfragen, die nicht von rolz.asmotym.fr stammen, müssen diesen Schlüssel im X-API-Key-Header mitsenden.",
       "apiKeyLabel": "API-Schlüssel",
       "emptyPlaceholder": "Noch kein Schlüssel",
       "emptyState": "Erzeuge einen Schlüssel, um die API zu verwenden.",
@@ -42,7 +42,27 @@
       "confirmRevoke": "Das Widerrufen deaktiviert alle bestehenden Integrationen. Fortfahren?",
       "loadError": "API-Schlüssel konnte nicht geladen werden.",
       "generatedAt": "Erstellt am {date}",
-      "lastUsed": "Zuletzt verwendet {date}"
+      "lastUsed": "Zuletzt verwendet {date}",
+      "doc": {
+        "title": "Endpunkt für Würfelhistorie",
+        "description": "Hole die Würfelaktivität eines Raums in deine eigenen Tools, indem du den folgenden schreibgeschützten Endpunkt aufrufst.",
+        "endpointLabel": "Endpunkt",
+        "endpointHelp": "Gibt nur Nachrichten des Typs „dice“ für den ausgewählten Raum zurück. Ergänze jede Anfrage um deinen API-Schlüssel, wenn sie nicht von rolz.asmotym.fr stammt.",
+        "authTitle": "Authentifizierung",
+        "authDescription": "Sende den oben erzeugten Schlüssel im Header X-API-Key und fordere JSON über Accept: application/json an.",
+        "apiKeyPlaceholder": "dein-api-schluessel",
+        "pathTitle": "Pfadparameter",
+        "pathRoomId": "roomId",
+        "pathRoomIdDescription": "Kennung des Raums, den du abfragen möchtest. Du findest sie in der Raum-URL oder in früheren API-Antworten.",
+        "queryTitle": "Query-Parameter",
+        "queryLimit": "limit",
+        "queryLimitDescription": "Optionaler Integer, der die Anzahl der zurückgegebenen Würfelwürfe begrenzt. Standard ist 50, maximal 200. Ohne weitere Filter werden die Ergebnisse vom neuesten zum ältesten sortiert.",
+        "querySince": "since",
+        "querySinceDescription": "Optionaler ISO-8601-Zeitstempel (z. B. 2024-01-01T00:00:00Z). Mit diesem Filter erhältst du nur Würfe nach diesem Zeitpunkt, sortiert vom ältesten zum neuesten.",
+        "exampleTitle": "Beispielanfrage",
+        "responseTitle": "Antwort-Payload",
+        "responseDescription": "Antworten folgen immer dem Schema { success, data }. Das data-Objekt wiederholt die roomId und enthält diceRolls, ein Array mit Würfelnachrichten (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...)."
+      }
     },
     "rooms": {
       "activeTitle": "Aktive Räume",

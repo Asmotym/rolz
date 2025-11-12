@@ -23,7 +23,7 @@
     },
     "api": {
       "description": "Generate a personal API key to integrate Rolz with custom scripts or bots.",
-      "enforcement": "Requests coming from domains other than rolz.asmotym.fr or localhost:5173 must include this key in the X-API-Key header.",
+      "enforcement": "Requests coming from domains other than rolz.asmotym.fr must include this key in the X-API-Key header.",
       "apiKeyLabel": "API Key",
       "emptyPlaceholder": "No key generated yet",
       "emptyState": "Generate a key to start using the API.",
@@ -42,7 +42,27 @@
       "confirmRevoke": "Revoking this key will break existing integrations. Continue?",
       "loadError": "Unable to load your API key.",
       "generatedAt": "Generated {date}",
-      "lastUsed": "Last used {date}"
+      "lastUsed": "Last used {date}",
+      "doc": {
+        "title": "Dice roll history endpoint",
+        "description": "Bring the dice activity of any room into your own tools by calling the read-only dice rolls endpoint below.",
+        "endpointLabel": "Endpoint",
+        "endpointHelp": "Returns only dice messages for the selected room. Combine it with your API key whenever the request does not originate from rolz.asmotym.fr.",
+        "authTitle": "Authentication",
+        "authDescription": "Send the API key you generated above in the X-API-Key header and request JSON responses with Accept: application/json.",
+        "apiKeyPlaceholder": "your-api-key",
+        "pathTitle": "Path parameter",
+        "pathRoomId": "roomId",
+        "pathRoomIdDescription": "Identifier of the room you want to inspect. You can copy it from the room URL or from previous API responses.",
+        "queryTitle": "Query parameters",
+        "queryLimit": "limit",
+        "queryLimitDescription": "Optional integer that caps how many dice rolls are returned. Defaults to 50 and is limited to 200. Without other filters, results are sorted from newest to oldest.",
+        "querySince": "since",
+        "querySinceDescription": "Optional ISO 8601 timestamp (e.g. 2024-01-01T00:00:00Z). When set, only dice rolls created strictly after this moment are returned and they are sorted from oldest to newest.",
+        "exampleTitle": "Example request",
+        "responseTitle": "Response payload",
+        "responseDescription": "Responses always follow { success, data }. The data object echoes the roomId and exposes diceRolls, an array of dice chat messages (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...)."
+      }
     },
     "rooms": {
       "activeTitle": "Active rooms",
