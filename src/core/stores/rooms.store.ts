@@ -157,6 +157,26 @@ export const useRoomsStore = defineStore('rooms', {
                 this.sendingMessage = false;
             }
         },
+        async renameRoom(payload: { roomId: string; userId: string; name: string }) {
+            this.setError(null);
+            try {
+                const room = await RoomsService.updateRoom(payload);
+                this.upsertRoom(room);
+                return room;
+            } catch (error) {
+                this.setError(error instanceof Error ? error.message : 'Unable to update room settings');
+                throw error;
+            }
+        },
+        async updateNickname(payload: { roomId: string; userId: string; nickname?: string | null }) {
+            this.setError(null);
+            try {
+                return await RoomsService.updateNickname(payload);
+            } catch (error) {
+                this.setError(error instanceof Error ? error.message : 'Unable to update nickname');
+                throw error;
+            }
+        },
         appendMessages(messages: RoomMessage[]) {
             const dedup = new Map(this.messages.map((message) => [message.id, message]));
             for (const message of messages) {

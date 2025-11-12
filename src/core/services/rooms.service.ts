@@ -90,6 +90,30 @@ export class RoomsService {
         return data.members;
     }
 
+    static async fetchMember(payload: { roomId: string; userId: string }): Promise<RoomMemberDetails> {
+        const data = await request<{ member: RoomMemberDetails }>({
+            action: 'member',
+            payload
+        });
+        return data.member;
+    }
+
+    static async updateRoom(payload: { roomId: string; userId: string; name: string }): Promise<RoomDetails> {
+        const data = await request<{ room: RoomDetails }>({
+            action: 'updateRoom',
+            payload
+        });
+        return data.room;
+    }
+
+    static async updateNickname(payload: { roomId: string; userId: string; nickname?: string | null }): Promise<RoomMemberDetails> {
+        const data = await request<{ member: RoomMemberDetails }>({
+            action: 'updateNickname',
+            payload
+        });
+        return data.member;
+    }
+
     static async sendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } }): Promise<RoomMessage> {
         const data = await request<{ message: RoomMessage }>({
             action: 'message',

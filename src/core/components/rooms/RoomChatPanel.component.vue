@@ -74,7 +74,7 @@
                         </template>
                       </v-avatar>
                     </template>
-                    <v-list-item-title>{{ member.username || 'Unknown Adventurer' }}</v-list-item-title>
+                    <v-list-item-title>{{ formatDisplayName(member.username, member.nickname) }}</v-list-item-title>
                     <v-list-item-subtitle class="text-caption">
                       <span>Joined {{ formatTimestamp(member.joinedAt) }}</span>
                       <span class="dot-separator" aria-hidden="true">•</span>
@@ -89,6 +89,13 @@
               </template>
             </v-card>
           </v-menu>
+          <v-btn
+            icon="mdi-cog"
+            variant="text"
+            :disabled="!room || !currentUser"
+            :title="'Room settings'"
+            @click="openSettingsPanel"
+          />
           <v-btn
             icon="mdi-content-copy"
             variant="text"
@@ -118,7 +125,7 @@
               >
                 <v-avatar size="36" class="mr-3">
                   <template v-if="message.avatar">
-                    <v-img :src="message.avatar" :alt="message.username" />
+                    <v-img :src="message.avatar" :alt="formatDisplayName(message.username, message.nickname)" />
                   </template>
                   <template v-else>
                     <v-icon>mdi-account</v-icon>
@@ -126,7 +133,7 @@
                 </v-avatar>
                 <div class="message-content">
                   <div class="message-meta">
-                    <span class="text-subtitle-2">{{ message.username || 'Unknown Adventurer' }}</span>
+                    <span class="text-subtitle-2">{{ formatDisplayName(message.username, message.nickname) }}</span>
                     <small class="text-medium-emphasis">{{ formatTimestamp(message.createdAt) }}</small>
                   </div>
                   <div v-if="message.type === 'text'">
@@ -136,10 +143,10 @@
                     <div class="d-flex align-center gap-2 mb-1">
                       <v-icon color="amber" class="mr-2">mdi-dice-multiple</v-icon>
                       <span v-if="message.content" class="font-weight-medium">
-                        {{ message.username || 'Someone' }} rolled {{ message.diceNotation }} ({{ message.content }})
+                        {{ formatDisplayName(message.username, message.nickname, 'Someone') }} rolled {{ message.diceNotation }} ({{ message.content }})
                       </span>
                       <span v-else class="font-weight-medium">
-                        {{ message.username || 'Someone' }} rolled {{ message.diceNotation }}
+                        {{ formatDisplayName(message.username, message.nickname, 'Someone') }} rolled {{ message.diceNotation }}
                       </span>
                     </div>
                     <div class="text-body-2">
@@ -205,6 +212,104 @@
       </v-card-text>
     </template>
   </v-card>
+  <v-dialog v-model="settingsDialog" max-width="520">
+    <v-card>
+      <v-card-title class="d-flex align-center justify-space-between">
+        <span>Room settings</span>
+        <v-btn icon="mdi-close" variant="text" @click="closeSettingsPanel" />
+      </v-card-title>
+      <v-divider />
+      <v-card-text>
+        <v-alert
+          v-if="settingsFeedback"
+          :type="settingsFeedback.type"
+          variant="tonal"
+          density="comfortable"
+          class="mb-4"
+        >
+          {{ settingsFeedback.message }}
+        </v-alert>
+
+        <section class="mb-6">
+          <div class="text-subtitle-2 mb-2">Room details</div>
+          <p class="text-caption text-medium-emphasis mb-3">
+            {{ isRoomCreator ? 'You can rename this room for everyone.' : 'Only the creator can rename this room.' }}
+          </p>
+          <v-text-field
+            v-model="roomNameInput"
+            label="Room name"
+            variant="outlined"
+            density="comfortable"
+            :counter="80"
+            maxlength="80"
+            :disabled="!isRoomCreator || settingsSaving"
+            :error-messages="roomNameError ? [roomNameError] : []"
+            hint="Max 80 characters"
+            persistent-hint
+          />
+        </section>
+
+        <v-divider class="my-4" />
+
+        <section>
+          <div class="text-subtitle-2 mb-2">My nickname</div>
+          <p class="text-caption text-medium-emphasis mb-3">
+            Set a display nickname for this room only. Leave blank to use your Discord username.
+          </p>
+          <v-alert
+            v-if="memberSettingsError"
+            type="error"
+            variant="tonal"
+            density="comfortable"
+            class="mb-3"
+          >
+            {{ memberSettingsError }}
+            <v-btn
+              variant="text"
+              size="small"
+              class="ml-2"
+              @click="ensureMemberSettingsLoaded(true)"
+            >
+              Retry
+            </v-btn>
+          </v-alert>
+          <v-progress-linear
+            v-if="memberSettingsLoading"
+            indeterminate
+            color="primary"
+            class="mb-3"
+          />
+          <v-text-field
+            v-model="nicknameInput"
+            label="Nickname"
+            variant="outlined"
+            density="comfortable"
+            :counter="40"
+            maxlength="40"
+            :disabled="memberSettingsLoading || settingsSaving"
+            :error-messages="nicknameError ? [nicknameError] : []"
+            hint="Max 40 characters"
+            persistent-hint
+          />
+          <div class="text-caption text-medium-emphasis mb-3">
+            Preview: {{ nicknamePreview }}
+          </div>
+        </section>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="closeSettingsPanel">Close</v-btn>
+        <v-btn
+          color="primary"
+          :disabled="settingsSaving || !hasPendingChanges"
+          :loading="settingsSaving"
+          @click="saveSettings"
+        >
+          Save
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -214,6 +319,7 @@ import type { RoomDetails, RoomMemberDetails, RoomMessage } from 'netlify/core/t
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import type { DiceRoll } from 'core/utils/dice.utils';
 import { RoomsService } from 'core/services/rooms.service';
+import { useRoomsStore } from 'core/stores/rooms.store';
 
 const RESIZE_STORAGE_KEY = 'rolz-room-chat-width';
 const DEFAULT_CHAT_PERCENT = 65;
@@ -221,6 +327,7 @@ const MIN_CHAT_WIDTH = 320;
 const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
+const roomsStore = useRoomsStore();
 
 function loadInitialWidth() {
   if (typeof window === 'undefined') return DEFAULT_CHAT_PERCENT;
@@ -254,6 +361,18 @@ const members = ref<RoomMemberDetails[]>([]);
 const membersLoading = ref(false);
 const membersError = ref<string | null>(null);
 const membersLoadedRoomId = ref<string | null>(null);
+const settingsDialog = ref(false);
+const roomNameInput = ref('');
+const roomNameError = ref<string | null>(null);
+const currentNickname = ref<string | null>(null);
+const nicknameInput = ref('');
+const nicknameError = ref<string | null>(null);
+const memberSettingsLoading = ref(false);
+const memberSettingsError = ref<string | null>(null);
+const memberSettingsLoadedRoomId = ref<string | null>(null);
+const settingsSaving = ref(false);
+const settingsFeedback = ref<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+let settingsFeedbackTimer: number | null = null;
 let resizeRaf: number | null = null;
 let pendingClientX: number | null = null;
 
@@ -268,13 +387,34 @@ const chatLayoutStyles = computed(() => ({
   '--dice-panel-width': `${Math.max(0, 100 - chatWidth.value)}%`,
 }));
 
+const isRoomCreator = computed(() => {
+  if (!props.room || !props.currentUser) return false;
+  return props.room.createdBy === props.currentUser.id;
+});
+
+const normalizedRoomName = computed(() => roomNameInput.value.trim());
+const currentRoomName = computed(() => props.room?.name?.trim() ?? '');
+const roomNameDirty = computed(() => normalizedRoomName.value !== currentRoomName.value);
+
+const normalizedNicknameInput = computed(() => nicknameInput.value.trim());
+const currentNicknameNormalized = computed(() => currentNickname.value?.trim() ?? '');
+const nicknameDirty = computed(() => normalizedNicknameInput.value !== currentNicknameNormalized.value);
+const hasPendingChanges = computed(() => roomNameDirty.value || nicknameDirty.value);
+
+const nicknamePreview = computed(() => {
+  const baseName = props.currentUser?.username ?? 'Unknown Adventurer';
+  return normalizedNicknameInput.value ? `${normalizedNicknameInput.value} (${baseName})` : baseName;
+});
+
 watch(
   () => props.room?.id,
   () => {
     messageText.value = '';
     scrollToBottom();
     resetMembersState();
-  }
+    resetSettingsState();
+  },
+  { immediate: true }
 );
 
 watch(
@@ -285,6 +425,14 @@ watch(
 watch(membersMenu, async (open) => {
   if (open) {
     await ensureMembersLoaded();
+  }
+});
+
+watch(settingsDialog, async (open) => {
+  if (open) {
+    await initializeSettingsPanel();
+  } else {
+    clearSettingsFeedback();
   }
 });
 
@@ -312,6 +460,158 @@ async function copyInviteLink() {
   }
 }
 
+function formatDisplayName(username?: string | null, nickname?: string | null, fallback = 'Unknown Adventurer') {
+  const hasUsername = typeof username === 'string' && username.trim().length > 0;
+  const base = hasUsername ? (username as string).trim() : fallback;
+  const hasNickname = typeof nickname === 'string' && nickname.trim().length > 0;
+  if (hasNickname) {
+    const nick = (nickname as string).trim();
+    return `${nick} (${base})`;
+  }
+  return base;
+}
+
+function openSettingsPanel() {
+  if (!props.room || !props.currentUser) return;
+  settingsDialog.value = true;
+}
+
+function closeSettingsPanel() {
+  settingsDialog.value = false;
+}
+
+async function initializeSettingsPanel() {
+  if (!props.room || !props.currentUser) return;
+  roomNameInput.value = props.room.name ?? '';
+  roomNameError.value = null;
+  nicknameError.value = null;
+  await ensureMemberSettingsLoaded();
+}
+
+async function ensureMemberSettingsLoaded(force = false) {
+  if (!props.room || !props.currentUser) return;
+  if (!force && memberSettingsLoadedRoomId.value === props.room.id) {
+    nicknameInput.value = currentNickname.value ?? '';
+    return;
+  }
+  memberSettingsLoading.value = true;
+  memberSettingsError.value = null;
+  try {
+    const member = await RoomsService.fetchMember({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+    });
+    currentNickname.value = member.nickname ?? null;
+    nicknameInput.value = member.nickname ?? '';
+    memberSettingsLoadedRoomId.value = props.room.id;
+  } catch (error) {
+    memberSettingsError.value = error instanceof Error ? error.message : 'Unable to load your settings';
+  } finally {
+    memberSettingsLoading.value = false;
+  }
+}
+
+function resetSettingsState() {
+  roomNameInput.value = props.room?.name ?? '';
+  roomNameError.value = null;
+  nicknameError.value = null;
+  currentNickname.value = null;
+  nicknameInput.value = '';
+  memberSettingsLoadedRoomId.value = null;
+  memberSettingsError.value = null;
+  memberSettingsLoading.value = false;
+  settingsSaving.value = false;
+  if (!props.room) {
+    settingsDialog.value = false;
+    clearSettingsFeedback();
+  }
+}
+
+function clearSettingsFeedback() {
+  settingsFeedback.value = null;
+  if (settingsFeedbackTimer !== null && typeof window !== 'undefined') {
+    window.clearTimeout(settingsFeedbackTimer);
+    settingsFeedbackTimer = null;
+  }
+}
+
+function showSettingsFeedback(type: 'success' | 'error' | 'info', message: string) {
+  settingsFeedback.value = { type, message };
+  if (typeof window === 'undefined') return;
+  if (settingsFeedbackTimer !== null) {
+    window.clearTimeout(settingsFeedbackTimer);
+  }
+  settingsFeedbackTimer = window.setTimeout(() => {
+    settingsFeedback.value = null;
+    settingsFeedbackTimer = null;
+  }, 3500);
+}
+
+async function saveSettings() {
+  if (!props.room || !props.currentUser) return;
+  if (!hasPendingChanges.value) {
+    showSettingsFeedback('info', 'No changes to save.');
+    return;
+  }
+
+  settingsSaving.value = true;
+  roomNameError.value = null;
+  nicknameError.value = null;
+
+  let anySuccess = false;
+  let lastError: string | null = null;
+
+  try {
+    if (roomNameDirty.value) {
+      if (!isRoomCreator.value) {
+        roomNameError.value = 'Only the room creator can rename this room.';
+        lastError = roomNameError.value;
+      } else if (!normalizedRoomName.value) {
+        roomNameError.value = 'Room name is required.';
+        lastError = roomNameError.value;
+      } else {
+        try {
+          await roomsStore.renameRoom({
+            roomId: props.room.id,
+            userId: props.currentUser.id,
+            name: normalizedRoomName.value,
+          });
+          anySuccess = true;
+        } catch (error) {
+          roomNameError.value = error instanceof Error ? error.message : 'Unable to update room name.';
+          lastError = roomNameError.value;
+        }
+      }
+    }
+
+    if (nicknameDirty.value) {
+      try {
+        const member = await roomsStore.updateNickname({
+          roomId: props.room.id,
+          userId: props.currentUser.id,
+          nickname: normalizedNicknameInput.value || undefined,
+        });
+        currentNickname.value = member.nickname ?? null;
+        nicknameInput.value = member.nickname ?? '';
+        memberSettingsLoadedRoomId.value = props.room.id;
+        anySuccess = true;
+      } catch (error) {
+        nicknameError.value = error instanceof Error ? error.message : 'Unable to update nickname.';
+        lastError = nicknameError.value;
+      }
+    }
+
+    if (anySuccess) {
+      showSettingsFeedback('success', 'Settings saved.');
+    } else if (lastError) {
+      showSettingsFeedback('error', lastError);
+    } else {
+      showSettingsFeedback('info', 'No changes to save.');
+    }
+  } finally {
+    settingsSaving.value = false;
+  }
+}
 async function handleMembersChipClick() {
   if (!props.room) return;
   if (!membersMenu.value) {
@@ -470,6 +770,7 @@ onUnmounted(() => {
   window.removeEventListener('touchmove', handlePointerMove, nonPassiveTouchOptions);
   window.removeEventListener('touchend', stopResize);
   window.removeEventListener('resize', handleWindowResize);
+  clearSettingsFeedback();
 });
 </script>
 

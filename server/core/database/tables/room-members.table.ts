@@ -29,3 +29,24 @@ export async function listMembers(roomId: string): Promise<DatabaseRoomMemberWit
         [roomId]
     );
 }
+
+export async function getMember(roomId: string, userId: string): Promise<DatabaseRoomMemberWithUser | undefined> {
+    const rows = await query<DatabaseRoomMemberWithUser[]>(
+        `SELECT rm.*, u.username, u.avatar
+         FROM room_members rm
+         LEFT JOIN users u ON u.discord_user_id = rm.user_id
+         WHERE rm.room_id = ? AND rm.user_id = ?
+         LIMIT 1`,
+        [roomId, userId]
+    );
+    return rows[0];
+}
+
+export async function updateMemberNickname(roomId: string, userId: string, nickname: string | null): Promise<void> {
+    await execute(
+        `UPDATE room_members
+         SET nickname = ?
+         WHERE room_id = ? AND user_id = ?`,
+        [nickname, roomId, userId]
+    );
+}

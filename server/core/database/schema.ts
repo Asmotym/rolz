@@ -40,12 +40,18 @@ export async function ensureDatabaseSetup(): Promise<void> {
             id CHAR(36) PRIMARY KEY,
             room_id CHAR(36) NOT NULL,
             user_id VARCHAR(64) NOT NULL,
+            nickname VARCHAR(80),
             joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uniq_room_member (room_id, user_id),
             CONSTRAINT fk_members_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
             CONSTRAINT fk_members_user FOREIGN KEY (user_id) REFERENCES users(discord_user_id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
+        ALTER TABLE room_members
+        ADD COLUMN IF NOT EXISTS nickname VARCHAR(80)
     `);
 
     await query(`

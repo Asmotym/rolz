@@ -29,9 +29,10 @@ export async function insertMessage(message: NewRoomMessage): Promise<DatabaseRo
     );
 
     const rows = await query<DatabaseRoomMessage[]>(
-        `SELECT rm.*, u.username, u.avatar
+        `SELECT rm.*, u.username, u.avatar, members.nickname AS member_nickname
          FROM room_messages rm
          LEFT JOIN users u ON u.discord_user_id = rm.user_id
+         LEFT JOIN room_members members ON members.room_id = rm.room_id AND members.user_id = rm.user_id
          WHERE rm.id = ?
          LIMIT 1`,
         [id]
@@ -48,9 +49,10 @@ export async function listMessages(roomId: string, options?: { limit?: number; s
     const limit = options?.limit ?? 50;
     if (options?.since) {
         return query<DatabaseRoomMessage[]>(
-            `SELECT rm.*, u.username, u.avatar
+            `SELECT rm.*, u.username, u.avatar, members.nickname AS member_nickname
              FROM room_messages rm
              LEFT JOIN users u ON u.discord_user_id = rm.user_id
+             LEFT JOIN room_members members ON members.room_id = rm.room_id AND members.user_id = rm.user_id
              WHERE rm.room_id = ? AND rm.created_at > ?
              ORDER BY rm.created_at ASC
              LIMIT ?`,
@@ -59,9 +61,10 @@ export async function listMessages(roomId: string, options?: { limit?: number; s
     }
 
     return query<DatabaseRoomMessage[]>(
-        `SELECT rm.*, u.username, u.avatar
+        `SELECT rm.*, u.username, u.avatar, members.nickname AS member_nickname
          FROM room_messages rm
          LEFT JOIN users u ON u.discord_user_id = rm.user_id
+         LEFT JOIN room_members members ON members.room_id = rm.room_id AND members.user_id = rm.user_id
          WHERE rm.room_id = ?
          ORDER BY rm.created_at DESC
          LIMIT ?`,
@@ -74,9 +77,10 @@ export async function listDiceMessages(roomId: string, options?: { limit?: numbe
 
     if (options?.since) {
         return query<DatabaseRoomMessage[]>(
-            `SELECT rm.*, u.username, u.avatar
+            `SELECT rm.*, u.username, u.avatar, members.nickname AS member_nickname
              FROM room_messages rm
              LEFT JOIN users u ON u.discord_user_id = rm.user_id
+             LEFT JOIN room_members members ON members.room_id = rm.room_id AND members.user_id = rm.user_id
              WHERE rm.room_id = ? AND rm.type = 'dice' AND rm.created_at > ?
              ORDER BY rm.created_at ASC
              LIMIT ?`,
@@ -85,9 +89,10 @@ export async function listDiceMessages(roomId: string, options?: { limit?: numbe
     }
 
     return query<DatabaseRoomMessage[]>(
-        `SELECT rm.*, u.username, u.avatar
+        `SELECT rm.*, u.username, u.avatar, members.nickname AS member_nickname
          FROM room_messages rm
          LEFT JOIN users u ON u.discord_user_id = rm.user_id
+         LEFT JOIN room_members members ON members.room_id = rm.room_id AND members.user_id = rm.user_id
          WHERE rm.room_id = ? AND rm.type = 'dice'
          ORDER BY rm.created_at DESC
          LIMIT ?`,

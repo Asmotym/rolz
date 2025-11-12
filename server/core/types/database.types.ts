@@ -32,6 +32,7 @@ export interface DatabaseRoomMember {
     id: string;
     room_id: string;
     user_id: string;
+    nickname?: string | null;
     joined_at?: string;
     last_seen?: string;
 }
@@ -53,6 +54,7 @@ export interface DatabaseRoomMessage {
     created_at: string;
     username?: string | null;
     avatar?: string | null;
+    member_nickname?: string | null;
 }
 
 export interface NewRoomMessage {

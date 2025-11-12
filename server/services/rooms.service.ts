@@ -1,6 +1,6 @@
 import { ensureDatabaseSetup } from '../core/database/schema';
-import { insertRoom, listRooms, getRoomByInviteCode, getRoomById, touchRoom } from '../core/database/tables/rooms.table';
-import { upsertMember, countMembers, listMembers } from '../core/database/tables/room-members.table';
+import { insertRoom, listRooms, getRoomByInviteCode, getRoomById, touchRoom, updateRoomName } from '../core/database/tables/rooms.table';
+import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname } from '../core/database/tables/room-members.table';
 import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
 import { getUser } from '../core/database/tables/users.table';
 import type { DatabaseRoom, DatabaseRoomMemberWithUser, DatabaseRoomMessage } from '../core/types/database.types';
@@ -8,12 +8,18 @@ import type { RoomDetails, RoomMemberDetails, RoomMessage } from '../core/types/
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
 
+const ROOM_NAME_MAX_LENGTH = 80;
+const NICKNAME_MAX_LENGTH = 40;
+
 export type RoomsAction =
     | { action: 'list' }
     | { action: 'create'; payload: { name: string; password?: string | null; userId: string } }
     | { action: 'join'; payload: { inviteCode: string; password?: string | null; userId: string } }
     | { action: 'messages'; payload: { roomId: string; limit?: number; since?: string } }
     | { action: 'members'; payload: { roomId: string } }
+    | { action: 'member'; payload: { roomId: string; userId: string } }
+    | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
+    | { action: 'updateNickname'; payload: { roomId: string; userId: string; nickname?: string | null } }
     | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } } };
 
 export type RoomsActionResponse =
@@ -21,6 +27,7 @@ export type RoomsActionResponse =
     | { room: RoomDetails }
     | { roomId: string; messages: RoomMessage[] }
     | { roomId: string; members: RoomMemberDetails[] }
+    | { member: RoomMemberDetails }
     | { message: RoomMessage };
 
 export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActionResponse> {
@@ -39,6 +46,12 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
             return { roomId: payload.payload.roomId, messages: await handleListMessages(payload.payload) };
         case 'members':
             return { roomId: payload.payload.roomId, members: await handleListMembers(payload.payload) };
+        case 'member':
+            return { member: await handleGetMember(payload.payload) };
+        case 'updateRoom':
+            return { room: await handleUpdateRoom(payload.payload) };
+        case 'updateNickname':
+            return { member: await handleUpdateNickname(payload.payload) };
         case 'message':
             return { message: await handleSendMessage(payload.payload) };
         default:
@@ -62,8 +75,8 @@ async function handleCreateRoom(payload: { name: string; password?: string | nul
     const inviteCode = await generateUniqueInviteCode();
     const roomId = createRoomId();
     const trimmedName = payload.name.trim();
-    if (trimmedName.length > 80) {
-        throw new Error('Room name is too long (max 80 characters)');
+    if (trimmedName.length > ROOM_NAME_MAX_LENGTH) {
+        throw new Error(`Room name is too long (max ${ROOM_NAME_MAX_LENGTH} characters)`);
     }
 
     const normalizedPassword = payload.password?.trim();
@@ -124,6 +137,75 @@ async function handleListMembers(payload: { roomId: string }): Promise<RoomMembe
 
     const rows = await listMembers(payload.roomId);
     return rows.map(mapMemberRecord);
+}
+
+async function handleGetMember(payload: { roomId: string; userId: string }): Promise<RoomMemberDetails> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+
+    let member = await getMember(payload.roomId, payload.userId);
+    if (!member) {
+        await upsertMember(payload.roomId, payload.userId);
+        member = await getMember(payload.roomId, payload.userId);
+    }
+    if (!member) throw new Error('Member not found');
+
+    return mapMemberRecord(member);
+}
+
+async function handleUpdateRoom(payload: { roomId: string; userId: string; name: string }): Promise<RoomDetails> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+
+    const trimmedName = payload.name?.trim();
+    if (!trimmedName) {
+        throw new Error('Room name is required');
+    }
+    if (trimmedName.length > ROOM_NAME_MAX_LENGTH) {
+        throw new Error(`Room name is too long (max ${ROOM_NAME_MAX_LENGTH} characters)`);
+    }
+
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+    if (!room.created_by || room.created_by !== payload.userId) {
+        throw new Error('Only the room creator can rename this room');
+    }
+
+    const updated = await updateRoomName(payload.roomId, trimmedName);
+    if (!updated) throw new Error('Failed to update room');
+
+    const memberCount = await countMembers(payload.roomId);
+    return mapRoomToSummary({ ...updated, member_count: memberCount });
+}
+
+async function handleUpdateNickname(payload: { roomId: string; userId: string; nickname?: string | null }): Promise<RoomMemberDetails> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+
+    const normalizedNickname = payload.nickname?.trim() ?? '';
+    if (normalizedNickname.length > NICKNAME_MAX_LENGTH) {
+        throw new Error(`Nickname is too long (max ${NICKNAME_MAX_LENGTH} characters)`);
+    }
+
+    let member = await getMember(payload.roomId, payload.userId);
+    if (!member) {
+        await upsertMember(payload.roomId, payload.userId);
+        member = await getMember(payload.roomId, payload.userId);
+    }
+    if (!member) throw new Error('Member not found');
+
+    const nicknameValue = normalizedNickname.length > 0 ? normalizedNickname : null;
+    await updateMemberNickname(payload.roomId, payload.userId, nicknameValue);
+
+    const refreshed = await getMember(payload.roomId, payload.userId);
+    if (!refreshed) throw new Error('Failed to update nickname');
+    return mapMemberRecord(refreshed);
 }
 
 const DEFAULT_DICE_LIMIT = 50;
@@ -238,7 +320,8 @@ function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
         diceNotation: record.dice_notation ?? undefined,
         diceTotal,
         diceRolls,
-        createdAt: record.created_at
+        createdAt: record.created_at,
+        nickname: record.member_nickname ?? undefined
     };
 }
 
@@ -248,6 +331,7 @@ function mapMemberRecord(record: DatabaseRoomMemberWithUser): RoomMemberDetails 
         username: record.username ?? undefined,
         avatar: record.avatar ?? undefined,
         joinedAt: record.joined_at ?? undefined,
-        lastSeen: record.last_seen ?? undefined
+        lastSeen: record.last_seen ?? undefined,
+        nickname: record.nickname ?? undefined
     };
 }

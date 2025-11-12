@@ -15,6 +15,7 @@ export interface RoomDetails extends RoomSummary {
 export interface RoomMemberDetails {
     userId: string;
     username?: string;
+    nickname?: string;
     avatar?: string;
     joinedAt?: string;
     lastSeen?: string;
@@ -27,6 +28,7 @@ export interface RoomMessage {
     roomId: string;
     userId: string | null;
     username?: string;
+    nickname?: string;
     avatar?: string;
     content?: string | null;
     type: RoomMessageType;

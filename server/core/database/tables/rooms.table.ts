@@ -60,3 +60,11 @@ export async function listRooms(): Promise<DatabaseRoom[]> {
 export async function touchRoom(roomId: string): Promise<void> {
     await execute('UPDATE rooms SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [roomId]);
 }
+
+export async function updateRoomName(roomId: string, name: string): Promise<DatabaseRoom | undefined> {
+    await execute(
+        'UPDATE rooms SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [name, roomId]
+    );
+    return getRoomById(roomId);
+}
