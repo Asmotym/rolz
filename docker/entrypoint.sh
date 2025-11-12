@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+dotenv_file="${DOTENV_FILE:-/app/.env}"
+if [[ -f "$dotenv_file" ]]; then
+  # Load values from .env before computing defaults.
+  set -a
+  source "$dotenv_file"
+  set +a
+fi
+
 MYSQL_DATA_DIR="${MYSQL_DATA_DIR:-/var/lib/mysql}"
 MYSQL_LOG="${MYSQL_LOG:-/var/log/mysql/mariadb.log}"
 MYSQL_SOCKET="${MYSQL_SOCKET:-/run/mysqld/mysqld.sock}"

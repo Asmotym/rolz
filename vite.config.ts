@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: Number(env.VITE_DEV_SERVER_PORT ?? 5173),
       host: env.VITE_DEV_SERVER_HOST ?? '0.0.0.0',
+      allowedHosts: ['rolz.asmotym.fr']
     },
     resolve: {
       alias: {
