@@ -1,29 +1,19 @@
 <template>
   <div class="dice-roller">
     <v-card class="pa-4">
-      <v-card-title class="text-h5 mb-4">
-        🎲 RPG Dice Roller
-      </v-card-title>
-      
-      <!-- Quick Dice Buttons -->
       <div class="mb-4">
-        <v-card-subtitle class="px-0">Quick Roll</v-card-subtitle>
-        <div class="d-flex flex-wrap gap-2">
-          <v-btn
-            v-for="(notation, label) in COMMON_DICE"
-            :key="label"
-            variant="outlined"
-            size="small"
-            @click="quickRoll(notation)"
-            :color="getDiceColor(notation)"
-          >
-            {{ label }}
-          </v-btn>
-        </div>
+        <v-btn
+          variant="outlined"
+          size="large"
+          color="brown"
+          block
+          @click="quickRoll('1d100')"
+        >
+          Roll D100
+        </v-btn>
       </div>
 
-      <!-- Custom Dice Input -->
-      <div class="mb-4">
+      <div>
         <v-text-field
           v-model="rollDescription"
           label="Description (optional)"
@@ -42,7 +32,6 @@
 import { ref, computed } from 'vue';
 import {
   rollDiceNotation,
-  COMMON_DICE,
   type DiceRoll,
   type DiceRollOptions
 } from 'core/utils/dice.utils';
@@ -87,20 +76,6 @@ function addRollToHistory(roll: DiceRoll) {
     rollHistory.value = rollHistory.value.slice(0, 10);
   }
   emit('rolled', roll);
-}
-
-function getDiceColor(notation: string): string {
-  const diceColors: Record<string, string> = {
-    '1d4': 'purple',
-    '1d6': 'blue',
-    '1d8': 'green',
-    '1d10': 'orange',
-    '1d12': 'red',
-    '1d20': 'indigo',
-    '1d100': 'brown'
-  };
-  
-  return diceColors[notation] || 'primary';
 }
 </script>
 

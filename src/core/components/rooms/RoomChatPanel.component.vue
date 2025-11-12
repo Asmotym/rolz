@@ -196,7 +196,7 @@
           </div>
 
           <div class="dice-section">
-            <h3 class="text-subtitle-1 mb-2">Quick dice roll</h3>
+            <h3 class="text-subtitle-1 mb-2">🎲 Dice Roll</h3>
             <DiceRollerComponent @rolled="forwardDiceRoll" />
           </div>
         </div>
