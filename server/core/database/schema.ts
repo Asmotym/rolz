@@ -29,10 +29,16 @@ export async function ensureDatabaseSetup(): Promise<void> {
             password_hash VARCHAR(255),
             password_salt VARCHAR(255),
             created_by VARCHAR(64),
+            archived_at TIMESTAMP NULL DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             CONSTRAINT fk_rooms_created_by FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
+        ALTER TABLE rooms
+        ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL DEFAULT NULL
     `);
 
     await query(`

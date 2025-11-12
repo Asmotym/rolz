@@ -1,6 +1,6 @@
 import { ensureDatabaseSetup } from '../core/database/schema';
-import { insertRoom, listRooms, getRoomByInviteCode, getRoomById, touchRoom, updateRoomName } from '../core/database/tables/rooms.table';
-import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname } from '../core/database/tables/room-members.table';
+import { insertRoom, listRooms, listUserRooms, getRoomByInviteCode, getRoomById, touchRoom, updateRoomName, setRoomArchived } from '../core/database/tables/rooms.table';
+import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname, removeMember } from '../core/database/tables/room-members.table';
 import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
 import { deleteRoomDice, getRoomDice, insertRoomDice, listRoomDices, updateRoomDice as updateRoomDiceRecord } from '../core/database/tables/room-dices.table';
 import { getUser } from '../core/database/tables/users.table';
@@ -19,11 +19,15 @@ export type RoomsAction =
     | { action: 'list' }
     | { action: 'create'; payload: { name: string; password?: string | null; userId: string } }
     | { action: 'join'; payload: { inviteCode: string; password?: string | null; userId: string } }
+    | { action: 'userRooms'; payload: { userId: string } }
     | { action: 'messages'; payload: { roomId: string; limit?: number; since?: string } }
     | { action: 'members'; payload: { roomId: string } }
     | { action: 'member'; payload: { roomId: string; userId: string } }
     | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
     | { action: 'updateNickname'; payload: { roomId: string; userId: string; nickname?: string | null } }
+    | { action: 'leaveRoom'; payload: { roomId: string; userId: string } }
+    | { action: 'archiveRoom'; payload: { roomId: string; userId: string } }
+    | { action: 'unarchiveRoom'; payload: { roomId: string; userId: string } }
     | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } } }
     | { action: 'roomDices'; payload: { roomId: string; userId: string } }
     | { action: 'createDice'; payload: { roomId: string; userId: string; notation: string; description?: string | null } }
@@ -39,7 +43,8 @@ export type RoomsActionResponse =
     | { message: RoomMessage }
     | { roomId: string; dices: RoomDice[] }
     | { dice: RoomDice }
-    | { diceId: string };
+    | { diceId: string }
+    | { roomId: string };
 
 export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActionResponse> {
     await ensureDatabaseSetup();
@@ -47,12 +52,14 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
     switch (payload.action) {
         case 'list': {
             const rooms = await listRooms();
-            return { rooms: rooms.map(mapRoomToSummary) };
+            return { rooms: rooms.map((room) => mapRoomToSummary(room)) };
         }
         case 'create':
             return { room: await handleCreateRoom(payload.payload) };
         case 'join':
             return { room: await handleJoinRoom(payload.payload) };
+        case 'userRooms':
+            return { rooms: await handleListUserRooms(payload.payload) };
         case 'messages':
             return { roomId: payload.payload.roomId, messages: await handleListMessages(payload.payload) };
         case 'members':
@@ -63,6 +70,13 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
             return { room: await handleUpdateRoom(payload.payload) };
         case 'updateNickname':
             return { member: await handleUpdateNickname(payload.payload) };
+        case 'leaveRoom':
+            await handleLeaveRoom(payload.payload);
+            return { roomId: payload.payload.roomId };
+        case 'archiveRoom':
+            return { room: await handleArchiveRoom(payload.payload) };
+        case 'unarchiveRoom':
+            return { room: await handleUnarchiveRoom(payload.payload) };
         case 'message':
             return { message: await handleSendMessage(payload.payload) };
         case 'roomDices':
@@ -118,7 +132,7 @@ async function handleCreateRoom(payload: { name: string; password?: string | nul
     await upsertMember(room.id, payload.userId);
     const memberCount = await countMembers(room.id);
 
-    return mapRoomToSummary({ ...room, member_count: memberCount });
+    return mapRoomToSummary({ ...room, member_count: memberCount }, { currentUserId: payload.userId });
 }
 
 async function handleJoinRoom(payload: { inviteCode: string; password?: string | null; userId: string }): Promise<RoomDetails> {
@@ -127,6 +141,9 @@ async function handleJoinRoom(payload: { inviteCode: string; password?: string |
 
     const room = await getRoomByInviteCode(payload.inviteCode.trim().toUpperCase());
     if (!room) throw new Error('Room not found');
+    if (room.archived_at && room.created_by !== payload.userId) {
+        throw new Error('This room is no longer available');
+    }
 
     if (room.password_hash) {
         const providedPassword = payload.password?.trim();
@@ -138,7 +155,72 @@ async function handleJoinRoom(payload: { inviteCode: string; password?: string |
     await upsertMember(room.id, payload.userId);
     const memberCount = await countMembers(room.id);
 
-    return mapRoomToSummary({ ...room, member_count: memberCount });
+    return mapRoomToSummary({ ...room, member_count: memberCount }, { currentUserId: payload.userId });
+}
+
+async function handleListUserRooms(payload: { userId: string }): Promise<RoomDetails[]> {
+    if (!payload.userId) {
+        throw new Error('User id is required');
+    }
+
+    const rooms = await listUserRooms(payload.userId);
+    return rooms.map((room) => mapRoomToSummary(room, { currentUserId: payload.userId }));
+}
+
+async function handleLeaveRoom(payload: { roomId: string; userId: string }): Promise<void> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+    if (room.created_by === payload.userId) {
+        throw new Error('Room creators cannot leave their own room');
+    }
+
+    const member = await getMember(payload.roomId, payload.userId);
+    if (!member) {
+        throw new Error('You are not a member of this room');
+    }
+
+    await removeMember(payload.roomId, payload.userId);
+}
+
+async function handleArchiveRoom(payload: { roomId: string; userId: string }): Promise<RoomDetails> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+    if (room.created_by !== payload.userId) {
+        throw new Error('Only the room creator can delete this room');
+    }
+
+    const updated = await setRoomArchived(payload.roomId, true);
+    if (!updated) {
+        throw new Error('Failed to delete room');
+    }
+
+    const memberCount = await countMembers(payload.roomId);
+    return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
+}
+
+async function handleUnarchiveRoom(payload: { roomId: string; userId: string }): Promise<RoomDetails> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+    if (room.created_by !== payload.userId) {
+        throw new Error('Only the room creator can restore this room');
+    }
+
+    const updated = await setRoomArchived(payload.roomId, false);
+    if (!updated) {
+        throw new Error('Failed to restore room');
+    }
+
+    const memberCount = await countMembers(payload.roomId);
+    return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
 }
 
 async function handleListMessages(payload: { roomId: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
@@ -198,7 +280,7 @@ async function handleUpdateRoom(payload: { roomId: string; userId: string; name:
     if (!updated) throw new Error('Failed to update room');
 
     const memberCount = await countMembers(payload.roomId);
-    return mapRoomToSummary({ ...updated, member_count: memberCount });
+    return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
 }
 
 async function handleUpdateNickname(payload: { roomId: string; userId: string; nickname?: string | null }): Promise<RoomMemberDetails> {
@@ -379,8 +461,13 @@ function normalizeDiceDescription(value?: string | null): string | null {
     return trimmed;
 }
 
-function mapRoomToSummary(room: DatabaseRoom): RoomDetails {
+function mapRoomToSummary(room: DatabaseRoom, options?: { currentUserId?: string }): RoomDetails {
     const lastActivity = room.last_activity ?? room.updated_at ?? room.created_at ?? null;
+    const archivedAt = room.archived_at ?? null;
+    const currentUserId = options?.currentUserId;
+    const isCreator = currentUserId && room.created_by
+        ? room.created_by === currentUserId
+        : undefined;
     return {
         id: room.id,
         name: room.name,
@@ -388,6 +475,9 @@ function mapRoomToSummary(room: DatabaseRoom): RoomDetails {
         isProtected: Boolean(room.password_hash),
         memberCount: room.member_count ?? 0,
         lastActivity,
+        archivedAt,
+        isArchived: Boolean(archivedAt),
+        isCreator,
         createdBy: room.created_by,
         createdAt: room.created_at ?? undefined
     };

@@ -5,6 +5,9 @@ export interface RoomSummary {
     isProtected: boolean;
     memberCount: number;
     lastActivity?: string | null;
+    archivedAt?: string | null;
+    isArchived?: boolean;
+    isCreator?: boolean;
 }
 
 export interface RoomDetails extends RoomSummary {

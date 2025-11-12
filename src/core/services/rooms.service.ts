@@ -70,6 +70,14 @@ export class RoomsService {
         return data.room;
     }
 
+    static async fetchUserRooms(userId: string): Promise<RoomDetails[]> {
+        const data = await request<{ rooms: RoomDetails[] }>({
+            action: 'userRooms',
+            payload: { userId }
+        });
+        return data.rooms;
+    }
+
     static async fetchMessages(roomId: string, options?: { limit?: number; since?: string }): Promise<RoomMessage[]> {
         const data = await request<{ messages: RoomMessage[] }>({
             action: 'messages',
@@ -112,6 +120,29 @@ export class RoomsService {
             payload
         });
         return data.member;
+    }
+
+    static async leaveRoom(payload: { roomId: string; userId: string }): Promise<void> {
+        await request<{ roomId: string }>({
+            action: 'leaveRoom',
+            payload
+        });
+    }
+
+    static async archiveRoom(payload: { roomId: string; userId: string }): Promise<RoomDetails> {
+        const data = await request<{ room: RoomDetails }>({
+            action: 'archiveRoom',
+            payload
+        });
+        return data.room;
+    }
+
+    static async unarchiveRoom(payload: { roomId: string; userId: string }): Promise<RoomDetails> {
+        const data = await request<{ room: RoomDetails }>({
+            action: 'unarchiveRoom',
+            payload
+        });
+        return data.room;
     }
 
     static async sendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } }): Promise<RoomMessage> {

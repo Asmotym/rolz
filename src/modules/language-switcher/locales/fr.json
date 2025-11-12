@@ -1,13 +1,46 @@
 {
   "common": {
     "title": "Rolz",
-    "disconnect": "Se déconnecter"
+    "disconnect": "Se déconnecter",
+    "cancel": "Annuler"
   },
   "navigation": {
-    "home": "Accueil"
+    "home": "Accueil",
+    "settings": "Paramètres"
   },
   "home": {
     "not_logged_in_title": "Hello World!",
     "not_logged_in_message": ":)"
+  },
+  "settings": {
+    "tabs": {
+      "general": "Général",
+      "rooms": "Salles"
+    },
+    "general": {
+      "placeholder": "Cette section est en cours de préparation."
+    },
+    "rooms": {
+      "activeTitle": "Salles actives",
+      "archivedTitle": "Salles archivées",
+      "archivedDescription": "Les salles archivées restent visibles pour vous mais cachées des autres membres.",
+      "archivedLabel": "Archivée",
+      "refresh": "Actualiser",
+      "emptyActive": "Vous n'avez rejoint aucune salle pour le moment.",
+      "inviteCode": "Code d'invitation : {code}",
+      "noActivity": "Aucune activité récente",
+      "confirmDelete": "Voulez-vous vraiment supprimer la salle « {name} » ? Elle deviendra inaccessible pour tout le monde.",
+      "actions": {
+        "open": "Ouvrir",
+        "leave": "Quitter",
+        "delete": "Supprimer",
+        "restore": "Restaurer"
+      },
+      "messages": {
+        "leaveSuccess": "Vous avez quitté {name}.",
+        "deleteSuccess": "La salle {name} a été archivée.",
+        "restoreSuccess": "La salle {name} est de nouveau active."
+      }
+    }
   }
 }

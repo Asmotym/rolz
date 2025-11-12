@@ -48,7 +48,37 @@ export async function listRooms(): Promise<DatabaseRoom[]> {
             FROM room_messages
             GROUP BY room_id
         ) messages ON messages.room_id = r.id
+        WHERE r.archived_at IS NULL
         ORDER BY last_activity IS NULL, last_activity DESC`
+    );
+
+    return rows.map((row) => ({
+        ...row,
+        member_count: typeof row.member_count === 'string' ? Number(row.member_count) : row.member_count
+    }));
+}
+
+export async function listUserRooms(userId: string): Promise<DatabaseRoom[]> {
+    const rows = await query<DatabaseRoom[]>(
+        `SELECT
+            r.*,
+            IFNULL(members.member_count, 0) AS member_count,
+            IFNULL(messages.last_activity, r.updated_at) AS last_activity
+        FROM rooms r
+        INNER JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = ?
+        LEFT JOIN (
+            SELECT room_id, COUNT(*) AS member_count
+            FROM room_members
+            GROUP BY room_id
+        ) members ON members.room_id = r.id
+        LEFT JOIN (
+            SELECT room_id, MAX(created_at) AS last_activity
+            FROM room_messages
+            GROUP BY room_id
+        ) messages ON messages.room_id = r.id
+        WHERE r.archived_at IS NULL OR r.created_by = ?
+        ORDER BY r.archived_at IS NULL DESC, last_activity IS NULL, last_activity DESC`,
+        [userId, userId]
     );
 
     return rows.map((row) => ({
@@ -65,6 +95,14 @@ export async function updateRoomName(roomId: string, name: string): Promise<Data
     await execute(
         'UPDATE rooms SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [name, roomId]
+    );
+    return getRoomById(roomId);
+}
+
+export async function setRoomArchived(roomId: string, archived: boolean): Promise<DatabaseRoom | undefined> {
+    await execute(
+        'UPDATE rooms SET archived_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [archived ? new Date() : null, roomId]
     );
     return getRoomById(roomId);
 }

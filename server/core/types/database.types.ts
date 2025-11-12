@@ -13,6 +13,7 @@ export interface DatabaseRoom {
     password_hash?: string | null;
     password_salt?: string | null;
     created_by?: string | null;
+    archived_at?: string | null;
     created_at?: string;
     updated_at?: string;
     member_count?: number;

@@ -50,3 +50,11 @@ export async function updateMemberNickname(roomId: string, userId: string, nickn
         [nickname, roomId, userId]
     );
 }
+
+export async function removeMember(roomId: string, userId: string): Promise<void> {
+    await execute(
+        `DELETE FROM room_members
+         WHERE room_id = ? AND user_id = ?`,
+        [roomId, userId]
+    );
+}

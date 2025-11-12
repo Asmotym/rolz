@@ -29,6 +29,17 @@
                 </v-avatar>
                 <h3>{{ user.username }}</h3>
                 <v-divider class="my-3"></v-divider>
+                <v-btn
+                  variant="text"
+                  color="primary"
+                  rounded
+                  block
+                  class="mb-2"
+                  :to="{ name: HomeRoutes.Settings }"
+                >
+                  <v-icon icon="mdi-cog-outline" start size="18" />
+                  {{ t('navigation.settings') }}
+                </v-btn>
                 <v-btn variant="text" color="red" rounded @click="logout()">
                   {{ t('common.disconnect') }}
                 </v-btn>
