@@ -33,7 +33,11 @@
               <div class="members-popover__header">
                 <div>
                   <div class="text-subtitle-2">Room members</div>
-                  <small class="text-medium-emphasis">{{ members.length }} total</small>
+                  <small class="text-medium-emphasis">
+                    {{ members.length }} total
+                    <span class="dot-separator" aria-hidden="true">•</span>
+                    {{ onlineMembers.length }} online
+                  </small>
                 </div>
                 <v-btn
                   icon="mdi-refresh"
@@ -74,11 +78,21 @@
                         </template>
                       </v-avatar>
                     </template>
-                    <v-list-item-title>{{ formatDisplayName(member.username, member.nickname) }}</v-list-item-title>
+                    <v-list-item-title class="members-popover__name">
+                      <span>{{ formatDisplayName(member.username, member.nickname) }}</span>
+                      <span
+                        v-if="member.isOnline"
+                        class="member-online-pill"
+                      >
+                        <span class="member-online-pill__dot" aria-hidden="true" />
+                        Connected
+                      </span>
+                    </v-list-item-title>
                     <v-list-item-subtitle class="text-caption">
                       <span>Joined {{ formatTimestamp(member.joinedAt) }}</span>
                       <span class="dot-separator" aria-hidden="true">•</span>
-                      <span>Last seen {{ formatTimestamp(member.lastSeen) }}</span>
+                      <span v-if="member.isOnline">Connected now</span>
+                      <span v-else>Last seen {{ formatTimestamp(member.lastSeen) }}</span>
                     </v-list-item-subtitle>
                   </v-list-item>
                 </v-list>
@@ -620,6 +634,7 @@ const inviteLink = computed(() => {
   return `${window.location.origin}/rooms/${props.room.id}?invite=${props.room.inviteCode}`;
 });
 
+const onlineMembers = computed(() => members.value.filter((member) => member.isOnline));
 
 const chatLayoutStyles = computed(() => ({
   '--chat-panel-width': `${chatWidth.value}%`,
@@ -1210,6 +1225,32 @@ onUnmounted(() => {
 
 .members-popover__item:not(:last-child) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.members-popover__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-online-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: rgba(76, 175, 80, 0.15);
+  color: var(--v-theme-success, #4caf50);
+  font-weight: 600;
+}
+
+.member-online-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+  display: inline-block;
 }
 
 .dot-separator {

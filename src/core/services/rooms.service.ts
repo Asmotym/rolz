@@ -78,13 +78,14 @@ export class RoomsService {
         return data.rooms;
     }
 
-    static async fetchMessages(roomId: string, options?: { limit?: number; since?: string }): Promise<RoomMessage[]> {
+    static async fetchMessages(roomId: string, options?: { limit?: number; since?: string; userId?: string }): Promise<RoomMessage[]> {
         const data = await request<{ messages: RoomMessage[] }>({
             action: 'messages',
             payload: {
                 roomId,
                 limit: options?.limit,
-                since: options?.since
+                since: options?.since,
+                userId: options?.userId
             }
         });
         return data.messages;

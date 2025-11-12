@@ -15,6 +15,7 @@ export const useRoomsStore = defineStore('rooms', {
     state: () => ({
         rooms: [] as RoomDetails[],
         selectedRoomId: null as string | null,
+        selectedRoomUserId: null as string | null,
         messages: [] as RoomMessage[],
         loadingRooms: false,
         creatingRoom: false,
@@ -52,7 +53,7 @@ export const useRoomsStore = defineStore('rooms', {
             try {
                 const room = await RoomsService.createRoom(payload);
                 this.upsertRoom(room);
-                this.selectRoom(room.id);
+                await this.selectRoom(room.id, payload.userId);
                 return room;
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : 'Unable to create room');
@@ -67,7 +68,7 @@ export const useRoomsStore = defineStore('rooms', {
             try {
                 const room = await RoomsService.joinRoom(payload);
                 this.upsertRoom(room);
-                this.selectRoom(room.id);
+                await this.selectRoom(room.id, payload.userId);
                 return room;
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : 'Unable to join room');
@@ -76,12 +77,14 @@ export const useRoomsStore = defineStore('rooms', {
                 this.joiningRoom = false;
             }
         },
-        async selectRoom(roomId: string | null) {
-            if (roomId === this.selectedRoomId) {
+        async selectRoom(roomId: string | null, userId?: string | null) {
+            const normalizedUserId = userId ?? null;
+            if (roomId === this.selectedRoomId && normalizedUserId === this.selectedRoomUserId) {
                 return;
             }
 
             this.selectedRoomId = roomId;
+            this.selectedRoomUserId = normalizedUserId;
             this.messages = [];
             this.lastMessageAt = null;
 
@@ -90,26 +93,30 @@ export const useRoomsStore = defineStore('rooms', {
                 return;
             }
 
-            await this.loadMessages(roomId);
-            this.startLiveUpdates(roomId);
+            await this.loadMessages(roomId, normalizedUserId);
+            this.startLiveUpdates(roomId, normalizedUserId);
         },
-        async loadMessages(roomId: string) {
+        async loadMessages(roomId: string, userId?: string | null) {
             try {
-                const messages = await RoomsService.fetchMessages(roomId);
+                const requester = userId ?? this.selectedRoomUserId ?? null;
+                const messages = await RoomsService.fetchMessages(roomId, { userId: requester ?? undefined });
                 this.messages = ensureAscending(messages);
                 this.lastMessageAt = this.messages.length > 0 ? this.messages[this.messages.length - 1].createdAt : null;
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : 'Unable to load messages');
             }
         },
-        async refreshMessages(roomId: string) {
+        async refreshMessages(roomId: string, userId?: string | null) {
             if (!this.lastMessageAt) {
-                await this.loadMessages(roomId);
+                await this.loadMessages(roomId, userId ?? this.selectedRoomUserId ?? null);
                 return;
             }
 
             try {
-                const updates = await RoomsService.fetchMessages(roomId, { since: this.lastMessageAt });
+                const updates = await RoomsService.fetchMessages(roomId, {
+                    since: this.lastMessageAt,
+                    userId: userId ?? this.selectedRoomUserId ?? undefined,
+                });
                 if (updates.length === 0) return;
                 this.appendMessages(updates);
             } catch (error) {
@@ -199,12 +206,13 @@ export const useRoomsStore = defineStore('rooms', {
             }
             this.rooms = [...this.rooms].sort(sortRoomsByActivity);
         },
-        startLiveUpdates(roomId: string) {
+        startLiveUpdates(roomId: string, userId?: string | null) {
             if (typeof window === 'undefined') return;
             this.stopLiveUpdates();
+            const heartbeatUser = userId ?? this.selectedRoomUserId ?? null;
             this.live.id = window.setInterval(() => {
                 if (this.selectedRoomId === roomId) {
-                    this.refreshMessages(roomId);
+                    this.refreshMessages(roomId, heartbeatUser);
                 }
             }, 3500);
         },
@@ -223,6 +231,7 @@ export const useRoomsStore = defineStore('rooms', {
         teardown() {
             this.stopLiveUpdates();
             this.selectedRoomId = null;
+            this.selectedRoomUserId = null;
             this.messages = [];
             this.lastMessageAt = null;
         },

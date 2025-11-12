@@ -108,7 +108,7 @@ watch(
       navigateHome();
       return;
     }
-    await roomsStore.selectRoom(roomId);
+    await roomsStore.selectRoom(roomId, currentUser.value?.id ?? null);
   },
   { immediate: true }
 );

@@ -22,6 +22,7 @@ export interface RoomMemberDetails {
     avatar?: string;
     joinedAt?: string;
     lastSeen?: string;
+    isOnline?: boolean;
 }
 
 export type RoomMessageType = 'text' | 'dice';

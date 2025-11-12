@@ -51,6 +51,15 @@ export async function updateMemberNickname(roomId: string, userId: string, nickn
     );
 }
 
+export async function touchMember(roomId: string, userId: string): Promise<void> {
+    await execute(
+        `UPDATE room_members
+         SET last_seen = CURRENT_TIMESTAMP
+         WHERE room_id = ? AND user_id = ?`,
+        [roomId, userId]
+    );
+}
+
 export async function removeMember(roomId: string, userId: string): Promise<void> {
     await execute(
         `DELETE FROM room_members

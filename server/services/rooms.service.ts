@@ -1,6 +1,6 @@
 import { ensureDatabaseSetup } from '../core/database/schema';
 import { insertRoom, listRooms, listUserRooms, getRoomByInviteCode, getRoomById, touchRoom, updateRoomName, setRoomArchived } from '../core/database/tables/rooms.table';
-import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname, removeMember } from '../core/database/tables/room-members.table';
+import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname, removeMember, touchMember } from '../core/database/tables/room-members.table';
 import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
 import { deleteRoomDice, getRoomDice, insertRoomDice, listRoomDices, updateRoomDice as updateRoomDiceRecord } from '../core/database/tables/room-dices.table';
 import { getUser } from '../core/database/tables/users.table';
@@ -14,13 +14,14 @@ const NICKNAME_MAX_LENGTH = 40;
 const DICE_NOTATION_MAX_LENGTH = 64;
 const DICE_DESCRIPTION_MAX_LENGTH = 255;
 const DICE_NOTATION_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
+const ONLINE_MEMBER_WINDOW_MS = 1000 * 60 * 2;
 
 export type RoomsAction =
     | { action: 'list' }
     | { action: 'create'; payload: { name: string; password?: string | null; userId: string } }
     | { action: 'join'; payload: { inviteCode: string; password?: string | null; userId: string } }
     | { action: 'userRooms'; payload: { userId: string } }
-    | { action: 'messages'; payload: { roomId: string; limit?: number; since?: string } }
+    | { action: 'messages'; payload: { roomId: string; userId?: string; limit?: number; since?: string } }
     | { action: 'members'; payload: { roomId: string } }
     | { action: 'member'; payload: { roomId: string; userId: string } }
     | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
@@ -223,10 +224,14 @@ async function handleUnarchiveRoom(payload: { roomId: string; userId: string }):
     return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
 }
 
-async function handleListMessages(payload: { roomId: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
+async function handleListMessages(payload: { roomId: string; userId?: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
     if (!payload.roomId) throw new Error('Room id missing');
     const room = await getRoomById(payload.roomId);
     if (!room) throw new Error('Room not found');
+
+    if (payload.userId) {
+        await touchMember(payload.roomId, payload.userId);
+    }
 
     const rows = await listMessages(payload.roomId, { limit: payload.limit, since: payload.since });
     return rows.map(mapMessageRecord);
@@ -528,6 +533,13 @@ function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
     };
 }
 
+function calculateIsOnline(lastSeen?: string | null): boolean {
+    if (!lastSeen) return false;
+    const timestamp = new Date(lastSeen).getTime();
+    if (Number.isNaN(timestamp)) return false;
+    return Date.now() - timestamp <= ONLINE_MEMBER_WINDOW_MS;
+}
+
 function mapMemberRecord(record: DatabaseRoomMemberWithUser): RoomMemberDetails {
     return {
         userId: record.user_id,
@@ -535,6 +547,7 @@ function mapMemberRecord(record: DatabaseRoomMemberWithUser): RoomMemberDetails 
         avatar: record.avatar ?? undefined,
         joinedAt: record.joined_at ?? undefined,
         lastSeen: record.last_seen ?? undefined,
-        nickname: record.nickname ?? undefined
+        nickname: record.nickname ?? undefined,
+        isOnline: calculateIsOnline(record.last_seen ?? undefined)
     };
 }
