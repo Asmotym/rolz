@@ -61,7 +61,18 @@
         "querySinceDescription": "Optionaler ISO-8601-Zeitstempel (z. B. 2024-01-01T00:00:00Z). Mit diesem Filter erhältst du nur Würfe nach diesem Zeitpunkt, sortiert vom ältesten zum neuesten.",
         "exampleTitle": "Beispielanfrage",
         "responseTitle": "Antwort-Payload",
-        "responseDescription": "Antworten folgen immer dem Schema { success, data }. Das data-Objekt wiederholt die roomId und enthält diceRolls, ein Array mit Würfelnachrichten (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...)."
+        "responseDescription": "Antworten folgen immer dem Schema { success, data }. Das data-Objekt wiederholt die roomId und enthält diceRolls, ein Array mit Würfelnachrichten (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...).",
+        "roomsTitle": "Endpunkt für deine Räume",
+        "roomsDescription": "Nutze diesen Endpunkt, um alle Räume abzurufen, die du erstellt oder denen du beigetreten bist. Die Daten entsprechen Einstellungen → Räume.",
+        "roomsEndpointHelp": "Gibt aktive und archivierte Räume zurück, die mit dem über deinen API-Schlüssel identifizierten Benutzer verbunden sind.",
+        "roomsExampleTitle": "Beispielanfrage (Räume)",
+        "roomsResponseTitle": "Antwort (Räume)",
+        "roomsResponseDescription": "Antworten liefern { success, data.rooms }. Jeder Raum entspricht der Darstellung in der App (id, name, inviteCode, isProtected, memberCount, lastActivity, archivedAt, isArchived, isCreator, createdBy, createdAt).",
+        "membersDescription": "Über diese Route erhältst du die komplette Mitgliederliste eines Raums, dem du angehörst.",
+        "membersEndpointHelp": "Erfordert deinen API-Schlüssel und funktioniert nur, wenn du Mitglied des angefragten Raums bist.",
+        "membersExampleTitle": "Beispielanfrage (Mitglieder)",
+        "membersResponseTitle": "Antwort (Mitglieder)",
+        "membersResponseDescription": "Antworten liefern { success, data.roomId, data.members }. Jeder Eintrag enthält userId, username, nickname, avatar, joinedAt, lastSeen und isOnline."
       }
     },
     "rooms": {

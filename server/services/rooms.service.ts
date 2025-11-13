@@ -94,6 +94,36 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
     }
 }
 
+export async function listRoomsForUser(userId: string): Promise<RoomDetails[]> {
+    await ensureDatabaseSetup();
+    return handleListUserRooms({ userId });
+}
+
+export async function listRoomMembersForUser(params: { roomId: string; userId: string }): Promise<RoomMemberDetails[]> {
+    const { roomId, userId } = params;
+    if (!roomId) {
+        throw new Error('Room id is required');
+    }
+    if (!userId) {
+        throw new Error('User id is required');
+    }
+
+    await ensureDatabaseSetup();
+
+    const room = await getRoomById(roomId);
+    if (!room) {
+        throw new Error('Room not found');
+    }
+
+    const member = await getMember(roomId, userId);
+    if (!member) {
+        throw new Error('You are not a member of this room');
+    }
+
+    const rows = await listMembers(roomId);
+    return rows.map(mapMemberRecord);
+}
+
 async function handleCreateRoom(payload: { name: string; password?: string | null; userId: string }): Promise<RoomDetails> {
     if (!payload.name?.trim()) {
         throw new Error('Room name is required');

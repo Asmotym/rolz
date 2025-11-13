@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { createLogger } from './core/utils/logger';
-import { handleRoomsAction, listRoomDiceRolls, type RoomsAction } from './services/rooms.service';
+import { handleRoomsAction, listRoomDiceRolls, listRoomsForUser, listRoomMembersForUser, type RoomsAction } from './services/rooms.service';
 import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/discord-handler.core';
 import { cors } from './middlewares/cors';
 import { requireApiKeyForUntrustedOrigins } from './middlewares/api-key';
@@ -91,6 +91,21 @@ app.delete('/api/users/:userId/api-key', async (req, res) => {
     }
 });
 
+app.get('/api/rooms', async (_req, res) => {
+    const userId = res.locals.apiKeyUserId as string | undefined;
+    if (!userId) {
+        return res.status(401).json({ success: false, error: 'API key is required to list rooms' });
+    }
+
+    try {
+        const rooms = await listRoomsForUser(userId);
+        res.json({ success: true, data: { rooms } });
+    } catch (error) {
+        logger.error(`Rooms listing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+    }
+});
+
 app.post('/api/rooms', async (req, res) => {
     if (!req.body || typeof req.body !== 'object') {
         return res.status(400).json({ success: false, error: 'Request body is required' });
@@ -106,6 +121,26 @@ app.post('/api/rooms', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         logger.error(`Rooms endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+    }
+});
+
+app.get('/api/rooms/:roomId/members', async (req, res) => {
+    const { roomId } = req.params;
+    const userId = res.locals.apiKeyUserId as string | undefined;
+
+    if (!userId) {
+        return res.status(401).json({ success: false, error: 'API key is required to list room members' });
+    }
+    if (!roomId) {
+        return res.status(400).json({ success: false, error: 'Room id is required' });
+    }
+
+    try {
+        const members = await listRoomMembersForUser({ roomId, userId });
+        res.json({ success: true, data: { roomId, members } });
+    } catch (error) {
+        logger.error(`Room members endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
     }
 });

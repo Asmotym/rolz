@@ -61,7 +61,18 @@
         "querySinceDescription": "Horodatage ISO 8601 optionnel (ex. 2024-01-01T00:00:00Z). Lorsqu'il est fourni, seuls les jets créés après ce moment sont renvoyés et ils sont triés du plus ancien au plus récent.",
         "exampleTitle": "Requête d'exemple",
         "responseTitle": "Charge utile de réponse",
-        "responseDescription": "Les réponses suivent toujours { success, data }. L'objet data répète le roomId et expose diceRolls, un tableau de messages de dés (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...)."
+        "responseDescription": "Les réponses suivent toujours { success, data }. L'objet data répète le roomId et expose diceRolls, un tableau de messages de dés (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...).",
+        "roomsTitle": "Endpoint des salles du compte",
+        "roomsDescription": "Utilisez ce point de terminaison pour récupérer toutes les salles que vous avez créées ou rejointes. La réponse reflète l'onglet Paramètres → Salles.",
+        "roomsEndpointHelp": "Retourne les salles actives et archivées liées à l'utilisateur identifié par votre clé API.",
+        "roomsExampleTitle": "Exemple de requête (salles)",
+        "roomsResponseTitle": "Réponse (salles)",
+        "roomsResponseDescription": "Les réponses contiennent { success, data.rooms }. Chaque salle suit la même structure que dans l'application (id, name, inviteCode, isProtected, memberCount, lastActivity, archivedAt, isArchived, isCreator, createdBy, createdAt).",
+        "membersDescription": "Utilisez cette route pour récupérer la liste complète des membres d'une salle à laquelle vous appartenez.",
+        "membersEndpointHelp": "Nécessite votre clé API et ne fonctionne que si vous êtes membre de la salle demandée.",
+        "membersExampleTitle": "Exemple de requête (membres)",
+        "membersResponseTitle": "Réponse (membres)",
+        "membersResponseDescription": "Les réponses renvoient { success, data.roomId, data.members }. Chaque membre inclut userId, username, nickname, avatar, joinedAt, lastSeen et isOnline."
       }
     },
     "rooms": {
