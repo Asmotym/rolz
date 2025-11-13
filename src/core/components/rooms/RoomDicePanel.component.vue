@@ -3,7 +3,7 @@
     <h3 class="text-subtitle-1 mb-2">🎲 Dice Roll</h3>
     <template v-if="!currentUser">
       <v-alert type="info" variant="tonal" density="comfortable">
-        Sign in to manage and roll this room's custom dice.
+        Sign in to manage and roll your custom dice for this room.
       </v-alert>
     </template>
     <template v-else>
@@ -31,7 +31,7 @@
         variant="tonal"
         density="comfortable"
       >
-        No room dice yet. Add one from Settings → Dices.
+        You haven't saved any dice for this room yet. Add one from Settings → Dices.
       </v-alert>
       <template v-else>
         <div class="custom-dice-chip-group">

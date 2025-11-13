@@ -100,7 +100,7 @@
               <div class="text-subtitle-2 mb-2">Create a custom dice</div>
               <template v-if="!currentUser">
                 <v-alert type="info" variant="tonal" density="comfortable">
-                  Sign in to manage this room's dice.
+                  Sign in to manage your dice for this room.
                 </v-alert>
               </template>
               <template v-else>
@@ -182,7 +182,7 @@
                 </v-alert>
                 <template v-else-if="diceManager.customDices.value.length === 0">
                   <p class="text-caption text-medium-emphasis">
-                    No custom dice yet. Use the form above to add one.
+                    You haven't saved any dice for this room yet. Use the form above to add one.
                   </p>
                 </template>
                 <template v-else>

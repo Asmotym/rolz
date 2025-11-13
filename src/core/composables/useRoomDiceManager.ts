@@ -22,7 +22,7 @@ export function useRoomDiceManager(
   const diceRollError = ref<string | null>(null);
   const roomDicesLoading = ref(false);
   const roomDicesError = ref<string | null>(null);
-  const roomDicesLoadedRoomId = ref<string | null>(null);
+  const roomDicesLoadedKey = ref<string | null>(null);
   const diceMutationLoading = ref(false);
   const diceManagementError = ref<string | null>(null);
 
@@ -41,13 +41,14 @@ export function useRoomDiceManager(
     const room = getRoom();
     const currentUser = getCurrentUser();
     if (!room || !currentUser) return;
-    if (!force && roomDicesLoadedRoomId.value === room.id) return;
+    const cacheKey = composeDiceCacheKey(room.id, currentUser.id);
+    if (!force && roomDicesLoadedKey.value === cacheKey) return;
     roomDicesLoading.value = true;
     roomDicesError.value = null;
     try {
       const dices = await RoomsService.fetchRoomDices(room.id, currentUser.id);
       customDices.value = dices;
-      roomDicesLoadedRoomId.value = room.id;
+      roomDicesLoadedKey.value = cacheKey;
     } catch (error) {
       roomDicesError.value = error instanceof Error ? error.message : 'Unable to load room dice';
     } finally {
@@ -61,7 +62,7 @@ export function useRoomDiceManager(
     newDiceDescription.value = '';
     newDiceError.value = null;
     diceRollError.value = null;
-    roomDicesLoadedRoomId.value = null;
+    roomDicesLoadedKey.value = null;
     roomDicesError.value = null;
     roomDicesLoading.value = false;
     diceMutationLoading.value = false;
@@ -115,7 +116,7 @@ export function useRoomDiceManager(
         description: description || undefined,
       });
       customDices.value = [...customDices.value, created];
-      roomDicesLoadedRoomId.value = room.id;
+      roomDicesLoadedKey.value = composeDiceCacheKey(room.id, currentUser.id);
       clearNewDiceForm();
     } catch (error) {
       diceManagementError.value = error instanceof Error ? error.message : 'Unable to add dice.';
@@ -202,6 +203,10 @@ export function useRoomDiceManager(
     } finally {
       diceMutationLoading.value = false;
     }
+  }
+
+  function composeDiceCacheKey(roomId: string, userId: string) {
+    return `${roomId}:${userId}`;
   }
 
   return {

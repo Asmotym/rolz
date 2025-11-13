@@ -2,10 +2,10 @@ import { randomUUID } from 'crypto';
 import { execute, query } from '../client';
 import type { DatabaseRoomDice, NewRoomDice } from '../../types/database.types';
 
-export async function listRoomDices(roomId: string): Promise<DatabaseRoomDice[]> {
+export async function listRoomDices(roomId: string, createdBy: string): Promise<DatabaseRoomDice[]> {
     return query<DatabaseRoomDice[]>(
-        `SELECT * FROM room_dices WHERE room_id = ? ORDER BY created_at ASC`,
-        [roomId]
+        `SELECT * FROM room_dices WHERE room_id = ? AND created_by = ? ORDER BY created_at ASC`,
+        [roomId, createdBy]
     );
 }
 

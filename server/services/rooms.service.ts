@@ -317,7 +317,7 @@ async function handleUpdateNickname(payload: { roomId: string; userId: string; n
 
 async function handleListRoomDices(payload: { roomId: string; userId: string }): Promise<RoomDice[]> {
     const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
-    const rows = await listRoomDices(room.id);
+    const rows = await listRoomDices(room.id, payload.userId);
     return rows.map(mapRoomDiceRecord);
 }
 
@@ -338,7 +338,7 @@ async function handleUpdateRoomDice(payload: { roomId: string; userId: string; d
     if (!payload.diceId) throw new Error('Dice id missing');
     const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
     const existing = await getRoomDice(payload.diceId);
-    if (!existing || existing.room_id !== room.id) {
+    if (!existing || existing.room_id !== room.id || existing.created_by !== payload.userId) {
         throw new Error('Dice not found');
     }
     const notation = normalizeDiceNotation(payload.notation);
@@ -352,7 +352,7 @@ async function handleDeleteRoomDice(payload: { roomId: string; userId: string; d
     if (!payload.diceId) throw new Error('Dice id missing');
     const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
     const existing = await getRoomDice(payload.diceId);
-    if (!existing || existing.room_id !== room.id) {
+    if (!existing || existing.room_id !== room.id || existing.created_by !== payload.userId) {
         throw new Error('Dice not found');
     }
     await deleteRoomDice(payload.diceId);
