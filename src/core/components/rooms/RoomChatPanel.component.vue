@@ -24,7 +24,7 @@
             variant="text"
             :disabled="!room || !currentUser"
             :title="'Room settings'"
-            @click="openSettingsPanel"
+            @click="openSettingsPanel()"
           />
           <v-btn
             icon="mdi-content-copy"

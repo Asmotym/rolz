@@ -507,6 +507,9 @@ onUnmounted(() => {
 <style scoped>
 .custom-dice-list {
   margin-top: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .custom-dice-card {
