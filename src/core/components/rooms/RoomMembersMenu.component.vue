@@ -11,7 +11,7 @@
         v-bind="menuActivatorProps"
         variant="tonal"
         color="secondary"
-        class="members-chip"
+        class="members-chip mr-2"
         :append-icon="menuOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
         @click="handleMembersChipClick"
       >
