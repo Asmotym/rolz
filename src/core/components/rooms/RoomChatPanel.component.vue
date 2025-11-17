@@ -4,9 +4,18 @@
       <v-card-title class="d-flex justify-space-between align-center flex-wrap gap-2">
         <div>
           <div class="text-h6">{{ room.name }}</div>
-          <small class="text-medium-emphasis">
-            Invite code: {{ room.inviteCode }}
-          </small>
+          <div class="text-medium-emphasis d-flex align-center gap-2">
+            <small>Invite code: {{ displayedInviteCode }}</small>
+            <v-btn
+              variant="text"
+              size="x-small"
+              :icon="showInviteCode ? 'mdi-eye-off' : 'mdi-eye'"
+              :disabled="!room?.inviteCode"
+              :title="showInviteCode ? 'Hide invite code' : 'Show invite code'"
+              :aria-label="showInviteCode ? 'Hide invite code' : 'Show invite code'"
+              @click="toggleInviteVisibility"
+            />
+          </div>
         </div>
         <div class="d-flex align-center gap-2">
           <RoomMembersMenu :room="room" />
@@ -147,6 +156,16 @@ const inviteLink = computed(() => {
   return `${window.location.origin}/rooms/${props.room.id}?invite=${props.room.inviteCode}`;
 });
 
+const showInviteCode = ref(false);
+const maskedInviteCode = computed(() => {
+  const code = props.room?.inviteCode ?? '';
+  return code ? '*'.repeat(code.length) : '';
+});
+const displayedInviteCode = computed(() => {
+  if (!props.room) return '';
+  return showInviteCode.value ? props.room.inviteCode : maskedInviteCode.value;
+});
+
 const chatLayoutStyles = computed(() => ({
   '--chat-panel-width': `${chatWidth.value}%`,
   '--dice-panel-width': `${Math.max(0, 100 - chatWidth.value)}%`,
@@ -168,6 +187,7 @@ watch(
     if (!props.room) {
       settingsDialog.value = false;
     }
+    showInviteCode.value = false;
   },
   { immediate: true }
 );
@@ -204,6 +224,11 @@ async function copyInviteLink() {
   } catch (error) {
     console.error('Unable to copy invite link', error);
   }
+}
+
+function toggleInviteVisibility() {
+  if (!props.room?.inviteCode) return;
+  showInviteCode.value = !showInviteCode.value;
 }
 
 function openSettingsPanel() {
