@@ -34,11 +34,15 @@ export const useRoomsStore = defineStore('rooms', {
         setError(message: string | null) {
             this.errorMessage = message;
         },
-        async fetchRooms() {
+        async fetchRooms(userId?: string | null) {
             this.loadingRooms = true;
             this.setError(null);
             try {
-                const rooms = await RoomsService.fetchRooms();
+                if (!userId) {
+                    this.rooms = [];
+                    return;
+                }
+                const rooms = await RoomsService.fetchUserRooms(userId);
                 this.rooms = rooms.sort(sortRoomsByActivity);
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : 'Unable to load rooms');

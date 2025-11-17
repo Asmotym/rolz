@@ -61,7 +61,7 @@ const route = useRoute();
 const router = useRouter();
 
 const currentUser = computed(() => discordService.user.value);
-const rooms = computed(() => roomsStore.rooms);
+const rooms = computed(() => roomsStore.rooms.filter((room) => !room.isArchived));
 const selectedRoom = computed(() => roomsStore.selectedRoom);
 const messages = computed(() => roomsStore.messages);
 const routeRoomId = computed(() => {
@@ -86,7 +86,7 @@ function showFeedback(type: 'success' | 'info', message: string) {
 
 async function ensureRoomsLoaded() {
   try {
-    await roomsStore.fetchRooms();
+    await roomsStore.fetchRooms(currentUser.value?.id ?? null);
   } catch (error) {
     console.error(error);
   }

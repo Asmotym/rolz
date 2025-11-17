@@ -210,7 +210,7 @@ function resetFeedback() {
 
 async function syncRoomsStore() {
   try {
-    await roomsStore.fetchRooms();
+    await roomsStore.fetchRooms(currentUser.value?.id ?? null);
   } catch (error) {
     console.error(error);
   }
