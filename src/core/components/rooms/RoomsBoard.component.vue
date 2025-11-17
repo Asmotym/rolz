@@ -17,7 +17,7 @@
       {{ feedback.message }}
     </v-alert>
 
-    <v-row class="justify-center">
+    <v-row class="justify-center" style="height: 100%;">
       <v-col v-if="!selectedRoom" cols="12" md="4">
         <RoomsSidebar
           :rooms="rooms"
@@ -30,7 +30,7 @@
           @join="handleJoinRoom"
         />
       </v-col>
-      <v-col v-if="selectedRoom" cols="12">
+      <v-col v-if="selectedRoom" cols="12" style="height: 100%;">
         <RoomChatPanel
           :room="selectedRoom"
           :messages="messages"
@@ -251,5 +251,6 @@ function navigateHome() {
 <style scoped>
 .rooms-board {
   min-height: 60vh;
+  height: 100%;
 }
 </style>

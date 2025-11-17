@@ -315,12 +315,16 @@ onUnmounted(() => {
 <style scoped>
 .room-chat-panel {
   min-height: 600px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .messages-container {
-  max-height: 360px;
+  /* max-height: 360px; */
   overflow-y: auto;
   padding-right: 8px;
+  height: 100%;
 }
 
 .chat-layout {
@@ -330,6 +334,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 24px;
   overflow: hidden;
+  height: 100%;
 }
 
 .chat-layout.is-resizing {
@@ -338,6 +343,11 @@ onUnmounted(() => {
 
 .chat-layout.is-resizing * {
   user-select: none;
+}
+
+.chat-section {
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-section,
