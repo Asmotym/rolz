@@ -38,7 +38,7 @@
 
       <v-divider />
 
-      <v-card-text>
+      <v-card-text style="height: 90%;">
         <div
           ref="chatLayout"
           class="chat-layout"
@@ -89,7 +89,7 @@
           </div>
 
           <div class="dice-section">
-            <RoomDicePanel :current-user="currentUser" />
+            <RoomDicePanel :current-user="currentUser" @manage-dice="openDiceSettings" />
           </div>
         </div>
       </v-card-text>
@@ -108,6 +108,7 @@
     v-model:open="settingsDialog"
     :room="room"
     :current-user="currentUser"
+    :initial-tab="settingsPanelTab"
   />
 </template>
 
@@ -128,6 +129,7 @@ const MIN_CHAT_WIDTH = 320;
 const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
+type SettingsTab = 'room' | 'dices';
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -148,6 +150,7 @@ const chatWidth = ref(loadInitialWidth());
 const isResizing = ref(false);
 const layoutBounds = ref<{ left: number; width: number } | null>(null);
 const settingsDialog = ref(false);
+const settingsPanelTab = ref<SettingsTab>('room');
 let resizeRaf: number | null = null;
 let pendingClientX: number | null = null;
 
@@ -231,9 +234,14 @@ function toggleInviteVisibility() {
   showInviteCode.value = !showInviteCode.value;
 }
 
-function openSettingsPanel() {
+function openSettingsPanel(tab: SettingsTab = 'room') {
   if (!props.room || !props.currentUser) return;
+  settingsPanelTab.value = tab;
   settingsDialog.value = true;
+}
+
+function openDiceSettings() {
+  openSettingsPanel('dices');
 }
 
 function persistChatWidth(value: number) {

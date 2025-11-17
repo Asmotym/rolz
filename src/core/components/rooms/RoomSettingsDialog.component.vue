@@ -290,6 +290,7 @@ type SettingsTab = 'room' | 'dices';
 const props = defineProps<{
   room: RoomDetails | null;
   currentUser: DiscordUser | null;
+  initialTab?: SettingsTab;
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -341,12 +342,20 @@ watch(
 
 watch(open, async (dialogOpen) => {
   if (dialogOpen) {
-    settingsTab.value = 'room';
+    settingsTab.value = props.initialTab ?? 'room';
     await initializeSettingsPanel();
   } else {
     clearSettingsFeedback();
   }
 });
+
+watch(
+  () => props.initialTab,
+  (tab) => {
+    if (!open.value) return;
+    settingsTab.value = tab ?? 'room';
+  }
+);
 
 watch(
   () => props.room,

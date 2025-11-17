@@ -53,6 +53,20 @@
               </span>
             </div>
           </v-chip>
+          <v-chip
+            key="add-dice"
+            variant="outlined"
+            size="large"
+            class="custom-dice-chip custom-dice-chip--action"
+            color="primary"
+            title="Add a new custom dice"
+            @click="emit('manage-dice')"
+          >
+            <div class="custom-dice-chip__content">
+              <v-icon icon="mdi-plus" size="18" class="mr-1" />
+              <span>Add dice</span>
+            </div>
+          </v-chip>
         </div>
       </template>
     </template>
@@ -75,6 +89,10 @@ import { RoomDiceManagerKey, type RoomDiceManager } from 'core/composables/useRo
 
 defineProps<{
   currentUser: DiscordUser | null;
+}>();
+
+const emit = defineEmits<{
+  (event: 'manage-dice'): void;
 }>();
 
 const diceManager = inject<RoomDiceManager>(RoomDiceManagerKey);
@@ -102,6 +120,10 @@ if (!diceManager) {
   text-transform: none;
   display: flex;
   text-align: left;
+}
+
+.custom-dice-chip--action {
+  border-style: dashed;
 }
 
 .custom-dice-chip__content {

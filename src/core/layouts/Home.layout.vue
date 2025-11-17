@@ -30,5 +30,6 @@ const userLoggedIn = computed(() => {
   width: 100%;
   margin: 0 auto;
   height: 100%;
+  max-height: calc(100vh - var(--v-layout-top));
 }
 </style>
