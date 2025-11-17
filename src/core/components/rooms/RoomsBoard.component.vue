@@ -18,7 +18,7 @@
     </v-alert>
 
     <v-row class="justify-center" style="height: 100%;">
-      <v-col v-if="!selectedRoom" cols="12" md="4">
+      <v-col v-if="!selectedRoom" cols="12" md="6">
         <RoomsSidebar
           :rooms="rooms"
           :selected-room-id="roomsStore.selectedRoomId"
