@@ -430,6 +430,7 @@ onUnmounted(() => {
   .chat-section {
     flex: 1 1 var(--chat-panel-width);
     min-width: 0;
+    height: 100%;
   }
 
   .dice-section {
