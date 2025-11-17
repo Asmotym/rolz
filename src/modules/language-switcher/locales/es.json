@@ -61,18 +61,18 @@
         "querySinceDescription": "Marca opcional en formato ISO 8601 (ej. 2024-01-01T00:00:00Z). Al incluirla solo se devuelven tiradas creadas después de ese momento y se ordenan de la más antigua a la más reciente.",
         "exampleTitle": "Solicitud de ejemplo",
         "responseTitle": "Carga de respuesta",
-        "responseDescription": "Las respuestas siempre siguen { success, data }. El objeto data repite el roomId y expone diceRolls, un arreglo de mensajes de dados (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...).",
+        "responseDescription": "Las respuestas siempre siguen la estructura success/data. El objeto data repite el roomId y expone diceRolls, un arreglo de mensajes de dados (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...).",
         "roomsTitle": "Endpoint de salas del usuario",
         "roomsDescription": "Usa este endpoint para recuperar todas las salas que creaste o a las que te uniste. La respuesta coincide con lo que ves en Configuración → Salas.",
         "roomsEndpointHelp": "Devuelve salas activas y archivadas vinculadas al usuario identificado por tu clave API.",
         "roomsExampleTitle": "Ejemplo de solicitud (salas)",
         "roomsResponseTitle": "Respuesta (salas)",
-        "roomsResponseDescription": "Las respuestas contienen { success, data.rooms }. Cada sala sigue la misma estructura que en la aplicación (id, name, inviteCode, isProtected, memberCount, lastActivity, archivedAt, isArchived, isCreator, createdBy, createdAt).",
+        "roomsResponseDescription": "Las respuestas contienen success junto a data.rooms. Cada sala sigue la misma estructura que en la aplicación (id, name, inviteCode, isProtected, memberCount, lastActivity, archivedAt, isArchived, isCreator, createdBy, createdAt).",
         "membersDescription": "Usa esta ruta para recuperar la lista completa de miembros de una sala a la que perteneces.",
         "membersEndpointHelp": "Necesita tu clave API y solo funciona si eres miembro de la sala solicitada.",
         "membersExampleTitle": "Ejemplo de solicitud (miembros)",
         "membersResponseTitle": "Respuesta (miembros)",
-        "membersResponseDescription": "Las respuestas devuelven { success, data.roomId, data.members }. Cada miembro incluye userId, username, nickname, avatar, joinedAt, lastSeen e isOnline."
+        "membersResponseDescription": "Las respuestas devuelven success además de data.roomId y data.members. Cada miembro incluye userId, username, nickname, avatar, joinedAt, lastSeen e isOnline."
       }
     },
     "rooms": {

@@ -61,18 +61,18 @@
         "querySinceDescription": "Optional ISO 8601 timestamp (e.g. 2024-01-01T00:00:00Z). When set, only dice rolls created strictly after this moment are returned and they are sorted from oldest to newest.",
         "exampleTitle": "Example request",
         "responseTitle": "Response payload",
-        "responseDescription": "Responses always follow { success, data }. The data object echoes the roomId and exposes diceRolls, an array of dice chat messages (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...).",
+        "responseDescription": "Responses always follow a success/data structure. The data object echoes the roomId and exposes diceRolls, an array of dice chat messages (id, userId, username, nickname, diceNotation, diceTotal, diceRolls[], createdAt, ...).",
         "roomsTitle": "Room membership endpoint",
         "roomsDescription": "Use this endpoint to fetch every room you created or joined. The payload mirrors what you see in Settings → Rooms.",
         "roomsEndpointHelp": "Returns both active and archived rooms linked to the user identified by your API key.",
         "roomsExampleTitle": "Rooms example request",
         "roomsResponseTitle": "Rooms response payload",
-        "roomsResponseDescription": "Responses return { success, data.rooms }. Each room entry matches the app (id, name, inviteCode, isProtected, memberCount, lastActivity, archivedAt, isArchived, isCreator, createdBy, createdAt).",
+        "roomsResponseDescription": "Responses return success with data.rooms. Each room entry matches the app (id, name, inviteCode, isProtected, memberCount, lastActivity, archivedAt, isArchived, isCreator, createdBy, createdAt).",
         "membersDescription": "Use this route to retrieve the full roster of a room you belong to.",
         "membersEndpointHelp": "Requires your API key and only works if you are a member of the requested room.",
         "membersExampleTitle": "Members example request",
         "membersResponseTitle": "Members response payload",
-        "membersResponseDescription": "Responses return { success, data.roomId, data.members }. Each member contains userId, username, nickname, avatar, joinedAt, lastSeen, and isOnline."
+        "membersResponseDescription": "Responses return success plus data.roomId and data.members. Each member contains userId, username, nickname, avatar, joinedAt, lastSeen, and isOnline."
       }
     },
     "rooms": {
