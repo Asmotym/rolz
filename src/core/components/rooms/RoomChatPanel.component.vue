@@ -443,4 +443,13 @@ onUnmounted(() => {
     flex: 0 0 12px;
   }
 }
+
+@media (max-width: 960px) {
+  .chat-section {
+    height: 80%;
+  }
+  .dice-section {
+    overflow: auto;
+  }
+}
 </style>
