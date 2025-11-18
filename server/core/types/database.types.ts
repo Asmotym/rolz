@@ -82,6 +82,7 @@ export interface DatabaseRoomDice {
     id: string;
     room_id: string;
     created_by?: string | null;
+    category_id?: string | null;
     notation: string;
     description?: string | null;
     created_at?: string;
@@ -92,6 +93,27 @@ export interface NewRoomDice {
     id?: string;
     room_id: string;
     created_by?: string | null;
+    category_id?: string | null;
     notation: string;
     description?: string | null;
+}
+
+export interface DatabaseRoomDiceCategory {
+    id: string;
+    room_id: string;
+    created_by?: string | null;
+    name: string;
+    sort_order?: number | null;
+    is_default?: number | boolean | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface NewRoomDiceCategory {
+    id?: string;
+    room_id: string;
+    created_by?: string | null;
+    name: string;
+    sort_order?: number;
+    is_default?: number | boolean;
 }

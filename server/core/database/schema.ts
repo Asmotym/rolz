@@ -77,18 +77,64 @@ export async function ensureDatabaseSetup(): Promise<void> {
     `);
 
     await query(`
+        CREATE TABLE IF NOT EXISTS room_dice_categories (
+            id CHAR(36) PRIMARY KEY,
+            room_id CHAR(36) NOT NULL,
+            created_by VARCHAR(64),
+            name VARCHAR(80) NOT NULL,
+            sort_order INT DEFAULT 0,
+            is_default TINYINT(1) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_dice_categories_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+            CONSTRAINT fk_dice_categories_user FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL,
+            UNIQUE KEY uniq_dice_category (room_id, created_by, name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
         CREATE TABLE IF NOT EXISTS room_dices (
             id CHAR(36) PRIMARY KEY,
             room_id CHAR(36) NOT NULL,
             created_by VARCHAR(64),
+            category_id CHAR(36),
             notation VARCHAR(64) NOT NULL,
             description VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             CONSTRAINT fk_room_dices_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
-            CONSTRAINT fk_room_dices_user FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL
+            CONSTRAINT fk_room_dices_user FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL,
+            CONSTRAINT fk_room_dices_category FOREIGN KEY (category_id) REFERENCES room_dice_categories(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    await query(`
+        ALTER TABLE room_dices
+        ADD COLUMN IF NOT EXISTS category_id CHAR(36) NULL
+    `);
+
+    await query(`
+        CREATE INDEX IF NOT EXISTS idx_room_dices_category ON room_dices (category_id)
+    `);
+
+    const existingCategoryConstraint = await query<{ constraint_name: string }[]>(
+        `
+        SELECT CONSTRAINT_NAME AS constraint_name
+        FROM information_schema.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'room_dices'
+          AND CONSTRAINT_NAME = 'fk_room_dices_category'
+        LIMIT 1
+        `
+    );
+
+    if (existingCategoryConstraint.length === 0) {
+        await query(`
+            ALTER TABLE room_dices
+            ADD CONSTRAINT fk_room_dices_category FOREIGN KEY (category_id)
+            REFERENCES room_dice_categories(id) ON DELETE SET NULL
+        `);
+    }
 
     await query(`
         CREATE TABLE IF NOT EXISTS user_api_keys (

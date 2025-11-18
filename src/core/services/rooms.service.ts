@@ -1,5 +1,5 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
-import type { RoomDetails, RoomMemberDetails, RoomMessage, RoomDice } from 'netlify/core/types/data.types';
+import type { RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory } from 'netlify/core/types/data.types';
 
 const ROOMS_ENDPOINT = getApiUrl('/rooms');
 
@@ -154,15 +154,15 @@ export class RoomsService {
         return data.message;
     }
 
-    static async fetchRoomDices(roomId: string, userId: string): Promise<RoomDice[]> {
-        const data = await request<{ roomId: string; dices: RoomDice[] }>({
+    static async fetchRoomDices(roomId: string, userId: string): Promise<{ dices: RoomDice[]; categories: RoomDiceCategory[] }> {
+        const data = await request<{ roomId: string; dices: RoomDice[]; categories: RoomDiceCategory[] }>({
             action: 'roomDices',
             payload: { roomId, userId }
         });
-        return data.dices;
+        return { dices: data.dices, categories: data.categories };
     }
 
-    static async createRoomDice(payload: { roomId: string; userId: string; notation: string; description?: string | null }): Promise<RoomDice> {
+    static async createRoomDice(payload: { roomId: string; userId: string; notation: string; description?: string | null; categoryId?: string | null }): Promise<RoomDice> {
         const data = await request<{ dice: RoomDice }>({
             action: 'createDice',
             payload
@@ -170,7 +170,7 @@ export class RoomsService {
         return data.dice;
     }
 
-    static async updateRoomDice(payload: { roomId: string; userId: string; diceId: string; notation: string; description?: string | null }): Promise<RoomDice> {
+    static async updateRoomDice(payload: { roomId: string; userId: string; diceId: string; notation: string; description?: string | null; categoryId?: string | null }): Promise<RoomDice> {
         const data = await request<{ dice: RoomDice }>({
             action: 'updateDice',
             payload
@@ -183,5 +183,13 @@ export class RoomsService {
             action: 'deleteDice',
             payload
         });
+    }
+
+    static async createDiceCategory(payload: { roomId: string; userId: string; name: string }): Promise<RoomDiceCategory> {
+        const data = await request<{ category: RoomDiceCategory }>({
+            action: 'createDiceCategory',
+            payload
+        });
+        return data.category;
     }
 }

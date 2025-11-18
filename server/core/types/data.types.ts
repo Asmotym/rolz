@@ -47,6 +47,19 @@ export interface RoomDice {
     roomId: string;
     notation: string;
     description?: string | null;
+    categoryId?: string;
+    categoryName?: string;
+    createdBy?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface RoomDiceCategory {
+    id: string;
+    roomId: string;
+    name: string;
+    sortOrder?: number;
+    isDefault?: boolean;
     createdBy?: string | null;
     createdAt?: string;
     updatedAt?: string;

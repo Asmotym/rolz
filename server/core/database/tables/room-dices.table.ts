@@ -21,12 +21,13 @@ export async function insertRoomDice(payload: NewRoomDice): Promise<DatabaseRoom
     const id = payload.id ?? randomUUID();
 
     await execute(
-        `INSERT INTO room_dices (id, room_id, created_by, notation, description)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO room_dices (id, room_id, created_by, category_id, notation, description)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
             id,
             payload.room_id,
             payload.created_by ?? null,
+            payload.category_id ?? null,
             payload.notation,
             payload.description ?? null
         ]
@@ -41,11 +42,11 @@ export async function insertRoomDice(payload: NewRoomDice): Promise<DatabaseRoom
 
 export async function updateRoomDice(
     id: string,
-    payload: { notation: string; description?: string | null }
+    payload: { notation: string; description?: string | null; category_id?: string | null }
 ): Promise<DatabaseRoomDice | undefined> {
     await execute(
-        `UPDATE room_dices SET notation = ?, description = ? WHERE id = ? LIMIT 1`,
-        [payload.notation, payload.description ?? null, id]
+        `UPDATE room_dices SET notation = ?, description = ?, category_id = ? WHERE id = ? LIMIT 1`,
+        [payload.notation, payload.description ?? null, payload.category_id ?? null, id]
     );
     return getRoomDice(id);
 }

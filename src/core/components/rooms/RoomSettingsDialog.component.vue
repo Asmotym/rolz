@@ -125,6 +125,58 @@
                   :disabled="diceManager.diceMutationLoading.value"
                   class="mt-3"
                 />
+                <v-select
+                  v-model="diceManager.newDiceCategoryId.value"
+                  :items="diceManager.diceCategories.value"
+                  item-title="name"
+                  item-value="id"
+                  label="Category"
+                  variant="outlined"
+                  density="comfortable"
+                  class="mt-3"
+                  :disabled="diceManager.diceMutationLoading.value || diceManager.roomDicesLoading.value"
+                  :loading="diceManager.roomDicesLoading.value"
+                  :hint="diceManager.roomDicesLoading.value ? 'Loading categories…' : 'Group similar dice together'"
+                  persistent-hint
+                />
+                <div class="mt-4">
+                  <div class="text-subtitle-2 mb-2">Need a new category?</div>
+                  <v-text-field
+                    v-model="diceManager.newCategoryName.value"
+                    label="Category name"
+                    variant="outlined"
+                    density="comfortable"
+                    placeholder="e.g., Attacks"
+                    :disabled="diceManager.categoryMutationLoading.value"
+                    :error-messages="diceManager.newCategoryError.value ? [diceManager.newCategoryError.value] : []"
+                  />
+                  <v-alert
+                    v-if="diceManager.categoryManagementError.value"
+                    type="error"
+                    variant="tonal"
+                    density="comfortable"
+                    class="mt-2"
+                  >
+                    {{ diceManager.categoryManagementError.value }}
+                  </v-alert>
+                  <div class="d-flex flex-wrap gap-2 mt-3">
+                    <v-btn
+                      color="primary"
+                      :disabled="diceManager.categoryMutationLoading.value"
+                      :loading="diceManager.categoryMutationLoading.value"
+                      @click="diceManager.addDiceCategory"
+                    >
+                      Create category
+                    </v-btn>
+                    <v-btn
+                      variant="text"
+                      :disabled="diceManager.categoryMutationLoading.value"
+                      @click="diceManager.newCategoryName.value = ''"
+                    >
+                      Clear
+                    </v-btn>
+                  </div>
+                </div>
                 <v-alert
                   v-if="diceManager.diceManagementError.value"
                   type="error"
@@ -199,6 +251,9 @@
                           <div v-if="dice.description" class="text-body-2 text-medium-emphasis">
                             {{ dice.description }}
                           </div>
+                          <div class="text-caption text-medium-emphasis mt-1">
+                            Category: {{ dice.categoryName ?? 'General' }}
+                          </div>
                         </div>
                         <div class="custom-dice-card__actions">
                           <v-btn
@@ -234,6 +289,17 @@
                           density="comfortable"
                           class="mt-3"
                           :disabled="diceManager.diceMutationLoading.value"
+                        />
+                        <v-select
+                          v-model="diceManager.editDiceCategoryId.value"
+                          :items="diceManager.diceCategories.value"
+                          item-title="name"
+                          item-value="id"
+                          label="Category"
+                          variant="outlined"
+                          density="comfortable"
+                          class="mt-3"
+                          :disabled="diceManager.diceMutationLoading.value || diceManager.roomDicesLoading.value"
                         />
                         <div class="d-flex justify-end gap-2 mt-3">
                           <v-btn
