@@ -1,3 +1,4 @@
+import './sentry.ts';
 import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { createLogger } from './core/utils/logger';
@@ -6,12 +7,12 @@ import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/dis
 import { cors } from './middlewares/cors';
 import { requireApiKeyForUntrustedOrigins } from './middlewares/api-key';
 import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/api-keys.service';
+import { sentry } from './middlewares/sentry'
+import Sentry from '@sentry/node'
 
 const logger = createLogger('Server');
 const app = express();
 
-app.use(cors);
-app.use(express.json({ limit: '1mb' }));
 app.use('/api', requireApiKeyForUntrustedOrigins);
 
 app.get('/health', (_req, res) => {
@@ -189,6 +190,11 @@ app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
     logger.error(`Unhandled error: ${error.message}`);
     return res.status(500).json({ success: false, error: 'Internal server error' });
 });
+
+Sentry.setupExpressErrorHandler(app);
+app.use(sentry)
+app.use(cors);
+app.use(express.json({ limit: '1mb' }));
 
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 8888);
 const host = process.env.HOST ?? '0.0.0.0';
