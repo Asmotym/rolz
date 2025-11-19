@@ -21,8 +21,8 @@ export class DiscordClient {
         }
 
         const json = await userResponse.json() as DiscordUser & { global_name?: string | null };
-        logger.debug(JSON.stringify(json));
-        const username = json.global_name ?? json.username;
+        const username = json.global_name || json.username || '???';
+        logger.info("User JSON => " + JSON.stringify(json));
         const user: DiscordUser = {
             id: json.id,
             username,
