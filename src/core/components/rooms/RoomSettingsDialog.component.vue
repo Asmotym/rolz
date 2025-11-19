@@ -96,115 +96,132 @@
           </v-window-item>
 
           <v-window-item value="dices">
-            <section class="mb-6">
-              <div class="text-subtitle-2 mb-2">Create a custom dice</div>
-              <template v-if="!currentUser">
-                <v-alert type="info" variant="tonal" density="comfortable">
-                  Sign in to manage your dice for this room.
-                </v-alert>
-              </template>
-              <template v-else>
-                <p class="text-caption text-medium-emphasis mb-3">
-                  Provide a dice notation (e.g., 1d20+3) and optionally a description to remember what it is for.
-                </p>
-                <v-text-field
-                  v-model="diceManager.newDiceNotation.value"
-                  label="Dice notation"
-                  variant="outlined"
-                  density="comfortable"
-                  placeholder="e.g., 2d6+1"
-                  :disabled="diceManager.diceMutationLoading.value"
-                  :error-messages="diceManager.newDiceError.value ? [diceManager.newDiceError.value] : []"
-                />
-                <v-text-field
-                  v-model="diceManager.newDiceDescription.value"
-                  label="Description (optional)"
-                  variant="outlined"
-                  density="comfortable"
-                  placeholder="e.g., Longsword attack"
-                  :disabled="diceManager.diceMutationLoading.value"
-                  class="mt-3"
-                />
-                <v-select
-                  v-model="diceManager.newDiceCategoryId.value"
-                  :items="diceManager.diceCategories.value"
-                  item-title="name"
-                  item-value="id"
-                  label="Category"
-                  variant="outlined"
-                  density="comfortable"
-                  class="mt-3"
-                  :disabled="diceManager.diceMutationLoading.value || diceManager.roomDicesLoading.value"
-                  :loading="diceManager.roomDicesLoading.value"
-                  :hint="diceManager.roomDicesLoading.value ? 'Loading categories…' : 'Group similar dice together'"
-                  persistent-hint
-                />
-                <div class="mt-4">
-                  <div class="text-subtitle-2 mb-2">Need a new category?</div>
-                  <v-text-field
-                    v-model="diceManager.newCategoryName.value"
-                    label="Category name"
-                    variant="outlined"
-                    density="comfortable"
-                    placeholder="e.g., Attacks"
-                    :disabled="diceManager.categoryMutationLoading.value"
-                    :error-messages="diceManager.newCategoryError.value ? [diceManager.newCategoryError.value] : []"
-                  />
-                  <v-alert
-                    v-if="diceManager.categoryManagementError.value"
-                    type="error"
-                    variant="tonal"
-                    density="comfortable"
-                    class="mt-2"
-                  >
-                    {{ diceManager.categoryManagementError.value }}
-                  </v-alert>
-                  <div class="d-flex flex-wrap gap-2 mt-3">
-                    <v-btn
-                      color="primary"
-                      :disabled="diceManager.categoryMutationLoading.value"
-                      :loading="diceManager.categoryMutationLoading.value"
-                      @click="diceManager.addDiceCategory"
+            <v-expansion-panels v-model="dicePanelsOpen" class="mb-6" variant="accordion">
+              <v-expansion-panel value="custom" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
+                <v-expansion-panel-title>Create a custom dice</v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <template v-if="!currentUser">
+                    <v-alert type="info" variant="tonal" density="comfortable">
+                      Sign in to manage your dice for this room.
+                    </v-alert>
+                  </template>
+                  <template v-else>
+                    <p class="text-caption text-medium-emphasis mb-3">
+                      Provide a dice notation (e.g., 1d20+3) and optionally a description to remember what it is for.
+                    </p>
+                    <v-text-field
+                      v-model="diceManager.newDiceNotation.value"
+                      label="Dice notation"
+                      variant="outlined"
+                      density="comfortable"
+                      placeholder="e.g., 2d6+1"
+                      :disabled="diceManager.diceMutationLoading.value"
+                      :error-messages="diceManager.newDiceError.value ? [diceManager.newDiceError.value] : []"
+                    />
+                    <v-text-field
+                      v-model="diceManager.newDiceDescription.value"
+                      label="Description (optional)"
+                      variant="outlined"
+                      density="comfortable"
+                      placeholder="e.g., Longsword attack"
+                      :disabled="diceManager.diceMutationLoading.value"
+                      class="mt-3"
+                    />
+                    <v-select
+                      v-model="diceManager.newDiceCategoryId.value"
+                      :items="diceManager.diceCategories.value"
+                      item-title="name"
+                      item-value="id"
+                      label="Category"
+                      variant="outlined"
+                      density="comfortable"
+                      class="mt-3"
+                      :disabled="diceManager.diceMutationLoading.value || diceManager.roomDicesLoading.value"
+                      :loading="diceManager.roomDicesLoading.value"
+                      :hint="diceManager.roomDicesLoading.value ? 'Loading categories…' : 'Group similar dice together'"
+                      persistent-hint
+                    />
+                    <v-alert
+                      v-if="diceManager.diceManagementError.value"
+                      type="error"
+                      variant="tonal"
+                      density="comfortable"
+                      class="mt-3"
                     >
-                      Create category
-                    </v-btn>
-                    <v-btn
-                      variant="text"
+                      {{ diceManager.diceManagementError.value }}
+                    </v-alert>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                      <v-btn
+                        color="primary"
+                        :disabled="diceManager.diceMutationLoading.value"
+                        :loading="diceManager.diceMutationLoading.value"
+                        @click="diceManager.addCustomDice"
+                      >
+                        Add dice
+                      </v-btn>
+                      <v-btn
+                        variant="text"
+                        :disabled="diceManager.diceMutationLoading.value"
+                        @click="diceManager.clearNewDiceForm"
+                      >
+                        Clear
+                      </v-btn>
+                    </div>
+                  </template>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <v-expansion-panel value="categories" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
+                <v-expansion-panel-title>Dice categories</v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <template v-if="!currentUser">
+                    <v-alert type="info" variant="tonal" density="comfortable">
+                      Sign in to manage categories for this room.
+                    </v-alert>
+                  </template>
+                  <template v-else>
+                    <p class="text-caption text-medium-emphasis mb-3">
+                      Group similar dice together by creating categories you can reuse.
+                    </p>
+                    <v-text-field
+                      v-model="diceManager.newCategoryName.value"
+                      label="Category name"
+                      variant="outlined"
+                      density="comfortable"
+                      placeholder="e.g., Attacks"
                       :disabled="diceManager.categoryMutationLoading.value"
-                      @click="diceManager.newCategoryName.value = ''"
+                      :error-messages="diceManager.newCategoryError.value ? [diceManager.newCategoryError.value] : []"
+                    />
+                    <v-alert
+                      v-if="diceManager.categoryManagementError.value"
+                      type="error"
+                      variant="tonal"
+                      density="comfortable"
+                      class="mt-2"
                     >
-                      Clear
-                    </v-btn>
-                  </div>
-                </div>
-                <v-alert
-                  v-if="diceManager.diceManagementError.value"
-                  type="error"
-                  variant="tonal"
-                  density="comfortable"
-                  class="mt-3"
-                >
-                  {{ diceManager.diceManagementError.value }}
-                </v-alert>
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                  <v-btn
-                    color="primary"
-                    :disabled="diceManager.diceMutationLoading.value"
-                    :loading="diceManager.diceMutationLoading.value"
-                    @click="diceManager.addCustomDice"
-                  >
-                    Add dice
-                  </v-btn>
-                  <v-btn
-                    variant="text"
-                    :disabled="diceManager.diceMutationLoading.value"
-                    @click="diceManager.clearNewDiceForm"
-                  >
-                    Clear
-                  </v-btn>
-                </div>
-              </template>
-            </section>
+                      {{ diceManager.categoryManagementError.value }}
+                    </v-alert>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                      <v-btn
+                        color="primary"
+                        :disabled="diceManager.categoryMutationLoading.value"
+                        :loading="diceManager.categoryMutationLoading.value"
+                        @click="diceManager.addDiceCategory"
+                      >
+                        Create category
+                      </v-btn>
+                      <v-btn
+                        variant="text"
+                        :disabled="diceManager.categoryMutationLoading.value"
+                        @click="diceManager.newCategoryName.value = ''"
+                      >
+                        Clear
+                      </v-btn>
+                    </div>
+                  </template>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
 
             <section>
               <div class="text-subtitle-2 mb-2">My dice</div>
@@ -368,6 +385,7 @@ if (!diceManager) {
 }
 
 const settingsTab = ref<SettingsTab>('room');
+const dicePanelsOpen = ref<(string | number)[]>([]);
 const roomNameInput = ref('');
 const roomNameError = ref<string | null>(null);
 const currentNickname = ref<string | null>(null);

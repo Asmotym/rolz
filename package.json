@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
+    "@sentry/node": "^10.26.0",
     "@vuetify/loader-shared": "^2.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
