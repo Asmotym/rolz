@@ -1,4 +1,4 @@
-import Sentry from '@sentry/node';
+import * as Sentry from '@sentry/node';
 
 if (typeof process.env.SENTRY_DSN === 'string') {
     Sentry.init({

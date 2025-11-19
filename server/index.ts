@@ -8,16 +8,31 @@ import { cors } from './middlewares/cors';
 import { requireApiKeyForUntrustedOrigins } from './middlewares/api-key';
 import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/api-keys.service';
 import { sentry } from './middlewares/sentry'
-import Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node'
+import { DatabaseUnavailableError } from './core/database/errors';
 
 const logger = createLogger('Server');
 const app = express();
 
+app.use(cors);
+app.use(express.json({ limit: '1mb' }));
 app.use('/api', requireApiKeyForUntrustedOrigins);
 
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+function respondWithServiceError(res: Response, error: unknown, context: string) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    const meta = error instanceof Error ? { stack: error.stack } : undefined;
+    if (error instanceof DatabaseUnavailableError) {
+        logger.error(`${context} - database unavailable: ${message}`, meta);
+        return res.status(503).json({ success: false, error: message });
+    }
+
+    logger.error(`${context}: ${message}`, meta);
+    return res.status(400).json({ success: false, error: message });
+}
 
 function ensureSameUser(res: Response, userId: string): boolean {
     const apiKeyUserId = res.locals.apiKeyUserId as string | undefined;
@@ -49,8 +64,7 @@ app.get('/api/users/:userId/api-key', async (req, res) => {
             }
         });
     } catch (error) {
-        logger.error(`Failed to fetch API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unable to fetch API key' });
+        respondWithServiceError(res, error, 'Failed to fetch API key');
     }
 });
 
@@ -68,8 +82,7 @@ app.post('/api/users/:userId/api-key', async (req, res) => {
         const payload = await generateUserApiKey(userId);
         res.json({ success: true, data: payload });
     } catch (error) {
-        logger.error(`Failed to generate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unable to generate API key' });
+        respondWithServiceError(res, error, 'Failed to generate API key');
     }
 });
 
@@ -87,8 +100,7 @@ app.delete('/api/users/:userId/api-key', async (req, res) => {
         await revokeUserApiKey(userId);
         res.json({ success: true, data: { apiKey: null } });
     } catch (error) {
-        logger.error(`Failed to revoke API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unable to revoke API key' });
+        respondWithServiceError(res, error, 'Failed to revoke API key');
     }
 });
 
@@ -102,8 +114,7 @@ app.get('/api/rooms', async (_req, res) => {
         const rooms = await listRoomsForUser(userId);
         res.json({ success: true, data: { rooms } });
     } catch (error) {
-        logger.error(`Rooms listing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+        respondWithServiceError(res, error, 'Rooms listing failed');
     }
 });
 
@@ -121,8 +132,7 @@ app.post('/api/rooms', async (req, res) => {
         const data = await handleRoomsAction(payload);
         res.json({ success: true, data });
     } catch (error) {
-        logger.error(`Rooms endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+        respondWithServiceError(res, error, 'Rooms endpoint failed');
     }
 });
 
@@ -141,8 +151,7 @@ app.get('/api/rooms/:roomId/members', async (req, res) => {
         const members = await listRoomMembersForUser({ roomId, userId });
         res.json({ success: true, data: { roomId, members } });
     } catch (error) {
-        logger.error(`Room members endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+        respondWithServiceError(res, error, 'Room members endpoint failed');
     }
 });
 
@@ -158,8 +167,7 @@ app.post('/api/discord', async (req, res) => {
         const data = await handleDiscordQuery({ ...body, queryType });
         res.json({ success: true, data, queryType });
     } catch (error) {
-        logger.error(`Discord endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+        respondWithServiceError(res, error, 'Discord endpoint failed');
     }
 });
 
@@ -176,8 +184,7 @@ app.get('/api/rooms/:roomId/dice-rolls', async (req, res) => {
         const diceRolls = await listRoomDiceRolls({ roomId, limit, since });
         res.json({ success: true, data: { roomId, diceRolls } });
     } catch (error) {
-        logger.error(`Dice rolls endpoint failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
+        respondWithServiceError(res, error, 'Dice rolls endpoint failed');
     }
 });
 
@@ -187,14 +194,17 @@ app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
         return res.status(400).json({ success: false, error: 'Invalid JSON payload' });
     }
 
+    if (error instanceof DatabaseUnavailableError) {
+        logger.error(`Database unavailable during request: ${error.message}`, { stack: error.stack });
+        return res.status(503).json({ success: false, error: error.message });
+    }
+
     logger.error(`Unhandled error: ${error.message}`);
     return res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
 Sentry.setupExpressErrorHandler(app);
 app.use(sentry)
-app.use(cors);
-app.use(express.json({ limit: '1mb' }));
 
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 8888);
 const host = process.env.HOST ?? '0.0.0.0';

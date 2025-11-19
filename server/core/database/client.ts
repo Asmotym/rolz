@@ -1,6 +1,16 @@
 import mysql from 'mysql2/promise';
+import { DatabaseUnavailableError, isDatabaseConnectionError } from './errors';
 
 const connectionString = process.env.DATABASE_URL ?? process.env.NETLIFY_DATABASE_URL;
+let connectionLabel: string | null = null;
+
+function setConnectionLabel(value: string | null) {
+    connectionLabel = value;
+}
+
+export function getDatabaseConnectionLabel(): string | null {
+    return connectionLabel;
+}
 
 function buildPoolConfig(): mysql.PoolOptions {
     const shared: mysql.PoolOptions = {
@@ -18,6 +28,9 @@ function buildPoolConfig(): mysql.PoolOptions {
         const url = new URL(connectionString);
         const sslRequired = process.env.DATABASE_SSL === 'true' || url.searchParams.get('sslmode') === 'require';
         const socketPath = url.searchParams.get('socketPath') ?? undefined;
+
+        const labelHost = socketPath ? `socket ${socketPath}` : `${url.hostname}:${url.port || 3306}`;
+        setConnectionLabel(`${labelHost}/${url.pathname.replace(/^\//, '')}`);
 
         return {
             ...shared,
@@ -43,6 +56,8 @@ function buildPoolConfig(): mysql.PoolOptions {
 
     const sslRequired = process.env.DATABASE_SSL === 'true';
 
+    setConnectionLabel(`${host}:${port}/${database}`);
+
     return {
         ...shared,
         host,
@@ -56,14 +71,35 @@ function buildPoolConfig(): mysql.PoolOptions {
 
 const pool = mysql.createPool(buildPoolConfig());
 
+function formatUnavailableMessage(): string {
+    const label = getDatabaseConnectionLabel();
+    const hint = 'Ensure your MySQL server is running and the DATABASE_URL (or MYSQL_*) variables are correct.';
+    return label ? `Unable to connect to the database (${label}). ${hint}` : `Unable to connect to the database. ${hint}`;
+}
+
+async function withDatabaseHandling<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+        return await operation();
+    } catch (error) {
+        if (isDatabaseConnectionError(error)) {
+            throw new DatabaseUnavailableError(formatUnavailableMessage(), { cause: error });
+        }
+        throw error;
+    }
+}
+
 export async function query<T = mysql.RowDataPacket[]>(statement: string, params: unknown[] = []): Promise<T> {
-    const [rows] = await pool.query(statement, params);
-    return rows as T;
+    return withDatabaseHandling(async () => {
+        const [rows] = await pool.query(statement, params);
+        return rows as T;
+    });
 }
 
 export async function execute(statement: string, params: unknown[] = []): Promise<mysql.ResultSetHeader> {
-    const [result] = await pool.execute(statement, params);
-    return result as mysql.ResultSetHeader;
+    return withDatabaseHandling(async () => {
+        const [result] = await pool.execute(statement, params);
+        return result as mysql.ResultSetHeader;
+    });
 }
 
 export { pool };

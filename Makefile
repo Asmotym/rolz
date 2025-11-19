@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 COMPOSE ?= docker compose
 COMPOSE_FILE ?= docker-compose.yml
 SERVICE ?= rolz
@@ -41,3 +43,42 @@ shell:
 
 clean:
 	$(COMPOSE_CMD) down -v
+
+.PHONY: watch
+watch:
+	@echo "Starting frontend and backend watch servers..."
+	@set -euo pipefail; \
+		remaining=""; \
+		if command -v lsof >/dev/null 2>&1; then \
+			in_use=$$( { lsof -ti tcp:$(FRONTEND_PORT) 2>/dev/null || true; } | tr '\n' ' '); \
+			if [ -n "$$in_use" ]; then \
+				echo "Port $(FRONTEND_PORT) is already in use by PID(s): $$in_use — sending SIGTERM..." >&2; \
+				kill $$in_use 2>/dev/null || true; \
+				for attempt in $$(seq 1 10); do \
+					sleep 0.2; \
+					remaining=$$( { lsof -ti tcp:$(FRONTEND_PORT) 2>/dev/null || true; } | tr '\n' ' '); \
+					if [ -z "$$remaining" ]; then \
+						break; \
+					fi; \
+				done; \
+				if [ -n "$$remaining" ]; then \
+					echo "Unable to free port $(FRONTEND_PORT). Still held by: $$remaining" >&2; \
+					echo "Stop those processes manually or run FRONTEND_PORT=<port> make watch." >&2; \
+					exit 1; \
+				fi; \
+			fi; \
+		fi; \
+		backend_pid=; \
+		frontend_pid=; \
+		cleanup() { \
+			set +e; \
+			[ -n "$$backend_pid" ] && kill $$backend_pid 2>/dev/null || true; \
+			[ -n "$$frontend_pid" ] && kill $$frontend_pid 2>/dev/null || true; \
+			wait $$backend_pid $$frontend_pid 2>/dev/null || true; \
+		}; \
+		trap cleanup EXIT INT TERM; \
+		npm run server:dev & \
+		backend_pid=$$!; \
+		npm run dev -- --host 0.0.0.0 --port $(FRONTEND_PORT) --strictPort & \
+		frontend_pid=$$!; \
+		wait $$backend_pid $$frontend_pid
