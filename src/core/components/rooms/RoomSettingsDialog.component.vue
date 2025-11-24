@@ -460,17 +460,20 @@
                       </div>
                       <div class="d-flex flex-column gap-3">
                         <div class="roll-award-number-row mb-4">
-                          <v-text-field
-                            v-model="newRollAwardNumber"
-                            type="number"
+                          <v-number-input
+                            ref="addRollAwardNumberInput"
                             label="Dice result"
                             variant="outlined"
                             density="comfortable"
-                            min="1"
-                            max="1000"
+                            control-variant="stacked"
+                            :model-value="newRollAwardNumber"
+                            :min="ROLL_AWARD_RESULT_MIN"
+                            :max="ROLL_AWARD_RESULT_MAX"
+                            :step="1"
                             :hide-details="true"
                             :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                             class="roll-award-number-input"
+                            @keyup="updateNewRollAwardNumber"
                             @keyup.enter.prevent="addRollAwardNumber"
                           />
                           <v-btn
@@ -620,7 +623,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, ref, watch } from 'vue';
+import { computed, inject, onUnmounted, ref, watch, useTemplateRef } from 'vue';
 import type { RoomDetails } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
@@ -665,15 +668,16 @@ const settingsSaving = ref(false);
 const settingsFeedback = ref<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 let settingsFeedbackTimer: number | null = null;
 const rollAwardsPanelsOpen = ref<(string | number)[]>(['create']);
-const newRollAwardNumber = ref('');
+const newRollAwardNumber = ref<number>(1);
 const newRollAwardNumbers = ref<number[]>([]);
 const newRollAwardName = ref('');
 const newRollAwardError = ref<string | null>(null);
+const addRollAwardNumberInput = useTemplateRef('addRollAwardNumberInput');
 const customRollAwardsWindow = ref('');
 const customRollAwardsWindowError = ref<string | null>(null);
 const rollAwardsWindowSelection = ref<'all' | '10' | '50' | '100' | 'custom'>('all');
 const ROLL_AWARD_RESULT_MIN = 1;
-const ROLL_AWARD_RESULT_MAX = 1000;
+const ROLL_AWARD_RESULT_MAX = 100;
 const ROLL_AWARD_MAX_RESULTS = 20;
 const ROLL_AWARD_WINDOW_OPTIONS = [
   { title: 'All rolls', value: 'all' },
@@ -995,9 +999,7 @@ async function saveRollAwardsWindowSetting() {
 
 function addRollAwardNumber() {
   newRollAwardError.value = null;
-  const trimmed = newRollAwardNumber.value?.toString().trim();
-  const parsed = trimmed ? Number(trimmed) : null;
-  const value = parsed !== null && Number.isFinite(parsed) ? Math.floor(parsed) : null;
+  const value = Number.parseInt(addRollAwardNumberInput.value?.value || '1');
   if (value === null || Number.isNaN(value)) {
     newRollAwardError.value = 'Enter a dice result to add.';
     return;
@@ -1015,7 +1017,12 @@ function addRollAwardNumber() {
     return;
   }
   newRollAwardNumbers.value = [...newRollAwardNumbers.value, value];
-  newRollAwardNumber.value = '';
+  newRollAwardNumber.value = 1;
+}
+
+function updateNewRollAwardNumber() {
+  const value: number = Number.parseInt(addRollAwardNumberInput.value?.value || '1');
+  newRollAwardNumber.value = value;
 }
 
 function removeRollAwardNumber(value: number) {
@@ -1023,7 +1030,7 @@ function removeRollAwardNumber(value: number) {
 }
 
 function clearRollAwardForm() {
-  newRollAwardNumber.value = '';
+  newRollAwardNumber.value = 1;
   newRollAwardNumbers.value = [];
   newRollAwardName.value = '';
   newRollAwardError.value = null;
