@@ -11,6 +11,7 @@ export MYSQL_PORT ?= 3306
 export MYSQL_USER ?= rolz
 export MYSQL_PASSWORD ?= rolz
 export MYSQL_DATABASE ?= rolz
+export MYSQL_ROOT_PASSWORD ?= root
 export FRONTEND_URL ?= http://localhost:5173
 export VITE_BACKEND_URL ?= http://localhost:4000
 export DATABASE_URL ?= mysql://rolz:rolz@localhost:3306/rolz
@@ -47,6 +48,12 @@ clean:
 .PHONY: watch
 watch:
 	@echo "Starting frontend and backend watch servers..."
+	@echo "Starting MySQL container..."
+	@$(COMPOSE_CMD) up -d mysql
+	@echo "Waiting for MySQL to be ready..."
+	@$(COMPOSE_CMD) exec -T mysql sh -c 'until mysqladmin ping -h "$${MYSQL_HOST:-127.0.0.1}" -u root -p"$${MYSQL_ROOT_PASSWORD}" --silent; do sleep 1; done'
+	@echo "Executing database bootstrap script..."
+	@COMPOSE="$(COMPOSE)" COMPOSE_FILE="$(COMPOSE_FILE)" ENV_FILE="$(ENV_FILE)" ./docker/init-dev-db.sh
 	@set -euo pipefail; \
 		remaining=""; \
 		if command -v lsof >/dev/null 2>&1; then \

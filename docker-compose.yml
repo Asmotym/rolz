@@ -1,10 +1,31 @@
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: rolz-mysql
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-rolz}
+      MYSQL_USER: ${MYSQL_USER:-rolz}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rolz}
+      MYSQL_TCP_PORT: ${MYSQL_PORT:-3306}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command:
+      - --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+
   rolz:
     build:
       context: .
       target: runner
     image: rolz-all:latest
     container_name: rolz-stack
+    depends_on:
+      - mysql
     env_file:
       - .env
     environment:
@@ -17,7 +38,7 @@ services:
       FRONTEND_PORT: ${FRONTEND_PORT:-5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
-      DATABASE_URL: ${DATABASE_URL:-mysql://rolz:rolz@localhost:3306/rolz}
+      DATABASE_URL: ${DATABASE_URL:-mysql://rolz:rolz@mysql:3306/rolz}
       DATABASE_SSL: ${DATABASE_SSL:-false}
       VIRTUAL_HOST: rolz.asmotym.fr
       VIRTUAL_PORT: 5173
@@ -26,9 +47,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
       - "${BACKEND_PORT:-4000}:4000"
-      - "${MYSQL_PORT:-3306}:3306"
     volumes:
-      - mysql-data:/var/lib/mysql
       - ./package.json:/app/package.json
       - ./package-lock.json:/app/package-lock.json
       - ./vite.config.ts:/app/vite.config.ts

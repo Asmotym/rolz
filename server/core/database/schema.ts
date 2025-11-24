@@ -4,6 +4,34 @@ import { createLogger } from '../utils/logger';
 const logger = createLogger('DatabaseSchema');
 let initialized = false;
 
+async function columnExists(table: string, column: string): Promise<boolean> {
+    const result = await query<{ count: number }[]>(
+        `
+        SELECT COUNT(*) AS count
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND COLUMN_NAME = ?
+        `,
+        [table, column]
+    );
+    return Boolean(result[0]?.count);
+}
+
+async function indexExists(table: string, indexName: string): Promise<boolean> {
+    const result = await query<{ count: number }[]>(
+        `
+        SELECT COUNT(*) AS count
+        FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND INDEX_NAME = ?
+        `,
+        [table, indexName]
+    );
+    return Boolean(result[0]?.count);
+}
+
 export async function ensureDatabaseSetup(): Promise<void> {
     if (initialized) return;
 
@@ -36,10 +64,12 @@ export async function ensureDatabaseSetup(): Promise<void> {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    await query(`
-        ALTER TABLE rooms
-        ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL DEFAULT NULL
-    `);
+    if (!(await columnExists('rooms', 'archived_at'))) {
+        await query(`
+            ALTER TABLE rooms
+            ADD COLUMN archived_at TIMESTAMP NULL DEFAULT NULL
+        `);
+    }
 
     await query(`
         CREATE TABLE IF NOT EXISTS room_members (
@@ -55,10 +85,12 @@ export async function ensureDatabaseSetup(): Promise<void> {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    await query(`
-        ALTER TABLE room_members
-        ADD COLUMN IF NOT EXISTS nickname VARCHAR(80)
-    `);
+    if (!(await columnExists('room_members', 'nickname'))) {
+        await query(`
+            ALTER TABLE room_members
+            ADD COLUMN nickname VARCHAR(80)
+        `);
+    }
 
     await query(`
         CREATE TABLE IF NOT EXISTS room_messages (
@@ -108,14 +140,18 @@ export async function ensureDatabaseSetup(): Promise<void> {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    await query(`
-        ALTER TABLE room_dices
-        ADD COLUMN IF NOT EXISTS category_id CHAR(36) NULL
-    `);
+    if (!(await columnExists('room_dices', 'category_id'))) {
+        await query(`
+            ALTER TABLE room_dices
+            ADD COLUMN category_id CHAR(36) NULL
+        `);
+    }
 
-    await query(`
-        CREATE INDEX IF NOT EXISTS idx_room_dices_category ON room_dices (category_id)
-    `);
+    if (!(await indexExists('room_dices', 'idx_room_dices_category'))) {
+        await query(`
+            CREATE INDEX idx_room_dices_category ON room_dices (category_id)
+        `);
+    }
 
     const existingCategoryConstraint = await query<{ constraint_name: string }[]>(
         `
