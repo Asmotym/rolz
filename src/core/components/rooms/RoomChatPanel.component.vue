@@ -55,6 +55,7 @@
 
             <div class="chat-input mt-4">
               <v-text-field
+                ref="messageInput"
                 v-model="messageText"
                 label="Send a message"
                 variant="outlined"
@@ -145,6 +146,7 @@ const emit = defineEmits<{
 
 const messageText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
+const messageInput = ref<{ focus: () => void } | null>(null);
 const chatLayout = ref<HTMLElement | null>(null);
 const chatWidth = ref(loadInitialWidth());
 const isResizing = ref(false);
@@ -177,10 +179,15 @@ const chatLayoutStyles = computed(() => ({
 const diceManager = useRoomDiceManager(
   () => props.room,
   () => props.currentUser,
-  (roll) => emit('send-dice', roll)
+  (roll) => {
+    emit('send-dice', roll);
+    focusMessageInput();
+  }
 );
 
 provide(RoomDiceManagerKey, diceManager);
+
+let hasMounted = false;
 
 watch(
   () => props.room?.id,
@@ -189,6 +196,8 @@ watch(
     scrollToBottom();
     if (!props.room) {
       settingsDialog.value = false;
+    } else {
+      focusMessageInput();
     }
     showInviteCode.value = false;
   },
@@ -198,6 +207,15 @@ watch(
 watch(
   () => props.messages.length,
   () => nextTick(scrollToBottom)
+);
+
+watch(
+  () => props.sending,
+  (isSending, wasSending) => {
+    if (!isSending && wasSending) {
+      focusMessageInput();
+    }
+  }
 );
 
 function loadInitialWidth() {
@@ -218,6 +236,7 @@ function sendMessage() {
   if (!messageText.value.trim()) return;
   emit('send-message', messageText.value);
   messageText.value = '';
+  focusMessageInput();
 }
 
 async function copyInviteLink() {
@@ -328,15 +347,25 @@ function handleWindowResize() {
   updateChatWidth(clientX);
 }
 
+function focusMessageInput() {
+  if (!props.room || !hasMounted) return;
+  nextTick(() => {
+    messageInput.value?.focus();
+  });
+}
+
 onMounted(() => {
+  hasMounted = true;
   window.addEventListener('mousemove', handlePointerMove);
   window.addEventListener('mouseup', stopResize);
   window.addEventListener('touchmove', handlePointerMove, nonPassiveTouchOptions);
   window.addEventListener('touchend', stopResize);
   window.addEventListener('resize', handleWindowResize);
+  focusMessageInput();
 });
 
 onUnmounted(() => {
+  hasMounted = false;
   window.removeEventListener('mousemove', handlePointerMove);
   window.removeEventListener('mouseup', stopResize);
   window.removeEventListener('touchmove', handlePointerMove, nonPassiveTouchOptions);
