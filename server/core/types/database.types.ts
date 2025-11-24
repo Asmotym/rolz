@@ -22,6 +22,8 @@ export interface DatabaseRoom {
     password_hash?: string | null;
     password_salt?: string | null;
     created_by?: string | null;
+    roll_awards_enabled?: number | boolean | null;
+    roll_awards_window?: number | null;
     archived_at?: string | null;
     created_at?: string;
     updated_at?: string;
@@ -116,4 +118,22 @@ export interface NewRoomDiceCategory {
     name: string;
     sort_order?: number;
     is_default?: number | boolean;
+}
+
+export interface DatabaseRoomRollAward {
+    id: string;
+    room_id: string;
+    created_by?: string | null;
+    name: string;
+    dice_results?: string | number[] | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface NewRoomRollAward {
+    id?: string;
+    room_id: string;
+    created_by?: string | null;
+    name: string;
+    dice_results: string;
 }

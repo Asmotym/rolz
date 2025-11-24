@@ -1,5 +1,5 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
-import type { RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory } from 'netlify/core/types/data.types';
+import type { RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory, RoomRollAward } from 'netlify/core/types/data.types';
 
 const ROOMS_ENDPOINT = getApiUrl('/rooms');
 
@@ -191,5 +191,37 @@ export class RoomsService {
             payload
         });
         return data.category;
+    }
+
+    static async fetchRollAwards(roomId: string): Promise<{ awards: RoomRollAward[]; enabled: boolean; windowSize: number | null }> {
+        const data = await request<{ roomId: string; rollAwards: RoomRollAward[]; enabled: boolean; windowSize: number | null }>({
+            action: 'rollAwards',
+            payload: { roomId }
+        });
+        return { awards: data.rollAwards, enabled: data.enabled, windowSize: data.windowSize ?? null };
+    }
+
+    static async updateRollAwardsSettings(payload: { roomId: string; userId: string; enabled: boolean; windowSize?: number | null }): Promise<{ roomId: string; enabled: boolean; windowSize: number | null }> {
+        const data = await request<{ rollAwardsEnabled: { roomId: string; enabled: boolean; windowSize: number | null } }>({
+            action: 'setRollAwardsEnabled',
+            payload
+        });
+        return data.rollAwardsEnabled;
+    }
+
+    static async createRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[] }): Promise<RoomRollAward> {
+        const data = await request<{ rollAward: RoomRollAward }>({
+            action: 'createRollAward',
+            payload
+        });
+        return data.rollAward;
+    }
+
+    static async deleteRollAward(payload: { roomId: string; userId: string; awardId: string }): Promise<string> {
+        const data = await request<{ rollAwardId: string }>({
+            action: 'deleteRollAward',
+            payload
+        });
+        return data.rollAwardId;
     }
 }

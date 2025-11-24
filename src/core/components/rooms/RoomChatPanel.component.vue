@@ -90,7 +90,31 @@
           </div>
 
           <div class="dice-section">
-            <RoomDicePanel :current-user="currentUser" @manage-dice="openDiceSettings" />
+            <v-card flat class="dice-panel-card" color="transparent">
+              <v-tabs
+                v-model="diceSidebarTab"
+                density="comfortable"
+                color="primary"
+                class="mb-2"
+              >
+                <v-tab value="dices">Dices</v-tab>
+                <v-tab value="rollAwards">Roll Awards</v-tab>
+              </v-tabs>
+
+              <v-window v-model="diceSidebarTab">
+                <v-window-item value="dices">
+                  <RoomDicePanel :current-user="currentUser" @manage-dice="openDiceSettings" />
+                </v-window-item>
+                <v-window-item value="rollAwards">
+                  <RoomRollAwardsPanel
+                    :room="room"
+                    :messages="messages"
+                    :current-user="currentUser"
+                    @manage-awards="openRollAwardsSettings"
+                  />
+                </v-window-item>
+              </v-window>
+            </v-card>
           </div>
         </div>
       </v-card-text>
@@ -118,10 +142,12 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 
 import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, useRoomDiceManager } from 'core/composables/useRoomDiceManager';
+import { RoomRollAwardsManagerKey, useRoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
 import { type DiceRoll } from 'core/utils/dice.utils';
 import RoomMembersMenu from './RoomMembersMenu.component.vue';
 import RoomMessagesList from './RoomMessagesList.component.vue';
 import RoomDicePanel from './RoomDicePanel.component.vue';
+import RoomRollAwardsPanel from './RoomRollAwardsPanel.component.vue';
 import RoomSettingsDialog from './RoomSettingsDialog.component.vue';
 
 const RESIZE_STORAGE_KEY = 'rolz-room-chat-width';
@@ -130,7 +156,7 @@ const MIN_CHAT_WIDTH = 320;
 const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
-type SettingsTab = 'room' | 'dices';
+type SettingsTab = 'room' | 'dices' | 'rollAwards';
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -153,6 +179,7 @@ const isResizing = ref(false);
 const layoutBounds = ref<{ left: number; width: number } | null>(null);
 const settingsDialog = ref(false);
 const settingsPanelTab = ref<SettingsTab>('room');
+const diceSidebarTab = ref<'dices' | 'rollAwards'>('dices');
 let resizeRaf: number | null = null;
 let pendingClientX: number | null = null;
 
@@ -186,6 +213,13 @@ const diceManager = useRoomDiceManager(
 );
 
 provide(RoomDiceManagerKey, diceManager);
+
+const rollAwardsManager = useRoomRollAwardsManager(
+  () => props.room,
+  () => props.currentUser
+);
+
+provide(RoomRollAwardsManagerKey, rollAwardsManager);
 
 let hasMounted = false;
 
@@ -261,6 +295,10 @@ function openSettingsPanel(tab: SettingsTab = 'room') {
 
 function openDiceSettings() {
   openSettingsPanel('dices');
+}
+
+function openRollAwardsSettings() {
+  openSettingsPanel('rollAwards');
 }
 
 function persistChatWidth(value: number) {
@@ -423,6 +461,11 @@ onUnmounted(() => {
 .dice-section :deep(.v-card) {
   width: 100%;
   box-sizing: border-box;
+}
+
+.dice-panel-card {
+  width: 100%;
+  background-color: transparent;
 }
 
 .resize-handle {

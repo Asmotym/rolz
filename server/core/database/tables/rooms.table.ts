@@ -106,3 +106,57 @@ export async function setRoomArchived(roomId: string, archived: boolean): Promis
     );
     return getRoomById(roomId);
 }
+
+export async function setRollAwardsEnabled(roomId: string, enabled: boolean): Promise<DatabaseRoom | undefined> {
+    return updateRollAwardsSettings(roomId, { enabled });
+}
+
+export async function updateRollAwardsSettings(
+    roomId: string,
+    settings: { enabled?: boolean; windowSize?: number | null }
+): Promise<DatabaseRoom | undefined> {
+    await ensureRollAwardsColumns();
+    const updates: string[] = [];
+    const params: (number | null)[] = [];
+
+    if (typeof settings.enabled !== 'undefined') {
+        updates.push('roll_awards_enabled = ?');
+        params.push(settings.enabled ? 1 : 0);
+    }
+
+    if ('windowSize' in settings) {
+        updates.push('roll_awards_window = ?');
+        params.push(settings.windowSize ?? null);
+    }
+
+    if (!updates.length) {
+        return getRoomById(roomId);
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    await execute(`UPDATE rooms SET ${updates.join(', ')} WHERE id = ?`, [...params, roomId]);
+    return getRoomById(roomId);
+}
+
+let rollAwardsColumnsChecked = false;
+async function ensureRollAwardsColumns() {
+    if (rollAwardsColumnsChecked) return;
+    const hasEnabled = await columnExists('rooms', 'roll_awards_enabled');
+    if (!hasEnabled) {
+        await execute('ALTER TABLE rooms ADD COLUMN roll_awards_enabled TINYINT(1) DEFAULT 0');
+    }
+    const hasWindow = await columnExists('rooms', 'roll_awards_window');
+    if (!hasWindow) {
+        await execute('ALTER TABLE rooms ADD COLUMN roll_awards_window INT NULL');
+    }
+    rollAwardsColumnsChecked = true;
+}
+
+async function columnExists(table: string, column: string): Promise<boolean> {
+    const rows = await query<{ count: number }[]>(
+        `SELECT COUNT(*) AS count FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+        [table, column]
+    );
+    const count = rows[0]?.count ?? 0;
+    return Number(count) > 0;
+}

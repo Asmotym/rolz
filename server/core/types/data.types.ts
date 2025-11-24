@@ -13,6 +13,8 @@ export interface RoomSummary {
 export interface RoomDetails extends RoomSummary {
     createdBy?: string | null;
     createdAt?: string;
+    rollAwardsEnabled?: boolean;
+    rollAwardsWindow?: number | null;
 }
 
 export interface RoomMemberDetails {
@@ -60,6 +62,16 @@ export interface RoomDiceCategory {
     name: string;
     sortOrder?: number;
     isDefault?: boolean;
+    createdBy?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface RoomRollAward {
+    id: string;
+    roomId: string;
+    name: string;
+    diceResults: number[];
     createdBy?: string | null;
     createdAt?: string;
     updatedAt?: string;

@@ -57,6 +57,8 @@ export async function ensureDatabaseSetup(): Promise<void> {
             password_hash VARCHAR(255),
             password_salt VARCHAR(255),
             created_by VARCHAR(64),
+            roll_awards_enabled TINYINT(1) DEFAULT 0,
+            roll_awards_window INT NULL,
             archived_at TIMESTAMP NULL DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -68,6 +70,20 @@ export async function ensureDatabaseSetup(): Promise<void> {
         await query(`
             ALTER TABLE rooms
             ADD COLUMN archived_at TIMESTAMP NULL DEFAULT NULL
+        `);
+    }
+
+    if (!(await columnExists('rooms', 'roll_awards_enabled'))) {
+        await query(`
+            ALTER TABLE rooms
+            ADD COLUMN roll_awards_enabled TINYINT(1) DEFAULT 0
+        `);
+    }
+
+    if (!(await columnExists('rooms', 'roll_awards_window'))) {
+        await query(`
+            ALTER TABLE rooms
+            ADD COLUMN roll_awards_window INT NULL
         `);
     }
 
@@ -171,6 +187,21 @@ export async function ensureDatabaseSetup(): Promise<void> {
             REFERENCES room_dice_categories(id) ON DELETE SET NULL
         `);
     }
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS room_roll_awards (
+            id CHAR(36) PRIMARY KEY,
+            room_id CHAR(36) NOT NULL,
+            created_by VARCHAR(64),
+            name VARCHAR(120) NOT NULL,
+            dice_results JSON NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_roll_awards_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+            CONSTRAINT fk_roll_awards_user FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL,
+            INDEX idx_roll_awards_room (room_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 
     await query(`
         CREATE TABLE IF NOT EXISTS user_api_keys (
