@@ -397,6 +397,29 @@
                 :disabled="!canManageRollAwards || rollAwardsManager.toggleLoading.value"
                 :error-messages="customRollAwardsWindowError ? [customRollAwardsWindowError] : []"
               />
+              <div
+                v-if="rollAwardsEnabled"
+                class="d-flex flex-wrap align-center gap-2 mb-4"
+              >
+                <v-btn
+                  color="primary"
+                  size="small"
+                  :disabled="
+                    !canManageRollAwards ||
+                    rollAwardsWindowSaving ||
+                    !rollAwardsWindowDirty ||
+                    Boolean(customRollAwardsWindowError) ||
+                    (rollAwardsWindowSelection === 'custom' && !customRollAwardsWindow.trim())
+                  "
+                  :loading="rollAwardsWindowSaving"
+                  @click="saveRollAwardsWindowSetting"
+                >
+                  Save Changes
+                </v-btn>
+                <span class="text-caption text-medium-emphasis ml-4">
+                  Changes apply after saving.
+                </span>
+              </div>
               <v-alert
                 v-if="rollAwardsManager.toggleError.value"
                 type="error"
@@ -671,6 +694,7 @@ const isRoomCreator = computed(() => {
 const rollAwardsEnabled = computed(() => rollAwardsManager.awardsEnabled.value);
 const canManageRollAwards = computed(() => isRoomCreator.value);
 const syncingRollWindow = ref(false);
+const rollAwardsWindowSaving = ref(false);
 
 watch(
   () => rollAwardsManager.rollAwardsWindowSize.value,
@@ -696,34 +720,18 @@ watch(
   { immediate: true }
 );
 
-watch(rollAwardsWindowSelection, (value) => {
+watch(rollAwardsWindowSelection, () => {
   if (syncingRollWindow.value) return;
-  customRollAwardsWindowError.value = null;
-  if (value === 'all') {
-    customRollAwardsWindow.value = '';
-    void rollAwardsManager.setAwardsWindow(null);
-    return;
+  if (rollAwardsWindowSelection.value !== 'custom') {
+    customRollAwardsWindowError.value = null;
   }
-  if (value === 'custom') {
-    return;
-  }
-  customRollAwardsWindow.value = '';
-  void rollAwardsManager.setAwardsWindow(Number(value));
 });
 
-watch(customRollAwardsWindow, (value) => {
-  if (rollAwardsWindowSelection.value !== 'custom') return;
-  customRollAwardsWindowError.value = null;
-  const trimmed = value?.trim() ?? '';
-  if (!trimmed) {
-    return;
+watch(customRollAwardsWindow, () => {
+  if (syncingRollWindow.value) return;
+  if (rollAwardsWindowSelection.value === 'custom') {
+    customRollAwardsWindowError.value = null;
   }
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed < CUSTOM_ROLL_WINDOW_MIN || parsed > CUSTOM_ROLL_WINDOW_MAX) {
-    customRollAwardsWindowError.value = `Enter a value between ${CUSTOM_ROLL_WINDOW_MIN} and ${CUSTOM_ROLL_WINDOW_MAX}.`;
-    return;
-  }
-  void rollAwardsManager.setAwardsWindow(Math.floor(parsed));
 });
 
 const normalizedRoomName = computed(() => roomNameInput.value.trim());
@@ -738,6 +746,46 @@ const hasPendingChanges = computed(() => roomNameDirty.value || nicknameDirty.va
 const nicknamePreview = computed(() => {
   const baseName = props.currentUser?.username ?? 'Unknown Adventurer';
   return normalizedNicknameInput.value ? `${normalizedNicknameInput.value} (${baseName})` : baseName;
+});
+
+function getSelectedRollAwardsWindow(showErrors = false): number | null | undefined {
+  if (rollAwardsWindowSelection.value === 'all') {
+    if (showErrors) customRollAwardsWindowError.value = null;
+    return null;
+  }
+  if (rollAwardsWindowSelection.value === 'custom') {
+    const trimmed = customRollAwardsWindow.value?.trim() ?? '';
+    if (!trimmed) {
+      if (showErrors) {
+        customRollAwardsWindowError.value = 'Enter the number of rolls to consider.';
+      }
+      return undefined;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < CUSTOM_ROLL_WINDOW_MIN || parsed > CUSTOM_ROLL_WINDOW_MAX) {
+      if (showErrors) {
+        customRollAwardsWindowError.value = `Enter a value between ${CUSTOM_ROLL_WINDOW_MIN} and ${CUSTOM_ROLL_WINDOW_MAX}.`;
+      }
+      return undefined;
+    }
+    if (showErrors) {
+      customRollAwardsWindowError.value = null;
+    }
+    return Math.floor(parsed);
+  }
+  if (showErrors) {
+    customRollAwardsWindowError.value = null;
+  }
+  return Number(rollAwardsWindowSelection.value);
+}
+
+const rollAwardsWindowDirty = computed(() => {
+  const selected = getSelectedRollAwardsWindow(false);
+  if (typeof selected === 'undefined') {
+    return true;
+  }
+  const current = rollAwardsManager.rollAwardsWindowSize.value ?? null;
+  return selected !== current;
 });
 
 watch(
@@ -828,6 +876,9 @@ function resetSettingsState() {
   settingsSaving.value = false;
   clearRollAwardForm();
   rollAwardsPanelsOpen.value = ['create'];
+  customRollAwardsWindow.value = '';
+  customRollAwardsWindowError.value = null;
+  rollAwardsWindowSelection.value = 'all';
   if (!props.room) {
     open.value = false;
     clearSettingsFeedback();
@@ -925,6 +976,20 @@ async function handleRollAwardsToggle(value: boolean | null) {
   await rollAwardsManager.setAwardsEnabled(nextValue);
   if (!nextValue) {
     clearRollAwardForm();
+  }
+}
+
+async function saveRollAwardsWindowSetting() {
+  if (!rollAwardsEnabled.value) return;
+  const nextValue = getSelectedRollAwardsWindow(true);
+  if (typeof nextValue === 'undefined') {
+    return;
+  }
+  rollAwardsWindowSaving.value = true;
+  try {
+    await rollAwardsManager.setAwardsWindow(nextValue);
+  } finally {
+    rollAwardsWindowSaving.value = false;
   }
 }
 
