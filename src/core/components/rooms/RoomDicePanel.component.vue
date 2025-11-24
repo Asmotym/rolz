@@ -32,6 +32,16 @@
         density="comfortable"
       >
         You haven't saved any dice for this room yet. Add one from Settings → Dices.
+        <template #append>
+          <v-btn
+            variant="tonal"
+            size="small"
+            color="primary"
+            @click="emit('manage-dice')"
+          >
+            Add dice
+          </v-btn>
+        </template>
       </v-alert>
       <template v-else>
         <div class="custom-dice-groups">
