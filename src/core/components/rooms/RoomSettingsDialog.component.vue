@@ -550,7 +550,10 @@
                     </v-expansion-panel-text>
                   </v-expansion-panel>
                   <v-expansion-panel value="list" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                    <v-expansion-panel-title>Existing awards</v-expansion-panel-title>
+                    <v-expansion-panel-title>
+                      <span>Existing awards</span>
+                      <v-chip class="ml-2">{{ rollAwardsManager.awards.value.length }}</v-chip>
+                    </v-expansion-panel-title>
                     <v-expansion-panel-text>
                       <template v-if="rollAwardsManager.awards.value.length > 0">
                         <v-list density="comfortable">
@@ -559,22 +562,8 @@
                             :key="award.id"
                             class="roll-awards-list-item"
                           >
-                            <v-list-item-title>{{ award.name }}</v-list-item-title>
-                            <v-list-item-subtitle class="text-caption mb-2">
-                              Tracking {{ award.diceResults.length }} result{{ award.diceResults.length === 1 ? '' : 's' }}
-                            </v-list-item-subtitle>
-                            <div class="d-flex flex-wrap gap-2 mb-2">
-                              <v-chip
-                                v-for="value in award.diceResults"
-                                :key="`${award.id}-${value}`"
-                                size="small"
-                                variant="tonal"
-                                color="secondary"
-                              >
-                                {{ value }}
-                              </v-chip>
-                            </div>
-                            <div class="d-flex justify-end">
+                            <v-list-item-title class="d-flex justify-space-between">
+                              <span class="d-flex align-center">{{ award.name }}</span>
                               <v-btn
                                 icon="mdi-delete"
                                 variant="text"
@@ -582,8 +571,20 @@
                                 size="small"
                                 :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                                 @click="rollAwardsManager.deleteAward(award.id)"
-                              />
+                              /></v-list-item-title>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                              <v-chip
+                                v-for="value in award.diceResults"
+                                :key="`${award.id}-${value}`"
+                                size="small"
+                                variant="tonal"
+                                color="secondary"
+                                class="mr-2"
+                              >
+                                {{ value }}
+                              </v-chip>
                             </div>
+                            
                           </v-list-item>
                         </v-list>
                       </template>
