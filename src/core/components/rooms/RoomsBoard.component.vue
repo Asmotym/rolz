@@ -30,26 +30,30 @@
           @join="handleJoinRoom"
         />
       </v-col>
-      <v-col v-if="selectedRoom" cols="12" style="height: 100%;">
-        <RoomChatPanel
-          :room="selectedRoom"
-          :messages="messages"
-          :sending="roomsStore.sendingMessage"
-          :current-user="currentUser"
-          @send-message="handleSendMessage"
-          @send-dice="handleDiceRoll"
-        />
-      </v-col>
-    </v-row>
-  </div>
-</template>
+          <v-col v-if="selectedRoom" cols="12" style="height: 100%;">
+            <RoomChatPanel
+              :room="selectedRoom"
+              :messages="messages"
+              :sending="roomsStore.sendingMessage"
+              :history-loading="roomsStore.historyLoading"
+              :can-load-older="canLoadOlderMessages"
+              :current-user="currentUser"
+              @send-message="handleSendMessage"
+              @send-dice="handleDiceRoll"
+              @load-older="handleLoadOlderMessages"
+              @trim-history="handleTrimMessages"
+            />
+          </v-col>
+        </v-row>
+      </div>
+    </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { isNavigationFailure, useRoute, useRouter } from 'vue-router';
 import RoomsSidebar from './RoomsSidebar.component.vue';
 import RoomChatPanel from './RoomChatPanel.component.vue';
-import { useRoomsStore } from 'core/stores/rooms.store';
+import { ROOM_MESSAGES_PAGE_SIZE, useRoomsStore } from 'core/stores/rooms.store';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import type { DiceRoll } from 'core/utils/dice.utils';
 import { parseInlineDiceCommand, rollDiceNotation } from 'core/utils/dice.utils';
@@ -64,6 +68,16 @@ const currentUser = computed(() => discordService.user.value);
 const rooms = computed(() => roomsStore.rooms.filter((room) => !room.isArchived));
 const selectedRoom = computed(() => roomsStore.selectedRoom);
 const messages = computed(() => roomsStore.messages);
+const canLoadOlderMessages = computed(() => {
+  if (!selectedRoom.value || roomsStore.historyLoading || roomsStore.messages.length === 0) {
+    return false;
+  }
+  if (!roomsStore.historyExhausted) {
+    return true;
+  }
+  // Allow reloading trimmed history even after we've previously reached the start.
+  return roomsStore.messages.length <= ROOM_MESSAGES_PAGE_SIZE;
+});
 const routeRoomId = computed(() => {
   const param = route.params.roomId;
   if (Array.isArray(param)) {
@@ -229,6 +243,26 @@ async function handleDiceRoll(roll: DiceRoll) {
 
 function handleSelectRoom(roomId: string) {
   navigateToRoom(roomId);
+}
+
+async function handleLoadOlderMessages() {
+  if (!roomsStore.selectedRoomId || roomsStore.historyLoading) return;
+  try {
+    const allowWhenExhausted =
+      roomsStore.historyExhausted && roomsStore.messages.length <= ROOM_MESSAGES_PAGE_SIZE;
+    await roomsStore.loadOlderMessages(
+      roomsStore.selectedRoomId,
+      currentUser.value?.id ?? null,
+      ROOM_MESSAGES_PAGE_SIZE,
+      allowWhenExhausted
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function handleTrimMessages() {
+  roomsStore.trimMessages(ROOM_MESSAGES_PAGE_SIZE);
 }
 
 function navigateToRoom(roomId: string) {

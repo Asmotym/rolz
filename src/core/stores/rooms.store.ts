@@ -3,6 +3,8 @@ import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiceRoll } from 'core/utils/dice.utils';
 import { RoomsService } from 'core/services/rooms.service';
 
+export const ROOM_MESSAGES_PAGE_SIZE = 20;
+
 interface LiveTimer {
     id: number | null;
 }
@@ -22,6 +24,8 @@ export const useRoomsStore = defineStore('rooms', {
         joiningRoom: false,
         sendingMessage: false,
         lastMessageAt: null as string | null,
+        historyLoading: false,
+        historyExhausted: false,
         live: { id: null } as LiveTimer,
         errorMessage: null as string | null,
     }),
@@ -91,6 +95,8 @@ export const useRoomsStore = defineStore('rooms', {
             this.selectedRoomUserId = normalizedUserId;
             this.messages = [];
             this.lastMessageAt = null;
+            this.historyExhausted = false;
+            this.historyLoading = false;
 
             if (!roomId) {
                 this.stopLiveUpdates();
@@ -100,12 +106,13 @@ export const useRoomsStore = defineStore('rooms', {
             await this.loadMessages(roomId, normalizedUserId);
             this.startLiveUpdates(roomId, normalizedUserId);
         },
-        async loadMessages(roomId: string, userId?: string | null) {
+        async loadMessages(roomId: string, userId?: string | null, limit: number = ROOM_MESSAGES_PAGE_SIZE) {
             try {
                 const requester = userId ?? this.selectedRoomUserId ?? null;
-                const messages = await RoomsService.fetchMessages(roomId, { userId: requester ?? undefined });
+                const messages = await RoomsService.fetchMessages(roomId, { userId: requester ?? undefined, limit });
                 this.messages = ensureAscending(messages);
                 this.lastMessageAt = this.messages.length > 0 ? this.messages[this.messages.length - 1].createdAt : null;
+                this.historyExhausted = messages.length < limit;
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : 'Unable to load messages');
             }
@@ -168,6 +175,44 @@ export const useRoomsStore = defineStore('rooms', {
                 this.sendingMessage = false;
             }
         },
+        async loadOlderMessages(
+            roomId: string,
+            userId?: string | null,
+            limit: number = ROOM_MESSAGES_PAGE_SIZE,
+            allowWhenExhausted = false
+        ) {
+            if (this.historyLoading || (this.historyExhausted && !allowWhenExhausted)) return;
+            const oldest = this.messages[0];
+            if (!oldest) return;
+            this.historyLoading = true;
+            this.setError(null);
+            try {
+                const requester = userId ?? this.selectedRoomUserId ?? null;
+                const older = await RoomsService.fetchMessages(roomId, {
+                    userId: requester ?? undefined,
+                    before: oldest.createdAt,
+                    limit
+                });
+                if (older.length === 0) {
+                    this.historyExhausted = true;
+                    return;
+                }
+                const dedup = new Map(this.messages.map((message) => [message.id, message]));
+                for (const message of older) {
+                    dedup.set(message.id, message);
+                }
+                this.messages = ensureAscending(Array.from(dedup.values()));
+                const last = this.messages[this.messages.length - 1];
+                this.lastMessageAt = last ? last.createdAt : this.lastMessageAt;
+                if (older.length < limit) {
+                    this.historyExhausted = true;
+                }
+            } catch (error) {
+                this.setError(error instanceof Error ? error.message : 'Unable to load older messages');
+            } finally {
+                this.historyLoading = false;
+            }
+        },
         async renameRoom(payload: { roomId: string; userId: string; name: string }) {
             this.setError(null);
             try {
@@ -200,6 +245,12 @@ export const useRoomsStore = defineStore('rooms', {
                 const latest = messages[messages.length - 1];
                 this.bumpRoomActivity(latest.roomId, latest.createdAt);
             }
+        },
+        trimMessages(limit: number = ROOM_MESSAGES_PAGE_SIZE) {
+            if (this.messages.length <= limit) return;
+            this.messages = ensureAscending(this.messages.slice(-limit));
+            const last = this.messages[this.messages.length - 1];
+            this.lastMessageAt = last ? last.createdAt : this.lastMessageAt;
         },
         upsertRoom(room: RoomDetails) {
             const existingIndex = this.rooms.findIndex((current) => current.id === room.id);

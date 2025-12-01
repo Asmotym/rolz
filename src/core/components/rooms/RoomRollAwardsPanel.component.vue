@@ -91,7 +91,11 @@
                 </div>
                 <div class="text-right">
                   <div v-if="awardSummary.leaders.length" class="text-body-2 font-weight-medium">
-                    <span v-for="(leader, index) in awardSummary.leaders" :key="leader.userId">
+                    <span
+                      v-for="(leader, index) in awardSummary.leaders"
+                      :key="leader.userId"
+                      :class="['leader-name', { 'current-user': isCurrentUser(leader.userId) }]"
+                    >
                       {{ leader.name }} ({{ leader.count }})<span v-if="index < awardSummary.leaders.length - 1">, </span>
                     </span>
                   </div>
@@ -183,6 +187,10 @@ const visibleAwardSummaries = computed(() =>
     : awardSummaries.value
 );
 
+function isCurrentUser(userId: string) {
+  return props.currentUser?.id === userId;
+}
+
 function evaluateAward(award: RoomRollAward, rolls: DiceMessageSummary[]): { leaders: AwardLeaderSummary['leaders']; maxHits: number } {
   if (!Array.isArray(award.diceResults) || award.diceResults.length === 0) {
     return { leaders: [], maxHits: 0 };
@@ -255,5 +263,9 @@ function handleManageClick() {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 6px;
+}
+
+.leader-name.current-user {
+  color: rgb(var(--v-theme-primary));
 }
 </style>

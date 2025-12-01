@@ -53,7 +53,7 @@ export type RoomsAction =
     | { action: 'create'; payload: { name: string; password?: string | null; userId: string } }
     | { action: 'join'; payload: { inviteCode: string; password?: string | null; userId: string } }
     | { action: 'userRooms'; payload: { userId: string } }
-    | { action: 'messages'; payload: { roomId: string; userId?: string; limit?: number; since?: string } }
+    | { action: 'messages'; payload: { roomId: string; userId?: string; limit?: number; since?: string; before?: string } }
     | { action: 'members'; payload: { roomId: string } }
     | { action: 'member'; payload: { roomId: string; userId: string } }
     | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
@@ -312,7 +312,13 @@ async function handleUnarchiveRoom(payload: { roomId: string; userId: string }):
     return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
 }
 
-async function handleListMessages(payload: { roomId: string; userId?: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
+async function handleListMessages(payload: {
+    roomId: string;
+    userId?: string;
+    limit?: number;
+    since?: string;
+    before?: string;
+}): Promise<RoomMessage[]> {
     if (!payload.roomId) throw new Error('Room id missing');
     const room = await getRoomById(payload.roomId);
     if (!room) throw new Error('Room not found');
@@ -321,7 +327,11 @@ async function handleListMessages(payload: { roomId: string; userId?: string; li
         await touchMember(payload.roomId, payload.userId);
     }
 
-    const rows = await listMessages(payload.roomId, { limit: payload.limit, since: payload.since });
+    const rows = await listMessages(payload.roomId, {
+        limit: payload.limit,
+        since: payload.since,
+        before: payload.before
+    });
     return rows.map(mapMessageRecord);
 }
 

@@ -45,7 +45,10 @@ export async function insertMessage(message: NewRoomMessage): Promise<DatabaseRo
     return rows[0];
 }
 
-export async function listMessages(roomId: string, options?: { limit?: number; since?: string }): Promise<DatabaseRoomMessage[]> {
+export async function listMessages(
+    roomId: string,
+    options?: { limit?: number; since?: string; before?: string }
+): Promise<DatabaseRoomMessage[]> {
     const limit = options?.limit ?? 50;
     if (options?.since) {
         return query<DatabaseRoomMessage[]>(
@@ -57,6 +60,19 @@ export async function listMessages(roomId: string, options?: { limit?: number; s
              ORDER BY rm.created_at ASC
              LIMIT ?`,
             [roomId, options.since, limit]
+        );
+    }
+
+    if (options?.before) {
+        return query<DatabaseRoomMessage[]>(
+            `SELECT rm.*, u.username, u.avatar, members.nickname AS member_nickname
+             FROM room_messages rm
+             LEFT JOIN users u ON u.discord_user_id = rm.user_id
+             LEFT JOIN room_members members ON members.room_id = rm.room_id AND members.user_id = rm.user_id
+             WHERE rm.room_id = ? AND rm.created_at < ?
+             ORDER BY rm.created_at DESC
+             LIMIT ?`,
+            [roomId, options.before, limit]
         );
     }
 

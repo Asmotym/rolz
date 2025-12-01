@@ -46,7 +46,7 @@
           :style="chatLayoutStyles"
         >
           <div class="chat-section">
-            <div ref="messageContainer" class="messages-container">
+            <div ref="messageContainer" class="messages-container" @scroll.passive="handleScroll">
               <RoomMessagesList
                 :messages="messages"
                 :current-user-id="currentUser?.id ?? null"
@@ -144,6 +144,7 @@ import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, useRoomDiceManager } from 'core/composables/useRoomDiceManager';
 import { RoomRollAwardsManagerKey, useRoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
 import { type DiceRoll } from 'core/utils/dice.utils';
+import { ROOM_MESSAGES_PAGE_SIZE } from 'core/stores/rooms.store';
 import RoomMembersMenu from './RoomMembersMenu.component.vue';
 import RoomMessagesList from './RoomMessagesList.component.vue';
 import RoomDicePanel from './RoomDicePanel.component.vue';
@@ -157,22 +158,31 @@ const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
 type SettingsTab = 'room' | 'dices' | 'rollAwards';
+const TOP_SCROLL_THRESHOLD = 60;
+const BOTTOM_SCROLL_THRESHOLD = 120;
+type PrependAdjustment = { previousHeight: number; previousTop: number; startLength: number };
 
 const props = defineProps<{
   room: RoomDetails | null;
   messages: RoomMessage[];
   sending: boolean;
   currentUser: DiscordUser | null;
+  historyLoading: boolean;
+  canLoadOlder: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: 'send-message', message: string): void;
   (event: 'send-dice', roll: DiceRoll): void;
+  (event: 'load-older'): void;
+  (event: 'trim-history'): void;
 }>();
 
 const messageText = ref('');
 const messageContainer = ref<HTMLElement | null>(null);
 const messageInput = ref<{ focus: () => void } | null>(null);
+const shouldStickToBottom = ref(true);
+const pendingPrependScrollAdjustment = ref<PrependAdjustment | null>(null);
 const chatLayout = ref<HTMLElement | null>(null);
 const chatWidth = ref(loadInitialWidth());
 const isResizing = ref(false);
@@ -227,6 +237,8 @@ watch(
   () => props.room?.id,
   () => {
     messageText.value = '';
+    shouldStickToBottom.value = true;
+    pendingPrependScrollAdjustment.value = null;
     scrollToBottom();
     if (!props.room) {
       settingsDialog.value = false;
@@ -240,7 +252,18 @@ watch(
 
 watch(
   () => props.messages.length,
-  () => nextTick(scrollToBottom)
+  (_length, previousLength) => nextTick(() => adjustScrollAfterMessagesChange(previousLength ?? 0))
+);
+
+watch(
+  () => props.historyLoading,
+  (loading, wasLoading) => {
+    if (!loading && wasLoading && pendingPrependScrollAdjustment.value) {
+      if (props.messages.length === pendingPrependScrollAdjustment.value.startLength) {
+        pendingPrependScrollAdjustment.value = null;
+      }
+    }
+  }
 );
 
 watch(
@@ -264,6 +287,49 @@ function loadInitialWidth() {
 function scrollToBottom() {
   if (!messageContainer.value) return;
   messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+  shouldStickToBottom.value = true;
+}
+
+function adjustScrollAfterMessagesChange(previousLength: number) {
+  if (!messageContainer.value) return;
+  if (pendingPrependScrollAdjustment.value) {
+    const { previousHeight, previousTop } = pendingPrependScrollAdjustment.value;
+    const heightDelta = messageContainer.value.scrollHeight - previousHeight;
+    messageContainer.value.scrollTop = previousTop + heightDelta;
+    pendingPrependScrollAdjustment.value = null;
+    return;
+  }
+  if (shouldStickToBottom.value || previousLength === 0) {
+    scrollToBottom();
+    if (shouldStickToBottom.value && props.messages.length > ROOM_MESSAGES_PAGE_SIZE) {
+      emit('trim-history');
+    }
+  }
+}
+
+function requestOlderMessages() {
+  if (!props.canLoadOlder || props.historyLoading) return;
+  if (messageContainer.value) {
+    pendingPrependScrollAdjustment.value = {
+      previousHeight: messageContainer.value.scrollHeight,
+      previousTop: messageContainer.value.scrollTop,
+      startLength: props.messages.length,
+    };
+  }
+  emit('load-older');
+}
+
+function handleScroll() {
+  if (!messageContainer.value) return;
+  const { scrollTop, scrollHeight, clientHeight } = messageContainer.value;
+  const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+  shouldStickToBottom.value = distanceFromBottom < BOTTOM_SCROLL_THRESHOLD;
+
+  if (scrollTop <= TOP_SCROLL_THRESHOLD) {
+    requestOlderMessages();
+  } else if (shouldStickToBottom.value && props.messages.length > ROOM_MESSAGES_PAGE_SIZE) {
+    emit('trim-history');
+  }
 }
 
 function sendMessage() {
@@ -394,6 +460,7 @@ function focusMessageInput() {
 
 onMounted(() => {
   hasMounted = true;
+  nextTick(scrollToBottom);
   window.addEventListener('mousemove', handlePointerMove);
   window.addEventListener('mouseup', stopResize);
   window.addEventListener('touchmove', handlePointerMove, nonPassiveTouchOptions);
