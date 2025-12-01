@@ -1,7 +1,7 @@
 <template>
   <section class="roll-awards-panel">
     <div class="roll-awards-panel__header">
-      <h3 class="text-subtitle-1 mb-1">🏆 Roll Awards</h3>
+      <h3 class="text-subtitle-1">🏆 Roll Awards</h3>
       <v-btn
         variant="text"
         size="small"
@@ -58,38 +58,53 @@
         <div v-if="rollAwardsManager.awards.value.length === 0" class="text-caption text-medium-emphasis">
           No awards defined yet. Use the Manage button to create one.
         </div>
-        <div v-else class="roll-awards-panel__list">
-          <v-card
-            v-for="awardSummary in awardSummaries"
-            :key="awardSummary.award.id"
-            class="roll-award-card mb-3"
-            variant="tonal"
-          >
-            <div class="roll-award-card__heading">
-              <div>
-                <div class="text-subtitle-2">{{ awardSummary.award.name }}</div>
-                <div class="text-caption text-medium-emphasis">
-                  Tracking:
-                  <span v-for="(result, index) in awardSummary.award.diceResults" :key="`${awardSummary.award.id}-${result}-${index}`">
-                    {{ result }}<span v-if="index < awardSummary.award.diceResults.length - 1">, </span>
-                  </span>
+        <div v-else>
+          <div class="d-flex justify-end mb-2">
+            <v-btn
+              variant="text"
+              size="small"
+              prepend-icon="mdi-eye-outline"
+              @click="showOnlyObtainedAwards = !showOnlyObtainedAwards"
+            >
+              {{ showOnlyObtainedAwards ? 'Show all awards' : 'Show obtained only' }}
+            </v-btn>
+          </div>
+          <div v-if="visibleAwardSummaries.length === 0" class="text-caption text-medium-emphasis">
+            No awards have been obtained yet. Try showing all awards to see every entry.
+          </div>
+          <div v-else class="roll-awards-panel__list">
+            <v-card
+              v-for="awardSummary in visibleAwardSummaries"
+              :key="awardSummary.award.id"
+              class="roll-award-card mb-3"
+              variant="tonal"
+            >
+              <div class="roll-award-card__heading">
+                <div>
+                  <div class="text-subtitle-2">{{ awardSummary.award.name }}</div>
+                  <div class="text-caption text-medium-emphasis">
+                    Tracking:
+                    <span v-for="(result, index) in awardSummary.award.diceResults" :key="`${awardSummary.award.id}-${result}-${index}`">
+                      {{ result }}<span v-if="index < awardSummary.award.diceResults.length - 1">, </span>
+                    </span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div v-if="awardSummary.leaders.length" class="text-body-2 font-weight-medium">
+                    <span v-for="(leader, index) in awardSummary.leaders" :key="leader.userId">
+                      {{ leader.name }} ({{ leader.count }})<span v-if="index < awardSummary.leaders.length - 1">, </span>
+                    </span>
+                  </div>
+                  <div v-else class="text-caption text-medium-emphasis">
+                    No winner yet
+                  </div>
                 </div>
               </div>
-              <div class="text-right">
-                <div v-if="awardSummary.leaders.length" class="text-body-2 font-weight-medium">
-                  <span v-for="(leader, index) in awardSummary.leaders" :key="leader.userId">
-                    {{ leader.name }} ({{ leader.count }})<span v-if="index < awardSummary.leaders.length - 1">, </span>
-                  </span>
-                </div>
-                <div v-else class="text-caption text-medium-emphasis">
-                  No winner yet
-                </div>
+              <div v-if="awardSummary.leaders.length" class="text-caption text-medium-emphasis">
+                {{ awardSummary.leaders.length > 1 ? 'Tied leaders' : 'Current leader' }} with {{ awardSummary.maxHits }} hit{{ awardSummary.maxHits === 1 ? '' : 's' }}.
               </div>
-            </div>
-            <div v-if="awardSummary.leaders.length" class="text-caption text-medium-emphasis">
-              {{ awardSummary.leaders.length > 1 ? 'Tied leaders' : 'Current leader' }} with {{ awardSummary.maxHits }} hit{{ awardSummary.maxHits === 1 ? '' : 's' }}.
-            </div>
-          </v-card>
+            </v-card>
+          </div>
         </div>
       </template>
     </template>
@@ -97,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed, inject, ref } from 'vue';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import type { RoomDetails, RoomMessage, RoomRollAward } from 'netlify/core/types/data.types';
 import { formatDisplayName } from 'core/utils/room-formatting.utils';
@@ -122,6 +137,7 @@ if (!injectedRollAwardsManager) {
 const rollAwardsManager = injectedRollAwardsManager;
 
 const canOpenSettings = computed(() => Boolean(props.room && props.currentUser));
+const showOnlyObtainedAwards = ref(false);
 
 interface DiceMessageSummary {
   userId: string;
@@ -160,6 +176,12 @@ const awardSummaries = computed<AwardLeaderSummary[]>(() => {
     ...evaluateAward(award, diceMessagesWindowed.value),
   }));
 });
+
+const visibleAwardSummaries = computed(() =>
+  showOnlyObtainedAwards.value
+    ? awardSummaries.value.filter((summary) => summary.leaders.length > 0)
+    : awardSummaries.value
+);
 
 function evaluateAward(award: RoomRollAward, rolls: DiceMessageSummary[]): { leaders: AwardLeaderSummary['leaders']; maxHits: number } {
   if (!Array.isArray(award.diceResults) || award.diceResults.length === 0) {
