@@ -101,11 +101,11 @@
                 <v-tab value="rollAwards">Roll Awards</v-tab>
               </v-tabs>
 
-              <v-window v-model="diceSidebarTab">
-                <v-window-item value="dices">
+              <v-window v-model="diceSidebarTab" class="dice-section-content">
+                <v-window-item value="dices" class="dice-section-content-item">
                   <RoomDicePanel :current-user="currentUser" @manage-dice="openDiceSettings" />
                 </v-window-item>
-                <v-window-item value="rollAwards">
+                <v-window-item value="rollAwards" class="dice-section-content-item">
                   <RoomRollAwardsPanel
                     :room="room"
                     :messages="messages"
@@ -518,6 +518,10 @@ onUnmounted(() => {
   height: 100%;
 }
 
+.dice-section {
+  height: 100%;
+}
+
 .chat-section,
 .dice-section {
   min-width: 0;
@@ -532,7 +536,10 @@ onUnmounted(() => {
 
 .dice-panel-card {
   width: 100%;
+  height: 100%;
   background-color: transparent;
+  display: flex;
+  flex-direction: column;
 }
 
 .resize-handle {
@@ -557,6 +564,14 @@ onUnmounted(() => {
 .resize-handle:hover .resize-grip,
 .chat-layout.is-resizing .resize-grip {
   background-color: rgba(255, 255, 255, 0.5);
+}
+
+.dice-section-content {
+  height: 100%;
+}
+
+.dice-section-content-item {
+  height: 100%;
 }
 
 @media (min-width: 960px) {

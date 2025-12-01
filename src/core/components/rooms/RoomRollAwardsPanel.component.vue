@@ -241,6 +241,10 @@ function handleManageClick() {
 <style scoped>
 .roll-awards-panel {
   min-height: 280px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
 }
 
 .roll-awards-panel__header {
