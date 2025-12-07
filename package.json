@@ -10,7 +10,8 @@
     "server:dev": "tsx server/index.ts",
     "server:typecheck": "tsc -p tsconfig.server.json --noEmit",
     "server:build": "npm run server:typecheck && tsup --config tsup.config.ts",
-    "server:start": "node dist-server/index.js"
+    "server:start": "node dist-server/index.js",
+    "db:update": "tsx server/scripts/update-schema.ts"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

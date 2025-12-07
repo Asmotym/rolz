@@ -33,9 +33,10 @@ async function indexExists(table: string, indexName: string): Promise<boolean> {
 }
 
 export async function ensureDatabaseSetup(): Promise<void> {
-    if (initialized) return;
-
-    logger.info('Ensuring database schema exists');
+    if (initialized) {
+        await ensureRollAwardDiceNotationColumn();
+        return;
+    }
 
     await query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -194,6 +195,7 @@ export async function ensureDatabaseSetup(): Promise<void> {
             room_id CHAR(36) NOT NULL,
             created_by VARCHAR(64),
             name VARCHAR(120) NOT NULL,
+            dice_notation VARCHAR(64) NULL,
             dice_results JSON NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -202,6 +204,8 @@ export async function ensureDatabaseSetup(): Promise<void> {
             INDEX idx_roll_awards_room (room_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    await ensureRollAwardDiceNotationColumn();
 
     await query(`
         CREATE TABLE IF NOT EXISTS user_api_keys (
@@ -218,4 +222,13 @@ export async function ensureDatabaseSetup(): Promise<void> {
 
     initialized = true;
     logger.success('Database schema ready');
+}
+
+async function ensureRollAwardDiceNotationColumn(): Promise<void> {
+    if (!(await columnExists('room_roll_awards', 'dice_notation'))) {
+        await query(`
+            ALTER TABLE room_roll_awards
+            ADD COLUMN dice_notation VARCHAR(64) NULL AFTER name
+        `);
+    }
 }

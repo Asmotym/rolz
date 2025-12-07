@@ -456,7 +456,7 @@
                     <v-expansion-panel-title>Create a Roll Award</v-expansion-panel-title>
                     <v-expansion-panel-text>
                       <div class="text-caption text-medium-emphasis mb-3">
-                        Add the dice results that should count toward this award, then give it a descriptive name.
+                        Add the dice results that should count toward this award, then give it a descriptive name. Optionally filter it to a specific dice notation.
                       </div>
                       <div class="d-flex flex-column gap-3">
                         <div class="roll-award-number-row mb-4">
@@ -501,6 +501,16 @@
                             {{ value }}
                           </v-chip>
                         </div>
+                        <v-text-field
+                          v-model="newRollAwardDiceNotation"
+                          label="Dice notation filter (optional)"
+                          variant="outlined"
+                          density="comfortable"
+                          placeholder="d100"
+                          hint="Only count rolls rolled with this die size (e.g., d100). Leave blank to include all dice."
+                          persistent-hint
+                          :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
+                        />
                         <v-text-field
                           v-model="newRollAwardName"
                           label="Award name"
@@ -584,7 +594,10 @@
                                 {{ value }}
                               </v-chip>
                             </div>
-                            
+                            <div class="text-caption text-medium-emphasis mb-1">
+                              <span v-if="award.diceNotation">Only counts rolls using {{ award.diceNotation }}</span>
+                              <span v-else>Counts every dice notation</span>
+                            </div>
                           </v-list-item>
                         </v-list>
                       </template>
@@ -672,6 +685,7 @@ const rollAwardsPanelsOpen = ref<(string | number)[]>(['create']);
 const newRollAwardNumber = ref<number>(1);
 const newRollAwardNumbers = ref<number[]>([]);
 const newRollAwardName = ref('');
+const newRollAwardDiceNotation = ref('');
 const newRollAwardError = ref<string | null>(null);
 const addRollAwardNumberInput = useTemplateRef('addRollAwardNumberInput');
 const customRollAwardsWindow = ref('');
@@ -680,6 +694,7 @@ const rollAwardsWindowSelection = ref<'all' | '10' | '50' | '100' | 'custom'>('a
 const ROLL_AWARD_RESULT_MIN = 1;
 const ROLL_AWARD_RESULT_MAX = 100;
 const ROLL_AWARD_MAX_RESULTS = 20;
+const ROLL_AWARD_NOTATION_REGEX = /^d([1-9]\d*)$/i;
 const ROLL_AWARD_WINDOW_OPTIONS = [
   { title: 'All rolls', value: 'all' },
   { title: 'Last 10 rolls', value: '10' },
@@ -1034,6 +1049,7 @@ function clearRollAwardForm() {
   newRollAwardNumber.value = 1;
   newRollAwardNumbers.value = [];
   newRollAwardName.value = '';
+  newRollAwardDiceNotation.value = '';
   newRollAwardError.value = null;
 }
 
@@ -1052,7 +1068,17 @@ async function handleCreateRollAward() {
     newRollAwardError.value = 'Add at least one dice result.';
     return;
   }
-  const created = await rollAwardsManager.createAward(trimmedName, newRollAwardNumbers.value);
+  const trimmedNotation = newRollAwardDiceNotation.value.trim();
+  let normalizedNotation: string | null = null;
+  if (trimmedNotation) {
+    const match = trimmedNotation.match(ROLL_AWARD_NOTATION_REGEX);
+    if (!match) {
+      newRollAwardError.value = 'Dice notation must look like d20 or d100.';
+      return;
+    }
+    normalizedNotation = `d${match[1]}`.toLowerCase();
+  }
+  const created = await rollAwardsManager.createAward(trimmedName, newRollAwardNumbers.value, normalizedNotation);
   if (created) {
     clearRollAwardForm();
     rollAwardsPanelsOpen.value = ['list'];

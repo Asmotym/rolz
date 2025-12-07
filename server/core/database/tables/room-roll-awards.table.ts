@@ -21,9 +21,9 @@ export async function insertRoomRollAward(award: NewRoomRollAward): Promise<Data
     const id = award.id ?? randomUUID();
 
     await execute(
-        `INSERT INTO room_roll_awards (id, room_id, created_by, name, dice_results)
-         VALUES (?, ?, ?, ?, ?)` ,
-        [id, award.room_id, award.created_by ?? null, award.name, award.dice_results]
+        `INSERT INTO room_roll_awards (id, room_id, created_by, name, dice_notation, dice_results)
+         VALUES (?, ?, ?, ?, ?, ?)` ,
+        [id, award.room_id, award.created_by ?? null, award.name, award.dice_notation ?? null, award.dice_results]
     );
 
     const created = await getRoomRollAward(id);

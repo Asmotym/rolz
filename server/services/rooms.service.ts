@@ -47,6 +47,7 @@ const ROLL_AWARD_MAX_RESULTS = 20;
 const ROLL_AWARD_RESULT_MIN = 1;
 const ROLL_AWARD_RESULT_MAX = 1000;
 const ROLL_AWARD_WINDOW_OPTIONS = [10, 50, 100];
+const ROLL_AWARD_DICE_NOTATION_REGEX = /^d([1-9]\d*)$/i;
 
 export type RoomsAction =
     | { action: 'list' }
@@ -69,7 +70,7 @@ export type RoomsAction =
     | { action: 'createDiceCategory'; payload: { roomId: string; userId: string; name: string } }
     | { action: 'rollAwards'; payload: { roomId: string } }
     | { action: 'setRollAwardsEnabled'; payload: { roomId: string; userId: string; enabled: boolean; windowSize?: number | null } }
-    | { action: 'createRollAward'; payload: { roomId: string; userId: string; name: string; diceResults: number[] } }
+    | { action: 'createRollAward'; payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null } }
     | { action: 'deleteRollAward'; payload: { roomId: string; userId: string; awardId: string } };
 
 export type RoomsActionResponse =
@@ -526,7 +527,7 @@ async function handleSetRollAwardsEnabled(payload: { roomId: string; userId: str
     };
 }
 
-async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[] }): Promise<RoomRollAward> {
+async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null }): Promise<RoomRollAward> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     const room = await getRoomById(payload.roomId);
@@ -538,11 +539,13 @@ async function handleCreateRollAward(payload: { roomId: string; userId: string; 
         throw new Error('Enable Roll Awards before creating entries');
     }
     const name = normalizeRollAwardName(payload.name);
+    const diceNotation = normalizeRollAwardDiceNotation(payload.diceNotation);
     const diceResults = normalizeRollAwardResults(payload.diceResults);
     const created = await insertRoomRollAward({
         room_id: room.id,
         created_by: payload.userId,
         name,
+        dice_notation: diceNotation,
         dice_results: JSON.stringify(diceResults)
     });
     return mapRollAwardRecord(created);
@@ -695,6 +698,21 @@ function normalizeRollAwardName(value: string): string {
     return trimmed;
 }
 
+function normalizeRollAwardDiceNotation(value?: string | null): string | null {
+    const trimmed = value?.trim() ?? '';
+    if (!trimmed) {
+        return null;
+    }
+    if (trimmed.length > DICE_NOTATION_MAX_LENGTH) {
+        throw new Error(`Dice notation filter is too long (max ${DICE_NOTATION_MAX_LENGTH} characters)`);
+    }
+    const match = trimmed.match(ROLL_AWARD_DICE_NOTATION_REGEX);
+    if (!match) {
+        throw new Error('Dice notation filter must look like d20 or d100');
+    }
+    return `d${match[1]}`.toLowerCase();
+}
+
 function normalizeRollAwardResults(values: number[]): number[] {
     if (!Array.isArray(values) || values.length === 0) {
         throw new Error('Add at least one dice result');
@@ -779,11 +797,13 @@ function mapRoomDiceCategoryRecord(record: DatabaseRoomDiceCategory): RoomDiceCa
 }
 
 function mapRollAwardRecord(record: DatabaseRoomRollAward): RoomRollAward {
+    const normalizedNotation = normalizeRollAwardDiceNotation(record.dice_notation ?? null);
     return {
         id: record.id,
         roomId: record.room_id,
         name: record.name,
         diceResults: parseStoredDiceResults(record.dice_results),
+        diceNotation: normalizedNotation ?? undefined,
         createdBy: record.created_by ?? undefined,
         createdAt: record.created_at ?? undefined,
         updatedAt: record.updated_at ?? undefined

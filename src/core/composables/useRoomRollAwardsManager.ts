@@ -39,7 +39,7 @@ export function useRoomRollAwardsManager(
     awardsError.value = null;
     try {
       const { awards: roomAwards, enabled, windowSize } = await RoomsService.fetchRollAwards(room.id);
-      awards.value = roomAwards;
+      awards.value = roomAwards.map(normalizeAwardNotation);
       awardsEnabled.value = enabled;
       rollAwardsWindowSize.value = windowSize ?? null;
       awardsLoadedRoomId.value = room.id;
@@ -91,7 +91,7 @@ export function useRoomRollAwardsManager(
     }
   }
 
-  async function createAward(name: string, diceResults: number[]) {
+  async function createAward(name: string, diceResults: number[], diceNotation?: string | null) {
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
@@ -99,15 +99,16 @@ export function useRoomRollAwardsManager(
       return null;
     }
     awardMutationLoading.value = true;
-    awardMutationError.value = null;
+      awardMutationError.value = null;
     try {
       const created = await RoomsService.createRollAward({
         roomId: room.id,
         userId: user.id,
         name,
         diceResults,
+        diceNotation,
       });
-      awards.value = [...awards.value, created];
+      awards.value = [...awards.value, normalizeAwardNotation(created)];
       return created;
     } catch (error) {
       awardMutationError.value = error instanceof Error ? error.message : 'Unable to save award';
@@ -149,6 +150,14 @@ export function useRoomRollAwardsManager(
     toggleError.value = null;
     awardMutationLoading.value = false;
     awardMutationError.value = null;
+  }
+
+  function normalizeAwardNotation(award: RoomRollAward): RoomRollAward {
+    const notation = award.diceNotation?.trim().toLowerCase() ?? null;
+    if (!notation) return { ...award, diceNotation: undefined };
+    const match = notation.match(/^d([1-9]\d*)$/i);
+    const normalizedNotation = match ? `d${match[1]}` : null;
+    return { ...award, diceNotation: normalizedNotation ?? undefined };
   }
 
   return {

@@ -88,6 +88,9 @@
                       {{ result }}<span v-if="index < awardSummary.award.diceResults.length - 1">, </span>
                     </span>
                   </div>
+                  <div v-if="awardSummary.award.diceNotation" class="text-caption text-medium-emphasis">
+                    Only counting {{ awardSummary.award.diceNotation }} rolls
+                  </div>
                 </div>
                 <div class="text-right">
                   <div v-if="awardSummary.leaders.length" class="text-body-2 font-weight-medium">
@@ -142,11 +145,14 @@ const rollAwardsManager = injectedRollAwardsManager;
 
 const canOpenSettings = computed(() => Boolean(props.room && props.currentUser));
 const showOnlyObtainedAwards = ref(false);
+const DICE_NOTATION_FACE_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
 
 interface DiceMessageSummary {
   userId: string;
   rolls: number[];
   name: string;
+  notation: string | null;
+  face: string | null;
 }
 
 interface AwardLeaderSummary {
@@ -158,11 +164,17 @@ interface AwardLeaderSummary {
 const diceMessages = computed<DiceMessageSummary[]>(() => {
   return props.messages
     .filter((message) => message.type === 'dice' && message.userId && Array.isArray(message.diceRolls))
-    .map((message) => ({
-      userId: message.userId as string,
-      rolls: (message.diceRolls ?? []).map((roll) => Number(roll)).filter((roll) => Number.isFinite(roll)),
-      name: formatDisplayName(message.username, message.nickname),
-    }));
+    .map((message) => {
+      const notation = message.diceNotation?.trim().toLowerCase() ?? null;
+      const face = extractDieFace(notation);
+      return {
+        userId: message.userId as string,
+        rolls: (message.diceRolls ?? []).map((roll) => Number(roll)).filter((roll) => Number.isFinite(roll)),
+        notation,
+        face,
+        name: formatDisplayName(message.username, message.nickname),
+      };
+    });
 });
 
 const diceMessagesWindowed = computed(() => {
@@ -199,8 +211,10 @@ function evaluateAward(award: RoomRollAward, rolls: DiceMessageSummary[]): { lea
   if (!targets.size) {
     return { leaders: [], maxHits: 0 };
   }
+  const requiredFace = award.diceNotation ? extractDieFace(award.diceNotation) : null;
   const counts = new Map<string, { userId: string; name: string; count: number }>();
   for (const message of rolls) {
+    if (!notationMatchesFilter(message.face, requiredFace)) continue;
     const hits = message.rolls.reduce((total, roll) => {
       const normalized = Math.floor(roll);
       return targets.has(normalized) ? total + 1 : total;
@@ -228,6 +242,20 @@ function evaluateAward(award: RoomRollAward, rolls: DiceMessageSummary[]): { lea
 
   const leaders = Array.from(counts.values()).filter((entry) => entry.count === maxHits && maxHits > 0);
   return { leaders, maxHits };
+}
+
+function extractDieFace(value?: string | null): string | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  const match = normalized.match(DICE_NOTATION_FACE_REGEX);
+  if (!match) return null;
+  return match[2];
+}
+
+function notationMatchesFilter(messageFace: string | null, awardFace: string | null): boolean {
+  if (!awardFace) return true;
+  if (!messageFace) return false;
+  return messageFace === awardFace;
 }
 
 function handleManageClick() {

@@ -45,6 +45,17 @@ shell:
 clean:
 	$(COMPOSE_CMD) down -v
 
+.PHONY: db-update
+db-update:
+	@echo "Starting MySQL service..."
+	@$(COMPOSE_CMD) up -d mysql
+	@echo "Waiting for MySQL to be ready..."
+	@$(COMPOSE_CMD) exec -T mysql sh -c 'until mysqladmin ping -h "$${MYSQL_HOST:-127.0.0.1}" -u root -p"$${MYSQL_ROOT_PASSWORD}" --silent; do sleep 1; done'
+	@echo "Updating database schema..."
+	@$(COMPOSE_CMD) run --rm \
+		-e DATABASE_URL="mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@mysql:$(MYSQL_PORT)/$(MYSQL_DATABASE)" \
+		$(SERVICE) npm run db:update
+
 .PHONY: watch
 watch:
 	@echo "Starting frontend and backend watch servers..."

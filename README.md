@@ -65,5 +65,6 @@ The included `Makefile` wraps common Docker commands:
 - `make up` – run the stack in the background (detached).
 - `make stop` – stop the detached container.
 - `make logs` – follow container logs.
+- `make db-update` – start MySQL if needed, wait for readiness, and run the schema updater inside the app container (uses the Compose MySQL host even if your local `.env` points to localhost).
 
 Variables such as `IMAGE`, `CONTAINER`, or the exposed ports (`FRONTEND_PORT`, `BACKEND_PORT`, `MYSQL_PORT`) can be overridden inline, e.g. `make run BACKEND_PORT=5000`. The Makefile automatically mounts a persistent Docker volume for MySQL data and, if a `.env` file exists, passes it through to the container.
