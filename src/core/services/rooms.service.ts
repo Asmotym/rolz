@@ -213,7 +213,7 @@ export class RoomsService {
         return data.rollAwardsEnabled;
     }
 
-    static async createRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null }): Promise<RoomRollAward> {
+    static async createRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
         const data = await request<{ rollAward: RoomRollAward }>({
             action: 'createRollAward',
             payload
@@ -221,7 +221,7 @@ export class RoomsService {
         return data.rollAward;
     }
 
-    static async updateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null }): Promise<RoomRollAward> {
+    static async updateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
         const data = await request<{ rollAward: RoomRollAward }>({
             action: 'updateRollAward',
             payload

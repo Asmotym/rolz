@@ -88,8 +88,8 @@
                       {{ result }}<span v-if="index < awardSummary.award.diceResults.length - 1">, </span>
                     </span>
                   </div>
-                  <div v-if="awardSummary.award.diceNotation" class="text-caption text-medium-emphasis">
-                    Only counting {{ awardSummary.award.diceNotation }} rolls
+                  <div v-if="getAwardNotations(awardSummary.award).length" class="text-caption text-medium-emphasis">
+                    Only counting {{ formatAwardNotations(awardSummary.award) }} rolls
                   </div>
                 </div>
                 <div class="text-right">
@@ -146,6 +146,17 @@ const rollAwardsManager = injectedRollAwardsManager;
 const canOpenSettings = computed(() => Boolean(props.room && props.currentUser));
 const showOnlyObtainedAwards = ref(false);
 const DICE_NOTATION_FACE_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
+
+function getAwardNotations(award: RoomRollAward): string[] {
+  if (Array.isArray(award.diceNotations) && award.diceNotations.length) {
+    return award.diceNotations;
+  }
+  return award.diceNotation ? [award.diceNotation] : [];
+}
+
+function formatAwardNotations(award: RoomRollAward): string {
+  return getAwardNotations(award).join(', ');
+}
 
 interface DiceMessageSummary {
   userId: string;
@@ -211,10 +222,12 @@ function evaluateAward(award: RoomRollAward, rolls: DiceMessageSummary[]): { lea
   if (!targets.size) {
     return { leaders: [], maxHits: 0 };
   }
-  const requiredFace = award.diceNotation ? extractDieFace(award.diceNotation) : null;
+  const requiredFaces = getAwardNotations(award)
+    .map((notation) => extractDieFace(notation))
+    .filter((face): face is string => Boolean(face));
   const counts = new Map<string, { userId: string; name: string; count: number }>();
   for (const message of rolls) {
-    if (!notationMatchesFilter(message.face, requiredFace)) continue;
+    if (!notationMatchesFilter(message.face, requiredFaces)) continue;
     const hits = message.rolls.reduce((total, roll) => {
       const normalized = Math.floor(roll);
       return targets.has(normalized) ? total + 1 : total;
@@ -252,10 +265,10 @@ function extractDieFace(value?: string | null): string | null {
   return match[2];
 }
 
-function notationMatchesFilter(messageFace: string | null, awardFace: string | null): boolean {
-  if (!awardFace) return true;
+function notationMatchesFilter(messageFace: string | null, awardFaces: string[]): boolean {
+  if (!awardFaces.length) return true;
   if (!messageFace) return false;
-  return messageFace === awardFace;
+  return awardFaces.includes(messageFace);
 }
 
 function handleManageClick() {

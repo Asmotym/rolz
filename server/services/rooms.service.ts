@@ -50,6 +50,7 @@ const ONLINE_MEMBER_WINDOW_MS = 1000 * 60 * 2;
 const DEFAULT_DICE_CATEGORY_NAME = 'General';
 const ROLL_AWARD_NAME_MAX_LENGTH = 120;
 const ROLL_AWARD_MAX_RESULTS = 20;
+const ROLL_AWARD_MAX_DICE_NOTATIONS = 10;
 const ROLL_AWARD_RESULT_MIN = 1;
 const ROLL_AWARD_RESULT_MAX = 1000;
 const ROLL_AWARD_WINDOW_OPTIONS = [10, 50, 100];
@@ -76,8 +77,8 @@ export type RoomsAction =
     | { action: 'createDiceCategory'; payload: { roomId: string; userId: string; name: string } }
     | { action: 'rollAwards'; payload: { roomId: string } }
     | { action: 'setRollAwardsEnabled'; payload: { roomId: string; userId: string; enabled: boolean; windowSize?: number | null } }
-    | { action: 'createRollAward'; payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null } }
-    | { action: 'updateRollAward'; payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null } }
+    | { action: 'createRollAward'; payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] } }
+    | { action: 'updateRollAward'; payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] } }
     | { action: 'deleteRollAward'; payload: { roomId: string; userId: string; awardId: string } };
 
 export type RoomsActionResponse =
@@ -536,7 +537,7 @@ async function handleSetRollAwardsEnabled(payload: { roomId: string; userId: str
     };
 }
 
-async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null }): Promise<RoomRollAward> {
+async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     const room = await getRoomById(payload.roomId);
@@ -548,19 +549,19 @@ async function handleCreateRollAward(payload: { roomId: string; userId: string; 
         throw new Error('Enable Roll Awards before creating entries');
     }
     const name = normalizeRollAwardName(payload.name);
-    const diceNotation = normalizeRollAwardDiceNotation(payload.diceNotation);
+    const diceNotations = normalizeRollAwardDiceNotations(payload.diceNotations ?? payload.diceNotation);
     const diceResults = normalizeRollAwardResults(payload.diceResults);
     const created = await insertRoomRollAward({
         room_id: room.id,
         created_by: payload.userId,
         name,
-        dice_notation: diceNotation,
+        dice_notation: serializeRollAwardDiceNotations(diceNotations),
         dice_results: JSON.stringify(diceResults)
     });
     return mapRollAwardRecord(created);
 }
 
-async function handleUpdateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null }): Promise<RoomRollAward> {
+async function handleUpdateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     if (!payload.awardId) throw new Error('Award id missing');
@@ -577,12 +578,12 @@ async function handleUpdateRollAward(payload: { roomId: string; userId: string; 
         throw new Error('Award not found');
     }
     const name = normalizeRollAwardName(payload.name);
-    const diceNotation = normalizeRollAwardDiceNotation(payload.diceNotation);
+    const diceNotations = normalizeRollAwardDiceNotations(payload.diceNotations ?? payload.diceNotation);
     const diceResults = normalizeRollAwardResults(payload.diceResults);
     const updated = await updateRoomRollAward({
         id: payload.awardId,
         name,
-        dice_notation: diceNotation,
+        dice_notation: serializeRollAwardDiceNotations(diceNotations),
         dice_results: JSON.stringify(diceResults)
     });
     return mapRollAwardRecord(updated);
@@ -735,19 +736,38 @@ function normalizeRollAwardName(value: string): string {
     return trimmed;
 }
 
-function normalizeRollAwardDiceNotation(value?: string | null): string | null {
-    const trimmed = value?.trim() ?? '';
-    if (!trimmed) {
+function normalizeRollAwardDiceNotations(value?: string | string[] | null): string[] {
+    const source = Array.isArray(value) ? value : typeof value === 'string' ? value.split(/[,\s]+/) : [];
+    const cleaned = source.map((entry) => entry.trim()).filter(Boolean);
+    if (!cleaned.length) {
+        return [];
+    }
+    const normalized = new Set<string>();
+    for (const entry of cleaned) {
+        if (entry.length > DICE_NOTATION_MAX_LENGTH) {
+            throw new Error(`Dice notation filter is too long (max ${DICE_NOTATION_MAX_LENGTH} characters)`);
+        }
+        const match = entry.match(ROLL_AWARD_DICE_NOTATION_REGEX);
+        if (!match) {
+            throw new Error('Dice notation filter must look like d20 or d100');
+        }
+        normalized.add(`d${match[1]}`.toLowerCase());
+        if (normalized.size > ROLL_AWARD_MAX_DICE_NOTATIONS) {
+            throw new Error(`You can only specify up to ${ROLL_AWARD_MAX_DICE_NOTATIONS} dice notations.`);
+        }
+    }
+    return Array.from(normalized);
+}
+
+function serializeRollAwardDiceNotations(notations: string[]): string | null {
+    if (!notations.length) {
         return null;
     }
-    if (trimmed.length > DICE_NOTATION_MAX_LENGTH) {
-        throw new Error(`Dice notation filter is too long (max ${DICE_NOTATION_MAX_LENGTH} characters)`);
+    const serialized = notations.join(',');
+    if (serialized.length > DICE_NOTATION_MAX_LENGTH) {
+        throw new Error(`Dice notation filter is too long (max ${DICE_NOTATION_MAX_LENGTH} characters combined).`);
     }
-    const match = trimmed.match(ROLL_AWARD_DICE_NOTATION_REGEX);
-    if (!match) {
-        throw new Error('Dice notation filter must look like d20 or d100');
-    }
-    return `d${match[1]}`.toLowerCase();
+    return serialized;
 }
 
 function normalizeRollAwardResults(values: number[]): number[] {
@@ -833,14 +853,32 @@ function mapRoomDiceCategoryRecord(record: DatabaseRoomDiceCategory): RoomDiceCa
     };
 }
 
+function parseStoredDiceNotations(value?: string | null): string[] {
+    if (!value) return [];
+    try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+            return normalizeRollAwardDiceNotations(parsed);
+        }
+    } catch {
+        // ignore parse errors for legacy string values
+    }
+    try {
+        return normalizeRollAwardDiceNotations(value);
+    } catch {
+        return [];
+    }
+}
+
 function mapRollAwardRecord(record: DatabaseRoomRollAward): RoomRollAward {
-    const normalizedNotation = normalizeRollAwardDiceNotation(record.dice_notation ?? null);
+    const normalizedNotations = parseStoredDiceNotations(record.dice_notation ?? null);
     return {
         id: record.id,
         roomId: record.room_id,
         name: record.name,
         diceResults: parseStoredDiceResults(record.dice_results),
-        diceNotation: normalizedNotation ?? undefined,
+        diceNotation: normalizedNotations[0],
+        diceNotations: normalizedNotations.length ? normalizedNotations : undefined,
         createdBy: record.created_by ?? undefined,
         createdAt: record.created_at ?? undefined,
         updatedAt: record.updated_at ?? undefined

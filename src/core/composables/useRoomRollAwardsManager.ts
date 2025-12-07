@@ -9,6 +9,7 @@ export function useRoomRollAwardsManager(
   getRoom: () => RoomDetails | null,
   getCurrentUser: () => DiscordUser | null
 ) {
+  const ROLL_AWARD_NOTATION_REGEX = /^d([1-9]\d*)$/i;
   const awards = ref<RoomRollAward[]>([]);
   const awardsEnabled = ref(false);
   const awardsLoading = ref(false);
@@ -91,7 +92,7 @@ export function useRoomRollAwardsManager(
     }
   }
 
-  async function createAward(name: string, diceResults: number[], diceNotation?: string | null) {
+  async function createAward(name: string, diceResults: number[], diceNotations?: string[] | null) {
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
@@ -99,14 +100,14 @@ export function useRoomRollAwardsManager(
       return null;
     }
     awardMutationLoading.value = true;
-      awardMutationError.value = null;
+    awardMutationError.value = null;
     try {
       const created = await RoomsService.createRollAward({
         roomId: room.id,
         userId: user.id,
         name,
         diceResults,
-        diceNotation,
+        diceNotations: diceNotations ?? undefined,
       });
       awards.value = [...awards.value, normalizeAwardNotation(created)];
       return created;
@@ -139,7 +140,7 @@ export function useRoomRollAwardsManager(
     }
   }
 
-  async function updateAward(awardId: string, name: string, diceResults: number[], diceNotation?: string | null) {
+  async function updateAward(awardId: string, name: string, diceResults: number[], diceNotations?: string[] | null) {
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
@@ -155,7 +156,7 @@ export function useRoomRollAwardsManager(
         awardId,
         name,
         diceResults,
-        diceNotation,
+        diceNotations: diceNotations ?? undefined,
       });
       awards.value = awards.value.map((award) => (award.id === awardId ? normalizeAwardNotation(updated) : award));
       return updated;
@@ -181,11 +182,32 @@ export function useRoomRollAwardsManager(
   }
 
   function normalizeAwardNotation(award: RoomRollAward): RoomRollAward {
-    const notation = award.diceNotation?.trim().toLowerCase() ?? null;
-    if (!notation) return { ...award, diceNotation: undefined };
-    const match = notation.match(/^d([1-9]\d*)$/i);
-    const normalizedNotation = match ? `d${match[1]}` : null;
-    return { ...award, diceNotation: normalizedNotation ?? undefined };
+    const normalizedNotations = normalizeNotations(
+      Array.isArray(award.diceNotations)
+        ? award.diceNotations
+        : award.diceNotation
+          ? award.diceNotation.split(/[\s,]+/)
+          : []
+    );
+    if (!normalizedNotations.length) {
+      return { ...award, diceNotation: undefined, diceNotations: undefined };
+    }
+    return { ...award, diceNotation: normalizedNotations[0], diceNotations: normalizedNotations };
+  }
+
+  function normalizeNotations(notations: string[]): string[] {
+    const normalized: string[] = [];
+    for (const value of notations) {
+      const trimmed = value?.trim().toLowerCase();
+      if (!trimmed) continue;
+      const match = trimmed.match(ROLL_AWARD_NOTATION_REGEX);
+      if (!match) continue;
+      const notation = `d${match[1]}`;
+      if (!normalized.includes(notation)) {
+        normalized.push(notation);
+      }
+    }
+    return normalized;
   }
 
   return {

@@ -515,8 +515,8 @@
                           label="Dice notation filter (optional)"
                           variant="outlined"
                           density="comfortable"
-                          placeholder="d100"
-                          hint="Only count rolls rolled with this die size (e.g., d100). Leave blank to include all dice."
+                          placeholder="d20, d100"
+                          hint="Separate die sizes with commas (e.g., d20, d100). Leave blank to include all dice."
                           persistent-hint
                           :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                         />
@@ -616,7 +616,7 @@
                               </v-chip>
                             </div>
                             <div class="text-caption text-medium-emphasis mb-1">
-                              <span v-if="award.diceNotation">Only counts rolls using {{ award.diceNotation }}</span>
+                              <span v-if="getAwardNotations(award).length">Only counts rolls using {{ formatAwardNotations(award) }}</span>
                               <span v-else>Counts every dice notation</span>
                             </div>
                           </v-list-item>
@@ -717,6 +717,8 @@ const ROLL_AWARD_RESULT_MIN = 1;
 const ROLL_AWARD_RESULT_MAX = 100;
 const ROLL_AWARD_MAX_RESULTS = 20;
 const ROLL_AWARD_NOTATION_REGEX = /^d([1-9]\d*)$/i;
+const ROLL_AWARD_NOTATION_TOTAL_LIMIT = 64;
+const ROLL_AWARD_MAX_DICE_NOTATIONS = 10;
 const ROLL_AWARD_WINDOW_OPTIONS = [
   { title: 'All rolls', value: 'all' },
   { title: 'Last 10 rolls', value: '10' },
@@ -1068,10 +1070,59 @@ function removeRollAwardNumber(value: number) {
   newRollAwardNumbers.value = newRollAwardNumbers.value.filter((entry) => entry !== value);
 }
 
+function getAwardNotations(award: RoomRollAward | null): string[] {
+  if (!award) return [];
+  if (Array.isArray(award.diceNotations) && award.diceNotations.length) {
+    return award.diceNotations;
+  }
+  return award.diceNotation ? [award.diceNotation] : [];
+}
+
+function formatNotations(notations: string[]): string {
+  return notations.join(', ');
+}
+
+function formatAwardNotations(award: RoomRollAward): string {
+  return formatNotations(getAwardNotations(award));
+}
+
+function parseRollAwardNotations(input: string): { notations: string[]; error?: string } {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return { notations: [] };
+  }
+  const parts = trimmed.split(/[\s,]+/).map((entry) => entry.trim()).filter(Boolean);
+  if (!parts.length) {
+    return { notations: [] };
+  }
+  const normalized: string[] = [];
+  for (const value of parts) {
+    const match = value.match(ROLL_AWARD_NOTATION_REGEX);
+    if (!match) {
+      return { notations: [], error: 'Dice notation must look like d20 or d100.' };
+    }
+    const notation = `d${match[1]}`.toLowerCase();
+    if (!normalized.includes(notation)) {
+      normalized.push(notation);
+    }
+    if (normalized.length > ROLL_AWARD_MAX_DICE_NOTATIONS) {
+      return { notations: [], error: `You can only filter by up to ${ROLL_AWARD_MAX_DICE_NOTATIONS} dice notations.` };
+    }
+  }
+  const combinedLength = normalized.join(',').length;
+  if (combinedLength > ROLL_AWARD_NOTATION_TOTAL_LIMIT) {
+    return {
+      notations: [],
+      error: `Dice notation filters are too long (max ${ROLL_AWARD_NOTATION_TOTAL_LIMIT} characters combined).`,
+    };
+  }
+  return { notations: normalized };
+}
+
 function startEditingRollAward(award: RoomRollAward) {
   editingRollAwardId.value = award.id;
   newRollAwardName.value = award.name;
-  newRollAwardDiceNotation.value = award.diceNotation ?? '';
+  newRollAwardDiceNotation.value = formatAwardNotations(award);
   newRollAwardNumbers.value = [...award.diceResults];
   newRollAwardNumber.value = award.diceResults[award.diceResults.length - 1] ?? 1;
   newRollAwardError.value = null;
@@ -1104,29 +1155,25 @@ async function handleSaveRollAward() {
     newRollAwardError.value = 'Add at least one dice result.';
     return;
   }
-  const trimmedNotation = newRollAwardDiceNotation.value.trim();
-  let normalizedNotation: string | null = null;
-  if (trimmedNotation) {
-    const match = trimmedNotation.match(ROLL_AWARD_NOTATION_REGEX);
-    if (!match) {
-      newRollAwardError.value = 'Dice notation must look like d20 or d100.';
-      return;
-    }
-    normalizedNotation = `d${match[1]}`.toLowerCase();
+  const notationResult = parseRollAwardNotations(newRollAwardDiceNotation.value);
+  if (notationResult.error) {
+    newRollAwardError.value = notationResult.error;
+    return;
   }
+  const normalizedNotations = notationResult.notations;
   if (editingRollAwardId.value) {
     const updated = await rollAwardsManager.updateAward(
       editingRollAwardId.value,
       trimmedName,
       newRollAwardNumbers.value,
-      normalizedNotation
+      normalizedNotations
     );
     if (updated) {
       clearRollAwardForm();
       rollAwardsPanelsOpen.value = ['list'];
     }
   } else {
-    const created = await rollAwardsManager.createAward(trimmedName, newRollAwardNumbers.value, normalizedNotation);
+    const created = await rollAwardsManager.createAward(trimmedName, newRollAwardNumbers.value, normalizedNotations);
     if (created) {
       clearRollAwardForm();
       rollAwardsPanelsOpen.value = ['list'];
