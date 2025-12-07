@@ -33,6 +33,26 @@ export async function insertRoomRollAward(award: NewRoomRollAward): Promise<Data
     return created;
 }
 
+export async function updateRoomRollAward(award: {
+    id: string;
+    name: string;
+    dice_notation?: string | null;
+    dice_results: string;
+}): Promise<DatabaseRoomRollAward> {
+    await execute(
+        `UPDATE room_roll_awards
+         SET name = ?, dice_notation = ?, dice_results = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [award.name, award.dice_notation ?? null, award.dice_results, award.id]
+    );
+
+    const updated = await getRoomRollAward(award.id);
+    if (!updated) {
+        throw new Error('Failed to update roll award');
+    }
+    return updated;
+}
+
 export async function deleteRoomRollAward(id: string): Promise<void> {
     await execute('DELETE FROM room_roll_awards WHERE id = ?', [id]);
 }

@@ -459,6 +459,15 @@
                         Add the dice results that should count toward this award, then give it a descriptive name. Optionally filter it to a specific dice notation.
                       </div>
                       <div class="d-flex flex-column gap-3">
+                        <v-alert
+                          v-if="isEditingRollAward"
+                          type="info"
+                          density="comfortable"
+                          variant="tonal"
+                          class="mb-2"
+                        >
+                          Editing existing award. Changes will update "{{ newRollAwardName || 'this award' }}".
+                        </v-alert>
                         <div class="roll-award-number-row mb-4">
                           <v-number-input
                             ref="addRollAwardNumberInput"
@@ -544,16 +553,16 @@
                             color="primary"
                             :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                             :loading="rollAwardsManager.awardMutationLoading.value"
-                            @click="handleCreateRollAward"
+                            @click="handleSaveRollAward"
                           >
-                            Save award
+                            {{ isEditingRollAward ? 'Update award' : 'Save award' }}
                           </v-btn>
                           <v-btn
                             variant="text"
                             :disabled="rollAwardsManager.awardMutationLoading.value"
                             @click="clearRollAwardForm"
                           >
-                            Clear
+                            {{ isEditingRollAward ? 'Cancel edit' : 'Clear' }}
                           </v-btn>
                         </div>
                       </div>
@@ -574,14 +583,26 @@
                           >
                             <v-list-item-title class="d-flex justify-space-between">
                               <span class="d-flex align-center">{{ award.name }}</span>
-                              <v-btn
-                                icon="mdi-delete"
-                                variant="text"
-                                color="error"
-                                size="small"
-                                :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                                @click="rollAwardsManager.deleteAward(award.id)"
-                              /></v-list-item-title>
+                              <div class="d-flex align-center">
+                                <v-btn
+                                  icon="mdi-pencil"
+                                  variant="text"
+                                  color="primary"
+                                  size="small"
+                                  class="mr-1"
+                                  :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
+                                  @click="startEditingRollAward(award)"
+                                />
+                                <v-btn
+                                  icon="mdi-delete"
+                                  variant="text"
+                                  color="error"
+                                  size="small"
+                                  :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
+                                  @click="rollAwardsManager.deleteAward(award.id)"
+                                />
+                              </div>
+                            </v-list-item-title>
                             <div class="d-flex flex-wrap gap-2 mb-2">
                               <v-chip
                                 v-for="value in award.diceResults"
@@ -638,7 +659,7 @@
 
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, watch, useTemplateRef } from 'vue';
-import type { RoomDetails } from 'netlify/core/types/data.types';
+import type { RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
 import { useRoomsStore } from 'core/stores/rooms.store';
@@ -687,6 +708,7 @@ const newRollAwardNumbers = ref<number[]>([]);
 const newRollAwardName = ref('');
 const newRollAwardDiceNotation = ref('');
 const newRollAwardError = ref<string | null>(null);
+const editingRollAwardId = ref<string | null>(null);
 const addRollAwardNumberInput = useTemplateRef('addRollAwardNumberInput');
 const customRollAwardsWindow = ref('');
 const customRollAwardsWindowError = ref<string | null>(null);
@@ -715,6 +737,7 @@ const rollAwardsEnabled = computed(() => rollAwardsManager.awardsEnabled.value);
 const canManageRollAwards = computed(() => isRoomCreator.value);
 const syncingRollWindow = ref(false);
 const rollAwardsWindowSaving = ref(false);
+const isEditingRollAward = computed(() => Boolean(editingRollAwardId.value));
 
 watch(
   () => rollAwardsManager.rollAwardsWindowSize.value,
@@ -1045,18 +1068,31 @@ function removeRollAwardNumber(value: number) {
   newRollAwardNumbers.value = newRollAwardNumbers.value.filter((entry) => entry !== value);
 }
 
+function startEditingRollAward(award: RoomRollAward) {
+  editingRollAwardId.value = award.id;
+  newRollAwardName.value = award.name;
+  newRollAwardDiceNotation.value = award.diceNotation ?? '';
+  newRollAwardNumbers.value = [...award.diceResults];
+  newRollAwardNumber.value = award.diceResults[award.diceResults.length - 1] ?? 1;
+  newRollAwardError.value = null;
+  rollAwardsManager.awardMutationError.value = null;
+  rollAwardsPanelsOpen.value = ['create'];
+}
+
 function clearRollAwardForm() {
   newRollAwardNumber.value = 1;
   newRollAwardNumbers.value = [];
   newRollAwardName.value = '';
   newRollAwardDiceNotation.value = '';
   newRollAwardError.value = null;
+  editingRollAwardId.value = null;
+  rollAwardsManager.awardMutationError.value = null;
 }
 
-async function handleCreateRollAward() {
+async function handleSaveRollAward() {
   newRollAwardError.value = null;
   if (!rollAwardsEnabled.value) {
-    newRollAwardError.value = 'Enable Roll Awards before creating entries.';
+    newRollAwardError.value = 'Enable Roll Awards before managing entries.';
     return;
   }
   const trimmedName = newRollAwardName.value.trim();
@@ -1078,10 +1114,23 @@ async function handleCreateRollAward() {
     }
     normalizedNotation = `d${match[1]}`.toLowerCase();
   }
-  const created = await rollAwardsManager.createAward(trimmedName, newRollAwardNumbers.value, normalizedNotation);
-  if (created) {
-    clearRollAwardForm();
-    rollAwardsPanelsOpen.value = ['list'];
+  if (editingRollAwardId.value) {
+    const updated = await rollAwardsManager.updateAward(
+      editingRollAwardId.value,
+      trimmedName,
+      newRollAwardNumbers.value,
+      normalizedNotation
+    );
+    if (updated) {
+      clearRollAwardForm();
+      rollAwardsPanelsOpen.value = ['list'];
+    }
+  } else {
+    const created = await rollAwardsManager.createAward(trimmedName, newRollAwardNumbers.value, normalizedNotation);
+    if (created) {
+      clearRollAwardForm();
+      rollAwardsPanelsOpen.value = ['list'];
+    }
   }
 }
 

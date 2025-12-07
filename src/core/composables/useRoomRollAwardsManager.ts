@@ -139,6 +139,34 @@ export function useRoomRollAwardsManager(
     }
   }
 
+  async function updateAward(awardId: string, name: string, diceResults: number[], diceNotation?: string | null) {
+    const room = getRoom();
+    const user = getCurrentUser();
+    if (!room || !user) {
+      awardMutationError.value = 'Sign in to manage awards.';
+      return null;
+    }
+    awardMutationLoading.value = true;
+    awardMutationError.value = null;
+    try {
+      const updated = await RoomsService.updateRollAward({
+        roomId: room.id,
+        userId: user.id,
+        awardId,
+        name,
+        diceResults,
+        diceNotation,
+      });
+      awards.value = awards.value.map((award) => (award.id === awardId ? normalizeAwardNotation(updated) : award));
+      return updated;
+    } catch (error) {
+      awardMutationError.value = error instanceof Error ? error.message : 'Unable to update award';
+      return null;
+    } finally {
+      awardMutationLoading.value = false;
+    }
+  }
+
   function resetState() {
     awards.value = [];
     awardsEnabled.value = false;
@@ -174,6 +202,7 @@ export function useRoomRollAwardsManager(
     setAwardsEnabled,
     setAwardsWindow,
     createAward,
+    updateAward,
     deleteAward,
   };
 }

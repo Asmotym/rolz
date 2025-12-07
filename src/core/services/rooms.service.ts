@@ -221,6 +221,14 @@ export class RoomsService {
         return data.rollAward;
     }
 
+    static async updateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null }): Promise<RoomRollAward> {
+        const data = await request<{ rollAward: RoomRollAward }>({
+            action: 'updateRollAward',
+            payload
+        });
+        return data.rollAward;
+    }
+
     static async deleteRollAward(payload: { roomId: string; userId: string; awardId: string }): Promise<string> {
         const data = await request<{ rollAwardId: string }>({
             action: 'deleteRollAward',

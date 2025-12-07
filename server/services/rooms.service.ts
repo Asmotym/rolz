@@ -20,7 +20,13 @@ import {
     listRoomDiceCategories,
     setDefaultRoomDiceCategory
 } from '../core/database/tables/room-dice-categories.table';
-import { deleteRoomRollAward, getRoomRollAward, insertRoomRollAward, listRoomRollAwards } from '../core/database/tables/room-roll-awards.table';
+import {
+    deleteRoomRollAward,
+    getRoomRollAward,
+    insertRoomRollAward,
+    listRoomRollAwards,
+    updateRoomRollAward
+} from '../core/database/tables/room-roll-awards.table';
 import { getUser } from '../core/database/tables/users.table';
 import type {
     DatabaseRoom,
@@ -71,6 +77,7 @@ export type RoomsAction =
     | { action: 'rollAwards'; payload: { roomId: string } }
     | { action: 'setRollAwardsEnabled'; payload: { roomId: string; userId: string; enabled: boolean; windowSize?: number | null } }
     | { action: 'createRollAward'; payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null } }
+    | { action: 'updateRollAward'; payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null } }
     | { action: 'deleteRollAward'; payload: { roomId: string; userId: string; awardId: string } };
 
 export type RoomsActionResponse =
@@ -146,6 +153,8 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
         }
         case 'createRollAward':
             return { rollAward: await handleCreateRollAward(payload.payload) };
+        case 'updateRollAward':
+            return { rollAward: await handleUpdateRollAward(payload.payload) };
         case 'deleteRollAward':
             return { rollAwardId: await handleDeleteRollAward(payload.payload) };
         default:
@@ -549,6 +558,34 @@ async function handleCreateRollAward(payload: { roomId: string; userId: string; 
         dice_results: JSON.stringify(diceResults)
     });
     return mapRollAwardRecord(created);
+}
+
+async function handleUpdateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null }): Promise<RoomRollAward> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.awardId) throw new Error('Award id missing');
+    const room = await getRoomById(payload.roomId);
+    if (!room) throw new Error('Room not found');
+    if (!room.created_by || room.created_by !== payload.userId) {
+        throw new Error('Only the room creator can update awards');
+    }
+    if (!room.roll_awards_enabled) {
+        throw new Error('Enable Roll Awards before editing entries');
+    }
+    const existing = await getRoomRollAward(payload.awardId);
+    if (!existing || existing.room_id !== room.id) {
+        throw new Error('Award not found');
+    }
+    const name = normalizeRollAwardName(payload.name);
+    const diceNotation = normalizeRollAwardDiceNotation(payload.diceNotation);
+    const diceResults = normalizeRollAwardResults(payload.diceResults);
+    const updated = await updateRoomRollAward({
+        id: payload.awardId,
+        name,
+        dice_notation: diceNotation,
+        dice_results: JSON.stringify(diceResults)
+    });
+    return mapRollAwardRecord(updated);
 }
 
 async function handleDeleteRollAward(payload: { roomId: string; userId: string; awardId: string }): Promise<string> {
