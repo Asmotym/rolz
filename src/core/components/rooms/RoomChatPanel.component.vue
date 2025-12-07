@@ -232,6 +232,10 @@ const rollAwardsManager = useRoomRollAwardsManager(
 provide(RoomRollAwardsManagerKey, rollAwardsManager);
 
 let hasMounted = false;
+const refreshRollAwardsAfterMessageChange = createQueuedAsyncTask(async () => {
+  if (!props.room) return;
+  await rollAwardsManager.ensureAwardsLoaded(true);
+});
 
 watch(
   () => props.room?.id,
@@ -252,7 +256,12 @@ watch(
 
 watch(
   () => props.messages.length,
-  (_length, previousLength) => nextTick(() => adjustScrollAfterMessagesChange(previousLength ?? 0))
+  (length, previousLength) => {
+    nextTick(() => adjustScrollAfterMessagesChange(previousLength ?? 0));
+    if (props.room && length !== previousLength) {
+      void refreshRollAwardsAfterMessageChange();
+    }
+  }
 );
 
 watch(
@@ -370,6 +379,27 @@ function openRollAwardsSettings() {
 function persistChatWidth(value: number) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(RESIZE_STORAGE_KEY, String(value));
+}
+
+function createQueuedAsyncTask(task: () => Promise<void>) {
+  let running = false;
+  let queued = false;
+
+  return async function run() {
+    if (running) {
+      queued = true;
+      return;
+    }
+    running = true;
+    try {
+      do {
+        queued = false;
+        await task();
+      } while (queued);
+    } finally {
+      running = false;
+    }
+  };
 }
 
 function startResize(event: MouseEvent | TouchEvent) {
