@@ -5,7 +5,7 @@ COMPOSE_BIN="${COMPOSE:-docker compose}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 MYSQL_SERVICE="${MYSQL_SERVICE:-mysql}"
 ENV_FILE="${ENV_FILE:-.env}"
-DEFAULT_BACKUP_DIR="${BACKUP_DIR:-./docker/backup}"
+DEFAULT_BACKUP_DIR="${BACKUP_DIR:-./docker/backups}"
 
 ENV_ARGS=()
 if [[ -f "$ENV_FILE" ]]; then
