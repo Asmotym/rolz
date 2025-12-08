@@ -18,6 +18,19 @@ services:
       - --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    depends_on:
+      - mysql
+    env_file:
+      - .env
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: ${MYSQL_PORT:-3306}
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "8080:80"
+
   rolz:
     build:
       context: .
