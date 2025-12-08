@@ -35,7 +35,7 @@
         :href="BUG_REPORT_LINK"
         target="_blank"
         rel="noreferrer"
-        title="Open Bug Request"
+        title="Report bug or request feature"
         variant="text"
         color="error"
         class="mr-2"
