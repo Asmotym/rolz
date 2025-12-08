@@ -30,6 +30,18 @@
 
     <template #append>
       <LanguageSwitcher />
+      <v-btn
+        icon
+        :href="BUG_REPORT_LINK"
+        target="_blank"
+        rel="noreferrer"
+        title="Open Bug Request"
+        variant="text"
+        color="error"
+        class="mr-2"
+      >
+        <v-icon icon="mdi-bug-outline" size="20" />
+      </v-btn>
       <DiscordAuth />
     </template>
   </v-app-bar>
@@ -42,6 +54,8 @@ import { HomeRoutes } from 'core/routes';
 import { useRoomsStore } from 'core/stores/rooms.store';
 import LanguageSwitcher from 'modules/language-switcher/components/LanguageSwitcher.vue';
 import DiscordAuth from 'modules/discord-auth/components/DiscordAuth.vue';
+
+const BUG_REPORT_LINK = 'https://asmotym.notion.site/Rolz-Issues-Reporting-2c31392001c0804f84cefb9726da1bdf';
 
 const { t } = useI18n();
 const roomsStore = useRoomsStore();
