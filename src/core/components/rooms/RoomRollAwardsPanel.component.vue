@@ -31,21 +31,21 @@
 
     <template v-else>
       <v-progress-linear
-        v-if="rollAwardsManager.awardsLoading.value"
+        v-if="awardsUiLoading"
         indeterminate
         color="primary"
         class="mb-3"
       />
       <v-alert
-        v-else-if="rollAwardsManager.awardsError.value"
+        v-else-if="awardsUiError"
         type="error"
         variant="tonal"
         density="comfortable"
         class="mb-3"
       >
-        {{ rollAwardsManager.awardsError.value }}
+        {{ awardsUiError }}
         <template #append>
-          <v-btn variant="text" size="small" @click="rollAwardsManager.ensureAwardsLoaded(true)">Retry</v-btn>
+          <v-btn variant="text" size="small" @click="retryAwardsDataLoad">Retry</v-btn>
         </template>
       </v-alert>
       <template v-else>
@@ -119,11 +119,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import type { RoomDetails, RoomMessage, RoomRollAward } from 'netlify/core/types/data.types';
 import { formatDisplayName } from 'core/utils/room-formatting.utils';
 import { RoomRollAwardsManagerKey, type RoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
+import { RoomsService } from 'core/services/rooms.service';
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -146,6 +147,13 @@ const rollAwardsManager = injectedRollAwardsManager;
 const canOpenSettings = computed(() => Boolean(props.room && props.currentUser));
 const showOnlyObtainedAwards = ref(false);
 const DICE_NOTATION_FACE_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
+const diceMessages = ref<DiceMessageSummary[]>([]);
+const diceRollsLoading = ref(false);
+const diceRollsError = ref<string | null>(null);
+const diceRollsLoadedRoomId = ref<string | null>(null);
+const diceRollsWindowApplied = ref<number | null>(null);
+let diceReloading = false;
+let diceReloadQueued = false;
 
 function getAwardNotations(award: RoomRollAward): string[] {
   if (Array.isArray(award.diceNotations) && award.diceNotations.length) {
@@ -164,6 +172,7 @@ interface DiceMessageSummary {
   name: string;
   notation: string | null;
   face: string | null;
+  createdAt: string;
 }
 
 interface AwardLeaderSummary {
@@ -171,22 +180,6 @@ interface AwardLeaderSummary {
   leaders: { userId: string; name: string; count: number }[];
   maxHits: number;
 }
-
-const diceMessages = computed<DiceMessageSummary[]>(() => {
-  return props.messages
-    .filter((message) => message.type === 'dice' && message.userId && Array.isArray(message.diceRolls))
-    .map((message) => {
-      const notation = message.diceNotation?.trim().toLowerCase() ?? null;
-      const face = extractDieFace(notation);
-      return {
-        userId: message.userId as string,
-        rolls: (message.diceRolls ?? []).map((roll) => Number(roll)).filter((roll) => Number.isFinite(roll)),
-        notation,
-        face,
-        name: formatDisplayName(message.username, message.nickname),
-      };
-    });
-});
 
 const diceMessagesWindowed = computed(() => {
   const limit = rollAwardsManager.rollAwardsWindowSize.value;
@@ -196,6 +189,9 @@ const diceMessagesWindowed = computed(() => {
   }
   return entries.slice(-limit);
 });
+
+const awardsUiLoading = computed(() => rollAwardsManager.awardsLoading.value || diceRollsLoading.value);
+const awardsUiError = computed(() => rollAwardsManager.awardsError.value ?? diceRollsError.value);
 
 const awardSummaries = computed<AwardLeaderSummary[]>(() => {
   return rollAwardsManager.awards.value.map((award) => ({
@@ -209,6 +205,131 @@ const visibleAwardSummaries = computed(() =>
     ? awardSummaries.value.filter((summary) => summary.leaders.length > 0)
     : awardSummaries.value
 );
+
+const latestDiceMessageId = computed(() => {
+  const latestDice = [...props.messages]
+    .filter((message) => message.type === 'dice')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .at(-1);
+  return latestDice?.id ?? null;
+});
+
+watch(
+  () => props.room?.id,
+  () => {
+    resetDiceRolls();
+    if (props.room && rollAwardsManager.awardsEnabled.value) {
+      void loadDiceRolls(true);
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => rollAwardsManager.rollAwardsWindowSize.value,
+  () => {
+    if (props.room && rollAwardsManager.awardsEnabled.value) {
+      void loadDiceRolls(true);
+    }
+  }
+);
+
+watch(
+  () => rollAwardsManager.awardsEnabled.value,
+  (enabled) => {
+    if (!enabled) {
+      resetDiceRolls();
+      return;
+    }
+    if (props.room) {
+      void loadDiceRolls(true);
+    }
+  }
+);
+
+watch(latestDiceMessageId, (current, previous) => {
+  if (!props.room || !rollAwardsManager.awardsEnabled.value) return;
+  if (current && current !== previous) {
+    void loadDiceRolls(true);
+  }
+});
+
+function retryAwardsDataLoad() {
+  if (rollAwardsManager.awardsError.value) {
+    void rollAwardsManager.ensureAwardsLoaded(true);
+    return;
+  }
+  void loadDiceRolls(true);
+}
+
+async function loadDiceRolls(force = false) {
+  const roomId = props.room?.id;
+  if (!roomId || !rollAwardsManager.awardsEnabled.value) {
+    resetDiceRolls();
+    return;
+  }
+
+  const windowSize = rollAwardsManager.rollAwardsWindowSize.value ?? null;
+
+  if (diceReloading) {
+    if (force) {
+      diceReloadQueued = true;
+    }
+    return;
+  }
+
+  if (!force && diceRollsLoadedRoomId.value === roomId && diceRollsWindowApplied.value === windowSize && !diceRollsError.value) {
+    return;
+  }
+
+  diceReloading = true;
+  diceRollsLoading.value = true;
+  diceRollsError.value = null;
+
+  try {
+    const rolls = await RoomsService.fetchDiceRolls(roomId, { limit: windowSize ?? undefined });
+    diceMessages.value = normalizeDiceMessages(rolls);
+    diceRollsLoadedRoomId.value = roomId;
+    diceRollsWindowApplied.value = windowSize;
+  } catch (error) {
+    diceRollsError.value = error instanceof Error ? error.message : 'Unable to load recent dice rolls';
+  } finally {
+    diceRollsLoading.value = false;
+    diceReloading = false;
+    if (diceReloadQueued) {
+      diceReloadQueued = false;
+      void loadDiceRolls(true);
+    }
+  }
+}
+
+function normalizeDiceMessages(messages: RoomMessage[]): DiceMessageSummary[] {
+  return messages
+    .filter((message) => message.type === 'dice' && message.userId && Array.isArray(message.diceRolls))
+    .map((message) => {
+      const notation = message.diceNotation?.trim().toLowerCase() ?? null;
+      const face = extractDieFace(notation);
+      return {
+        userId: message.userId as string,
+        rolls: (message.diceRolls ?? []).map((roll) => Number(roll)).filter((roll) => Number.isFinite(roll)),
+        notation,
+        face,
+        name: formatDisplayName(message.username, message.nickname),
+        createdAt: message.createdAt,
+      };
+    })
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+function resetDiceRolls() {
+  diceMessages.value = [];
+  diceRollsError.value = null;
+  diceRollsLoadedRoomId.value = null;
+  diceRollsWindowApplied.value = null;
+  diceRollsLoading.value = false;
+  diceReloading = false;
+  diceReloadQueued = false;
+}
 
 function isCurrentUser(userId: string) {
   return props.currentUser?.id === userId;

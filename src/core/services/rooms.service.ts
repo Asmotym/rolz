@@ -236,4 +236,40 @@ export class RoomsService {
         });
         return data.rollAwardId;
     }
+
+    static async fetchDiceRolls(roomId: string, options?: { limit?: number; since?: string }): Promise<RoomMessage[]> {
+        const endpoint = new URL(getApiUrl(`/rooms/${roomId}/dice-rolls`));
+        if (options?.limit !== undefined) {
+            endpoint.searchParams.set('limit', String(options.limit));
+        }
+        if (options?.since) {
+            endpoint.searchParams.set('since', options.since);
+        }
+
+        const response = await fetch(endpoint.toString(), {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        const text = await response.text();
+        const payload = parseJson<ApiResponse<{ roomId: string; diceRolls: RoomMessage[] }>>(text);
+
+        if (!response.ok) {
+            const fallbackMessage = payload?.error ?? (text.trim() || `Request failed with status ${response.status}`);
+            throw new Error(fallbackMessage);
+        }
+
+        if (!payload) {
+            throw new Error('Invalid server response');
+        }
+
+        if (!payload.success) {
+            throw new Error(payload.error || 'Unknown error');
+        }
+
+        return payload.data.diceRolls;
+    }
 }
