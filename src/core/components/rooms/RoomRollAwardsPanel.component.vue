@@ -107,6 +107,9 @@
                   </div>
                 </div>
               </div>
+              <div v-if="awardSummary.award.description" class="text-body-2 text-medium-emphasis mb-1">
+                {{ awardSummary.award.description }}
+              </div>
               <div v-if="awardSummary.leaders.length" class="text-caption text-medium-emphasis">
                 {{ awardSummary.leaders.length > 1 ? 'Tied leaders' : 'Current leader' }} with {{ awardSummary.maxHits }} hit{{ awardSummary.maxHits === 1 ? '' : 's' }}.
               </div>

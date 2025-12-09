@@ -21,9 +21,17 @@ export async function insertRoomRollAward(award: NewRoomRollAward): Promise<Data
     const id = award.id ?? randomUUID();
 
     await execute(
-        `INSERT INTO room_roll_awards (id, room_id, created_by, name, dice_notation, dice_results)
-         VALUES (?, ?, ?, ?, ?, ?)` ,
-        [id, award.room_id, award.created_by ?? null, award.name, award.dice_notation ?? null, award.dice_results]
+        `INSERT INTO room_roll_awards (id, room_id, created_by, name, description, dice_notation, dice_results)
+         VALUES (?, ?, ?, ?, ?, ?, ?)` ,
+        [
+            id,
+            award.room_id,
+            award.created_by ?? null,
+            award.name,
+            award.description ?? null,
+            award.dice_notation ?? null,
+            award.dice_results
+        ]
     );
 
     const created = await getRoomRollAward(id);
@@ -36,14 +44,15 @@ export async function insertRoomRollAward(award: NewRoomRollAward): Promise<Data
 export async function updateRoomRollAward(award: {
     id: string;
     name: string;
+    description?: string | null;
     dice_notation?: string | null;
     dice_results: string;
 }): Promise<DatabaseRoomRollAward> {
     await execute(
         `UPDATE room_roll_awards
-         SET name = ?, dice_notation = ?, dice_results = ?, updated_at = CURRENT_TIMESTAMP
+         SET name = ?, description = ?, dice_notation = ?, dice_results = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [award.name, award.dice_notation ?? null, award.dice_results, award.id]
+        [award.name, award.description ?? null, award.dice_notation ?? null, award.dice_results, award.id]
     );
 
     const updated = await getRoomRollAward(award.id);

@@ -92,7 +92,7 @@ export function useRoomRollAwardsManager(
     }
   }
 
-  async function createAward(name: string, diceResults: number[], diceNotations?: string[] | null) {
+  async function createAward(name: string, diceResults: number[], diceNotations?: string[] | null, description?: string | null) {
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
@@ -106,6 +106,7 @@ export function useRoomRollAwardsManager(
         roomId: room.id,
         userId: user.id,
         name,
+        description,
         diceResults,
         diceNotations: diceNotations ?? undefined,
       });
@@ -140,7 +141,13 @@ export function useRoomRollAwardsManager(
     }
   }
 
-  async function updateAward(awardId: string, name: string, diceResults: number[], diceNotations?: string[] | null) {
+  async function updateAward(
+    awardId: string,
+    name: string,
+    diceResults: number[],
+    diceNotations?: string[] | null,
+    description?: string | null
+  ) {
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
@@ -155,6 +162,7 @@ export function useRoomRollAwardsManager(
         userId: user.id,
         awardId,
         name,
+        description,
         diceResults,
         diceNotations: diceNotations ?? undefined,
       });

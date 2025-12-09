@@ -1,4 +1,3 @@
-import { ensureDatabaseSetup } from '../core/database/schema';
 import { getUser } from '../core/database/tables/users.table';
 import {
     deleteUserApiKey,
@@ -21,7 +20,6 @@ export interface UserApiKeyPayload {
 export async function getUserApiKey(userId: string): Promise<UserApiKeyPayload | null> {
     if (!userId) throw new Error('User id is required');
 
-    await ensureDatabaseSetup();
     const record = await getApiKeyForUser(userId);
     if (!record) {
         return null;
@@ -43,7 +41,6 @@ export async function getUserApiKey(userId: string): Promise<UserApiKeyPayload |
 export async function generateUserApiKey(userId: string): Promise<UserApiKeyPayload> {
     if (!userId) throw new Error('User id is required');
 
-    await ensureDatabaseSetup();
     const user = await getUser(userId);
     if (!user) {
         throw new Error('Unknown user');
@@ -71,7 +68,6 @@ export async function generateUserApiKey(userId: string): Promise<UserApiKeyPayl
 export async function revokeUserApiKey(userId: string): Promise<void> {
     if (!userId) throw new Error('User id is required');
 
-    await ensureDatabaseSetup();
     await deleteUserApiKey(userId);
     logger.info(`Revoked API key for user ${userId}`);
 }
@@ -79,7 +75,6 @@ export async function revokeUserApiKey(userId: string): Promise<void> {
 export async function verifyApiKey(apiKey: string): Promise<{ userId: string } | null> {
     if (!apiKey) return null;
 
-    await ensureDatabaseSetup();
     const hash = hashApiKey(apiKey);
     const record = await getApiKeyByHash(hash);
 

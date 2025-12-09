@@ -1,4 +1,3 @@
-import { ensureDatabaseSetup } from '../core/database/schema';
 import {
     insertRoom,
     listRooms,
@@ -49,6 +48,7 @@ const DICE_NOTATION_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
 const ONLINE_MEMBER_WINDOW_MS = 1000 * 60 * 2;
 const DEFAULT_DICE_CATEGORY_NAME = 'General';
 const ROLL_AWARD_NAME_MAX_LENGTH = 120;
+const ROLL_AWARD_DESCRIPTION_MAX_LENGTH = 255;
 const ROLL_AWARD_MAX_RESULTS = 20;
 const ROLL_AWARD_MAX_DICE_NOTATIONS = 10;
 const ROLL_AWARD_RESULT_MIN = 1;
@@ -77,8 +77,8 @@ export type RoomsAction =
     | { action: 'createDiceCategory'; payload: { roomId: string; userId: string; name: string } }
     | { action: 'rollAwards'; payload: { roomId: string } }
     | { action: 'setRollAwardsEnabled'; payload: { roomId: string; userId: string; enabled: boolean; windowSize?: number | null } }
-    | { action: 'createRollAward'; payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] } }
-    | { action: 'updateRollAward'; payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] } }
+    | { action: 'createRollAward'; payload: { roomId: string; userId: string; name: string; description?: string | null; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] } }
+    | { action: 'updateRollAward'; payload: { roomId: string; userId: string; awardId: string; name: string; description?: string | null; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] } }
     | { action: 'deleteRollAward'; payload: { roomId: string; userId: string; awardId: string } };
 
 export type RoomsActionResponse =
@@ -99,8 +99,6 @@ export type RoomsActionResponse =
     | { rollAwardId: string };
 
 export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActionResponse> {
-    await ensureDatabaseSetup();
-
     switch (payload.action) {
         case 'list': {
             const rooms = await listRooms();
@@ -164,7 +162,6 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
 }
 
 export async function listRoomsForUser(userId: string): Promise<RoomDetails[]> {
-    await ensureDatabaseSetup();
     return handleListUserRooms({ userId });
 }
 
@@ -176,8 +173,6 @@ export async function listRoomMembersForUser(params: { roomId: string; userId: s
     if (!userId) {
         throw new Error('User id is required');
     }
-
-    await ensureDatabaseSetup();
 
     const room = await getRoomById(roomId);
     if (!room) {
@@ -537,7 +532,7 @@ async function handleSetRollAwardsEnabled(payload: { roomId: string; userId: str
     };
 }
 
-async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
+async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; description?: string | null; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     const room = await getRoomById(payload.roomId);
@@ -549,19 +544,21 @@ async function handleCreateRollAward(payload: { roomId: string; userId: string; 
         throw new Error('Enable Roll Awards before creating entries');
     }
     const name = normalizeRollAwardName(payload.name);
+    const description = normalizeRollAwardDescription(payload.description);
     const diceNotations = normalizeRollAwardDiceNotations(payload.diceNotations ?? payload.diceNotation);
     const diceResults = normalizeRollAwardResults(payload.diceResults);
     const created = await insertRoomRollAward({
         room_id: room.id,
         created_by: payload.userId,
         name,
+        description,
         dice_notation: serializeRollAwardDiceNotations(diceNotations),
         dice_results: JSON.stringify(diceResults)
     });
     return mapRollAwardRecord(created);
 }
 
-async function handleUpdateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
+async function handleUpdateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; description?: string | null; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     if (!payload.awardId) throw new Error('Award id missing');
@@ -578,11 +575,13 @@ async function handleUpdateRollAward(payload: { roomId: string; userId: string; 
         throw new Error('Award not found');
     }
     const name = normalizeRollAwardName(payload.name);
+    const description = normalizeRollAwardDescription(payload.description);
     const diceNotations = normalizeRollAwardDiceNotations(payload.diceNotations ?? payload.diceNotation);
     const diceResults = normalizeRollAwardResults(payload.diceResults);
     const updated = await updateRoomRollAward({
         id: payload.awardId,
         name,
+        description,
         dice_notation: serializeRollAwardDiceNotations(diceNotations),
         dice_results: JSON.stringify(diceResults)
     });
@@ -616,8 +615,6 @@ function sanitizeDiceLimit(limit?: number): number {
 }
 
 export async function listRoomDiceRolls(payload: { roomId: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
-    await ensureDatabaseSetup();
-
     if (!payload.roomId) throw new Error('Room id missing');
     const room = await getRoomById(payload.roomId);
     if (!room) throw new Error('Room not found');
@@ -732,6 +729,15 @@ function normalizeRollAwardName(value: string): string {
     }
     if (trimmed.length > ROLL_AWARD_NAME_MAX_LENGTH) {
         throw new Error(`Award name is too long (max ${ROLL_AWARD_NAME_MAX_LENGTH} characters)`);
+    }
+    return trimmed;
+}
+
+function normalizeRollAwardDescription(value?: string | null): string | null {
+    const trimmed = value?.trim() ?? '';
+    if (!trimmed) return null;
+    if (trimmed.length > ROLL_AWARD_DESCRIPTION_MAX_LENGTH) {
+        throw new Error(`Description is too long (max ${ROLL_AWARD_DESCRIPTION_MAX_LENGTH} characters)`);
     }
     return trimmed;
 }
@@ -876,6 +882,7 @@ function mapRollAwardRecord(record: DatabaseRoomRollAward): RoomRollAward {
         id: record.id,
         roomId: record.room_id,
         name: record.name,
+        description: record.description ?? undefined,
         diceResults: parseStoredDiceResults(record.dice_results),
         diceNotation: normalizedNotations[0],
         diceNotations: normalizedNotations.length ? normalizedNotations : undefined,

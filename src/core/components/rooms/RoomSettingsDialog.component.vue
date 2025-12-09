@@ -528,6 +528,17 @@
                           placeholder="e.g., Natural 20 Champion"
                           :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                         />
+                        <v-textarea
+                          v-model="newRollAwardDescription"
+                          label="Description (optional)"
+                          variant="outlined"
+                          density="comfortable"
+                          placeholder="What makes this award special?"
+                          :counter="ROLL_AWARD_DESCRIPTION_MAX_LENGTH"
+                          :maxlength="ROLL_AWARD_DESCRIPTION_MAX_LENGTH"
+                          auto-grow
+                          :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
+                        />
                         <div class="text-caption text-medium-emphasis mb-2">
                           Players who total the most tracked results automatically own this award.
                         </div>
@@ -603,6 +614,9 @@
                                 />
                               </div>
                             </v-list-item-title>
+                            <div v-if="award.description" class="text-body-2 text-medium-emphasis mb-1">
+                              {{ award.description }}
+                            </div>
                             <div class="d-flex flex-wrap gap-2 mb-2">
                               <v-chip
                                 v-for="value in award.diceResults"
@@ -706,6 +720,7 @@ const rollAwardsPanelsOpen = ref<(string | number)[]>(['create']);
 const newRollAwardNumber = ref<number>(1);
 const newRollAwardNumbers = ref<number[]>([]);
 const newRollAwardName = ref('');
+const newRollAwardDescription = ref('');
 const newRollAwardDiceNotation = ref('');
 const newRollAwardError = ref<string | null>(null);
 const editingRollAwardId = ref<string | null>(null);
@@ -716,6 +731,7 @@ const rollAwardsWindowSelection = ref<'all' | '10' | '50' | '100' | 'custom'>('a
 const ROLL_AWARD_RESULT_MIN = 1;
 const ROLL_AWARD_RESULT_MAX = 100;
 const ROLL_AWARD_MAX_RESULTS = 20;
+const ROLL_AWARD_DESCRIPTION_MAX_LENGTH = 255;
 const ROLL_AWARD_NOTATION_REGEX = /^d([1-9]\d*)$/i;
 const ROLL_AWARD_NOTATION_TOTAL_LIMIT = 64;
 const ROLL_AWARD_MAX_DICE_NOTATIONS = 10;
@@ -1122,6 +1138,7 @@ function parseRollAwardNotations(input: string): { notations: string[]; error?: 
 function startEditingRollAward(award: RoomRollAward) {
   editingRollAwardId.value = award.id;
   newRollAwardName.value = award.name;
+  newRollAwardDescription.value = award.description ?? '';
   newRollAwardDiceNotation.value = formatAwardNotations(award);
   newRollAwardNumbers.value = [...award.diceResults];
   newRollAwardNumber.value = award.diceResults[award.diceResults.length - 1] ?? 1;
@@ -1134,6 +1151,7 @@ function clearRollAwardForm() {
   newRollAwardNumber.value = 1;
   newRollAwardNumbers.value = [];
   newRollAwardName.value = '';
+  newRollAwardDescription.value = '';
   newRollAwardDiceNotation.value = '';
   newRollAwardError.value = null;
   editingRollAwardId.value = null;
@@ -1151,6 +1169,11 @@ async function handleSaveRollAward() {
     newRollAwardError.value = 'Award name is required.';
     return;
   }
+  const trimmedDescription = newRollAwardDescription.value.trim();
+  if (trimmedDescription.length > ROLL_AWARD_DESCRIPTION_MAX_LENGTH) {
+    newRollAwardError.value = `Description must be ${ROLL_AWARD_DESCRIPTION_MAX_LENGTH} characters or fewer.`;
+    return;
+  }
   if (newRollAwardNumbers.value.length === 0) {
     newRollAwardError.value = 'Add at least one dice result.';
     return;
@@ -1166,14 +1189,20 @@ async function handleSaveRollAward() {
       editingRollAwardId.value,
       trimmedName,
       newRollAwardNumbers.value,
-      normalizedNotations
+      normalizedNotations,
+      trimmedDescription || null
     );
     if (updated) {
       clearRollAwardForm();
       rollAwardsPanelsOpen.value = ['list'];
     }
   } else {
-    const created = await rollAwardsManager.createAward(trimmedName, newRollAwardNumbers.value, normalizedNotations);
+    const created = await rollAwardsManager.createAward(
+      trimmedName,
+      newRollAwardNumbers.value,
+      normalizedNotations,
+      trimmedDescription || null
+    );
     if (created) {
       clearRollAwardForm();
       rollAwardsPanelsOpen.value = ['list'];

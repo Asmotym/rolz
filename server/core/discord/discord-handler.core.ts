@@ -1,6 +1,5 @@
 import type { DiscordAuth } from "../types/discord.types";
 import { DiscordClient } from "./client";
-import { ensureDatabaseSetup } from "../database/schema";
 import { getUser, insertUser, updateUser } from "../database/tables/users.table";
 import { createLogger } from "../utils/logger";
 
@@ -30,7 +29,6 @@ async function handleUserQuery(auth: DiscordAuth) {
         throw new Error('Missing Discord authentication tokens');
     }
 
-    await ensureDatabaseSetup();
     logger.info('Fetching Discord user info');
 
     const discordUser = await discordClient.getUserInfo(auth);

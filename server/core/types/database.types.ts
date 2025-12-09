@@ -125,6 +125,7 @@ export interface DatabaseRoomRollAward {
     room_id: string;
     created_by?: string | null;
     name: string;
+    description?: string | null;
     dice_notation?: string | null;
     dice_results?: string | number[] | null;
     created_at?: string;
@@ -136,6 +137,7 @@ export interface NewRoomRollAward {
     room_id: string;
     created_by?: string | null;
     name: string;
+    description?: string | null;
     dice_notation?: string | null;
     dice_results: string;
 }

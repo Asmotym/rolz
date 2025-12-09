@@ -71,6 +71,7 @@ export interface RoomRollAward {
     id: string;
     roomId: string;
     name: string;
+    description?: string | null;
     diceResults: number[];
     diceNotations?: string[];
     diceNotation?: string | null;
