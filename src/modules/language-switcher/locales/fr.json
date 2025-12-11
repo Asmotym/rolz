@@ -9,8 +9,9 @@
     "settings": "Paramètres"
   },
   "home": {
-    "not_logged_in_title": "Hello World!",
-    "not_logged_in_message": ":)"
+    "not_logged_in_title": "Bienvenue sur Rolz !",
+    "not_logged_in_message": "L'outil simple et puissant pour lancer vos dés de JDR.",
+    "not_logged_in_text": "<p>Cet outil vous permet de créer ou de rejoindre des salles avec un chat entièrement fonctionnel et des lancers de dés intégrés.</p><p>Vous DEVEZ être connecté pour l'utiliser. Cliquez sur le bouton ci-dessous pour vous connecter avec votre compte Discord.</p>"
   },
   "settings": {
     "tabs": {

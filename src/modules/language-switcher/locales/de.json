@@ -9,8 +9,9 @@
     "settings": "Einstellungen"
   },
   "home": {
-    "not_logged_in_title": "Hello World!",
-    "not_logged_in_message": ":)"
+    "not_logged_in_title": "Willkommen bei Rolz!",
+    "not_logged_in_message": "Das einfache und leistungsstarke Tool für RPG-Würfe.",
+    "not_logged_in_text": "<p>Mit diesem Tool kannst du Räume erstellen oder beitreten – mit voll funktionsfähigem Chat und Würfelfunktion.</p><p>Du MUSST angemeldet sein, um es zu nutzen. Klicke unten auf den Button und melde dich mit deinem Discord-Konto an.</p>"
   },
   "settings": {
     "tabs": {

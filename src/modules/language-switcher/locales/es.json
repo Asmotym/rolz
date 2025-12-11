@@ -9,8 +9,9 @@
     "settings": "Configuración"
   },
   "home": {
-    "not_logged_in_title": "Hello World!",
-    "not_logged_in_message": ":)"
+    "not_logged_in_title": "¡Bienvenido a Rolz!",
+    "not_logged_in_message": "La herramienta sencilla y potente para tirar dados de rol.",
+    "not_logged_in_text": "<p>Esta herramienta te permite crear o unirte a salas con un chat totalmente funcional y tiradas de dados.</p><p>Debes estar conectado para usarla; pulsa el botón de abajo para conectarte con tu cuenta de Discord.</p>"
   },
   "settings": {
     "tabs": {

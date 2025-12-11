@@ -4,7 +4,29 @@
         <RoomsBoard />
     </v-container>
     <v-container v-else class="d-flex justify-center align-center" style="height: 100vh">
-        <v-card :title="t('home.not_logged_in_title')" :text="t('home.not_logged_in_message')"></v-card>
+        <v-card
+          :title="t('home.not_logged_in_title')"
+          :subtitle="t('home.not_logged_in_message')"
+        >
+        <!-- Prepend Rolz icon -->
+        <template v-slot:prepend>
+          <img
+            src="/rolz-d100.svg"
+            alt="Rolz d100 icon"
+            class="header-logo"
+          />
+        </template>
+
+        <!-- Text slot -->
+        <template v-slot:text>
+          <div v-html="t('home.not_logged_in_text')"></div>
+        </template>
+
+        <!-- Discord Auth button -->
+        <v-card-actions>
+          <DiscordAuth :show-login-text="true" />
+        </v-card-actions>
+      </v-card>
     </v-container>
 </template>
 
@@ -14,6 +36,7 @@ import { useI18n } from 'vue-i18n';
 import HeaderComponent from 'core/components/Header.component.vue';
 import RoomsBoard from 'core/components/rooms/RoomsBoard.component.vue';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
+import DiscordAuth from 'modules/discord-auth/components/DiscordAuth.vue';
 
 const { t } = useI18n();
 

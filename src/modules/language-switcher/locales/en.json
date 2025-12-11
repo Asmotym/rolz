@@ -9,8 +9,12 @@
     "settings": "Settings"
   },
   "home": {
-    "not_logged_in_title": "Hello World!",
-    "not_logged_in_message": ":)"
+    "not_logged_in_title": "Welcome to Rolz!",
+    "not_logged_in_message": "The simple and powerful RPG dice rolling tool.",
+    "not_logged_in_text": "<p>This tool will allow you to create or join rooms with a fully functionnal chat & dice roll feature.</p><p>You MUST be connected to use it, please click the button below the connect use your Discord account.</p>"
+  },
+  "discord": {
+    "login_text": "Login with Discord"
   },
   "settings": {
     "tabs": {
