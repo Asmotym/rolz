@@ -1358,25 +1358,24 @@ function normalizeClipboardAward(entry: unknown): ImportableRollAward | null {
 }
 
 function parseAwardsClipboard(raw: string): ImportableRollAward[] {
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const entries = (Array.isArray(parsed)
+      ? parsed
+      : parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).awards)
+        ? (parsed as Record<string, unknown>).awards
+        : []) as Array<any>;
+    const normalized: ImportableRollAward[] = [];
+    for (const entry of entries) {
+      const award = normalizeClipboardAward(entry);
+      if (award) {
+        normalized.push(award);
+      }
+    }
+    return normalized;
   } catch {
     return [];
   }
-  const entries = Array.isArray(parsed)
-    ? parsed
-    : parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).awards)
-      ? (parsed as Record<string, unknown>).awards
-      : [];
-  const normalized: ImportableRollAward[] = [];
-  for (const entry of entries) {
-    const award = normalizeClipboardAward(entry);
-    if (award) {
-      normalized.push(award);
-    }
-  }
-  return normalized;
 }
 
 async function handlePasteRollAwards() {
