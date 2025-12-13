@@ -12,7 +12,7 @@ RUN npm run build && npm run server:build
 FROM node:20-slim AS runner
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends mariadb-server mariadb-client tini \
+    && apt-get install -y --no-install-recommends mariadb-client tini \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -32,9 +32,7 @@ COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
 RUN chmod +x ./docker/entrypoint.sh
 
-VOLUME ["/var/lib/mysql"]
-
-EXPOSE 5173 4000 3306
+EXPOSE 5173 4000
 
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["/app/docker/entrypoint.sh"]

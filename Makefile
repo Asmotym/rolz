@@ -14,7 +14,7 @@ export MYSQL_DATABASE ?= rolz
 export MYSQL_ROOT_PASSWORD ?= root
 export FRONTEND_URL ?= http://localhost:5173
 export VITE_BACKEND_URL ?= http://localhost:4000
-export DATABASE_URL ?= mysql://rolz:rolz@localhost:3306/rolz
+export DATABASE_URL ?= mysql://rolz:rolz@mysql:3306/rolz
 export DATABASE_SSL ?= false
 
 ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")
