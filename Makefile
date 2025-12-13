@@ -16,6 +16,7 @@ export FRONTEND_URL ?= http://localhost:5173
 export VITE_BACKEND_URL ?= http://localhost:4000
 export DATABASE_URL ?= mysql://rolz:rolz@mysql:3306/rolz
 export DATABASE_SSL ?= false
+WATCH_DATABASE_URL ?= mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@127.0.0.1:$(MYSQL_PORT)/$(MYSQL_DATABASE)
 
 ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")
 COMPOSE_CMD := $(COMPOSE) -f $(COMPOSE_FILE) $(ENV_FILE_FLAG)
@@ -95,7 +96,7 @@ watch:
 			wait $$backend_pid $$frontend_pid 2>/dev/null || true; \
 		}; \
 		trap cleanup EXIT INT TERM; \
-		npm run server:dev & \
+		DATABASE_URL="$(WATCH_DATABASE_URL)" MYSQL_HOST=127.0.0.1 MYSQL_PORT=$(MYSQL_PORT) npm run server:dev & \
 		backend_pid=$$!; \
 		npm run dev -- --host 0.0.0.0 --port $(FRONTEND_PORT) --strictPort & \
 		frontend_pid=$$!; \
