@@ -10,6 +10,7 @@ import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/
 import { sentry } from './middlewares/sentry'
 import * as Sentry from '@sentry/node'
 import { DatabaseUnavailableError } from './core/database/errors';
+import { ensureDatabaseSetup } from './core/database/schema';
 
 const logger = createLogger('Server');
 const app = express();
@@ -209,9 +210,21 @@ app.use(sentry)
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 8888);
 const host = process.env.HOST ?? '0.0.0.0';
 
-app.listen(port, host, () => {
-    const displayHost = host === '0.0.0.0' ? 'localhost' : host;
-    logger.success(`API server listening on http://${displayHost}:${port}`);
-});
+async function startServer() {
+    try {
+        await ensureDatabaseSetup();
+        app.listen(port, host, () => {
+            const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+            logger.success(`API server listening on http://${displayHost}:${port}`);
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error during startup';
+        const meta = error instanceof Error ? { stack: error.stack } : undefined;
+        logger.error(`Failed to start server: ${message}`, meta);
+        process.exit(1);
+    }
+}
+
+void startServer();
 
 export { app };
