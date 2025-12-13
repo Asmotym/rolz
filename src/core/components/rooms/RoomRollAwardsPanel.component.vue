@@ -210,10 +210,10 @@ const visibleAwardSummaries = computed(() =>
 );
 
 const latestDiceMessageId = computed(() => {
-  const latestDice = [...props.messages]
+  const sortedDice = [...props.messages]
     .filter((message) => message.type === 'dice')
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    .at(-1);
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const latestDice = sortedDice.length > 0 ? sortedDice[sortedDice.length - 1] : undefined;
   return latestDice?.id ?? null;
 });
 
