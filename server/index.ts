@@ -10,6 +10,7 @@ import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/
 import { sentry } from './middlewares/sentry'
 import * as Sentry from '@sentry/node'
 import { DatabaseUnavailableError } from './core/database/errors';
+import { HttpError } from './core/errors/http-errors';
 import { ensureDatabaseSetup } from './core/database/schema';
 
 const logger = createLogger('Server');
@@ -29,6 +30,12 @@ function respondWithServiceError(res: Response, error: unknown, context: string)
     if (error instanceof DatabaseUnavailableError) {
         logger.error(`${context} - database unavailable: ${message}`, meta);
         return res.status(503).json({ success: false, error: message });
+    }
+
+    if (error instanceof HttpError) {
+        const log = error.status >= 500 ? logger.error : logger.warn;
+        log(`${context}: ${message}`, meta);
+        return res.status(error.status).json({ success: false, error: message });
     }
 
     logger.error(`${context}: ${message}`, meta);

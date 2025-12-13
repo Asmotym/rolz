@@ -27,6 +27,7 @@ import {
     updateRoomRollAward
 } from '../core/database/tables/room-roll-awards.table';
 import { getUser } from '../core/database/tables/users.table';
+import { NotFoundError } from '../core/errors/http-errors';
 import type {
     DatabaseRoom,
     DatabaseRoomDice,
@@ -55,6 +56,14 @@ const ROLL_AWARD_RESULT_MIN = 1;
 const ROLL_AWARD_RESULT_MAX = 1000;
 const ROLL_AWARD_WINDOW_OPTIONS = [10, 50, 100];
 const ROLL_AWARD_DICE_NOTATION_REGEX = /^d([1-9]\d*)$/i;
+
+async function requireRoom(roomId: string): Promise<DatabaseRoom> {
+    const room = await getRoomById(roomId);
+    if (!room) {
+        throw new NotFoundError('Room not found');
+    }
+    return room;
+}
 
 export type RoomsAction =
     | { action: 'list' }
@@ -174,10 +183,7 @@ export async function listRoomMembersForUser(params: { roomId: string; userId: s
         throw new Error('User id is required');
     }
 
-    const room = await getRoomById(roomId);
-    if (!room) {
-        throw new Error('Room not found');
-    }
+    await requireRoom(roomId);
 
     const member = await getMember(roomId, userId);
     if (!member) {
@@ -235,7 +241,7 @@ async function handleJoinRoom(payload: { inviteCode: string; password?: string |
     if (!payload.userId) throw new Error('User id is required');
 
     const room = await getRoomByInviteCode(payload.inviteCode.trim().toUpperCase());
-    if (!room) throw new Error('Room not found');
+    if (!room) throw new NotFoundError('Room not found');
     if (room.archived_at && room.created_by !== payload.userId) {
         throw new Error('This room is no longer available');
     }
@@ -266,8 +272,7 @@ async function handleLeaveRoom(payload: { roomId: string; userId: string }): Pro
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
 
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (room.created_by === payload.userId) {
         throw new Error('Room creators cannot leave their own room');
     }
@@ -284,8 +289,7 @@ async function handleArchiveRoom(payload: { roomId: string; userId: string }): P
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
 
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (room.created_by !== payload.userId) {
         throw new Error('Only the room creator can delete this room');
     }
@@ -303,8 +307,7 @@ async function handleUnarchiveRoom(payload: { roomId: string; userId: string }):
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
 
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (room.created_by !== payload.userId) {
         throw new Error('Only the room creator can restore this room');
     }
@@ -326,8 +329,7 @@ async function handleListMessages(payload: {
     before?: string;
 }): Promise<RoomMessage[]> {
     if (!payload.roomId) throw new Error('Room id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    await requireRoom(payload.roomId);
 
     if (payload.userId) {
         await touchMember(payload.roomId, payload.userId);
@@ -343,8 +345,7 @@ async function handleListMessages(payload: {
 
 async function handleListMembers(payload: { roomId: string }): Promise<RoomMemberDetails[]> {
     if (!payload.roomId) throw new Error('Room id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    await requireRoom(payload.roomId);
 
     const rows = await listMembers(payload.roomId);
     return rows.map(mapMemberRecord);
@@ -354,8 +355,7 @@ async function handleGetMember(payload: { roomId: string; userId: string }): Pro
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
 
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    await requireRoom(payload.roomId);
 
     let member = await getMember(payload.roomId, payload.userId);
     if (!member) {
@@ -379,8 +379,7 @@ async function handleUpdateRoom(payload: { roomId: string; userId: string; name:
         throw new Error(`Room name is too long (max ${ROOM_NAME_MAX_LENGTH} characters)`);
     }
 
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
         throw new Error('Only the room creator can rename this room');
     }
@@ -396,8 +395,7 @@ async function handleUpdateNickname(payload: { roomId: string; userId: string; n
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
 
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    await requireRoom(payload.roomId);
 
     const normalizedNickname = payload.nickname?.trim() ?? '';
     if (normalizedNickname.length > NICKNAME_MAX_LENGTH) {
@@ -501,8 +499,7 @@ async function handleCreateDiceCategory(payload: { roomId: string; userId: strin
 
 async function handleListRollAwards(payload: { roomId: string }): Promise<{ awards: RoomRollAward[]; enabled: boolean; windowSize: number | null }> {
     if (!payload.roomId) throw new Error('Room id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     const rows = await listRoomRollAwards(room.id);
     const awards = rows.map(mapRollAwardRecord);
     return {
@@ -515,8 +512,7 @@ async function handleListRollAwards(payload: { roomId: string }): Promise<{ awar
 async function handleSetRollAwardsEnabled(payload: { roomId: string; userId: string; enabled: boolean; windowSize?: number | null }): Promise<{ roomId: string; enabled: boolean; windowSize: number | null }> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
         throw new Error('Only the room creator can update this setting');
     }
@@ -535,8 +531,7 @@ async function handleSetRollAwardsEnabled(payload: { roomId: string; userId: str
 async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; description?: string | null; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
         throw new Error('Only the room creator can create awards');
     }
@@ -562,8 +557,7 @@ async function handleUpdateRollAward(payload: { roomId: string; userId: string; 
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     if (!payload.awardId) throw new Error('Award id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
         throw new Error('Only the room creator can update awards');
     }
@@ -592,8 +586,7 @@ async function handleDeleteRollAward(payload: { roomId: string; userId: string; 
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     if (!payload.awardId) throw new Error('Award id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
         throw new Error('Only the room creator can delete awards');
     }
@@ -616,8 +609,7 @@ function sanitizeDiceLimit(limit?: number): number {
 
 export async function listRoomDiceRolls(payload: { roomId: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
     if (!payload.roomId) throw new Error('Room id missing');
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    await requireRoom(payload.roomId);
 
     const limit = sanitizeDiceLimit(payload.limit);
     const rows = await listDiceMessages(payload.roomId, { limit, since: payload.since });
@@ -634,8 +626,7 @@ async function handleSendMessage(payload: { roomId: string; userId: string; cont
         throw new Error('Dice payload missing');
     }
 
-    const room = await getRoomById(payload.roomId);
-    if (!room) throw new Error('Room not found');
+    await requireRoom(payload.roomId);
 
     const author = await getUser(payload.userId);
     if (!author) throw new Error('Unknown user');
@@ -677,8 +668,7 @@ async function ensureRoomMembership(roomId: string, userId: string) {
     if (!roomId) throw new Error('Room id missing');
     if (!userId) throw new Error('User id missing');
 
-    const room = await getRoomById(roomId);
-    if (!room) throw new Error('Room not found');
+    const room = await requireRoom(roomId);
 
     const member = await getMember(roomId, userId);
     if (!member) {
