@@ -17,6 +17,8 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 db_name="${MYSQL_DATABASE:-rolz}"
+db_host="${MYSQL_HOST:-mysql}"
+db_port="${MYSQL_PORT:-3306}"
 
 backup_arg="${1:-}"
 
@@ -52,16 +54,16 @@ echo "Importing backup '$backup_path' into MySQL service '$MYSQL_SERVICE' ..."
 
 # Ensure target database exists to avoid "No database selected".
 $COMPOSE_BIN -f "$COMPOSE_FILE" "${ENV_ARGS[@]}" exec -T -e MYSQL_PWD="$mysql_root_password" \
-  "$MYSQL_SERVICE" mysql -uroot --host=127.0.0.1 --protocol=TCP \
+  "$MYSQL_SERVICE" mysql -uroot --host="$db_host" --port="$db_port" --protocol=TCP \
   -e "CREATE DATABASE IF NOT EXISTS \`$db_name\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 if [[ "$backup_path" == *.gz ]]; then
   gunzip -c "$backup_path" | \
     $COMPOSE_BIN -f "$COMPOSE_FILE" "${ENV_ARGS[@]}" exec -T -e MYSQL_PWD="$mysql_root_password" \
-    "$MYSQL_SERVICE" mysql -uroot --host=127.0.0.1 --protocol=TCP --database="$db_name"
+    "$MYSQL_SERVICE" mysql -uroot --host="$db_host" --port="$db_port" --protocol=TCP --database="$db_name"
 else
   $COMPOSE_BIN -f "$COMPOSE_FILE" "${ENV_ARGS[@]}" exec -T -e MYSQL_PWD="$mysql_root_password" \
-    "$MYSQL_SERVICE" mysql -uroot --host=127.0.0.1 --protocol=TCP --database="$db_name" <"$backup_path"
+    "$MYSQL_SERVICE" mysql -uroot --host="$db_host" --port="$db_port" --protocol=TCP --database="$db_name" <"$backup_path"
 fi
 
 echo "Import completed."

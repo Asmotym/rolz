@@ -17,6 +17,8 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 db_name="${MYSQL_DATABASE:-rolz}"
+db_host="${MYSQL_HOST:-mysql}"
+db_port="${MYSQL_PORT:-3306}"
 
 timestamp="$(date +%Y%m%d-%H%M%S)"
 requested_path="${1:-}"
@@ -45,7 +47,7 @@ mysql_root_password="${MYSQL_ROOT_PASSWORD:-root}"
 echo "Exporting MySQL data from service '$MYSQL_SERVICE' to $output_path ..."
 
 $COMPOSE_BIN -f "$COMPOSE_FILE" "${ENV_ARGS[@]}" exec -T -e MYSQL_PWD="$mysql_root_password" \
-  "$MYSQL_SERVICE" mysqldump -uroot --host=127.0.0.1 --protocol=TCP \
+  "$MYSQL_SERVICE" mysqldump -uroot --host="$db_host" --port="$db_port" --protocol=TCP \
   --single-transaction --quick --routines --events --triggers \
   "$db_name" >"$output_path"
 
