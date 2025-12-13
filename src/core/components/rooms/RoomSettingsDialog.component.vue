@@ -432,6 +432,59 @@
             </section>
 
             <template v-if="rollAwardsEnabled">
+              <div class="d-flex flex-wrap gap-2 align-center mb-4">
+                <v-btn
+                  variant="tonal"
+                  color="primary"
+                  size="small"
+                  prepend-icon="mdi-content-copy"
+                  :disabled="
+                    !canManageRollAwards ||
+                    rollAwardsManager.awardsLoading.value ||
+                    rollAwardsManager.awardMutationLoading.value ||
+                    clipboardLoading
+                  "
+                  :loading="clipboardLoading && clipboardAction === 'copy'"
+                  @click="copyRollAwardsToClipboard"
+                  class="mr-2"
+                >
+                  Copy awards
+                </v-btn>
+                <v-btn
+                  variant="tonal"
+                  color="primary"
+                  size="small"
+                  prepend-icon="mdi-content-paste"
+                  :disabled="
+                    !canManageRollAwards ||
+                    rollAwardsManager.awardsLoading.value ||
+                    rollAwardsManager.awardMutationLoading.value ||
+                    clipboardLoading
+                  "
+                  :loading="clipboardLoading && clipboardAction === 'paste'"
+                  @click="handlePasteRollAwards"
+                >
+                  Paste awards
+                </v-btn>
+              </div>
+              <v-alert
+                v-if="rollAwardsClipboardFeedback"
+                :type="rollAwardsClipboardFeedback.type"
+                density="comfortable"
+                variant="tonal"
+                class="mb-4"
+              >
+                {{ rollAwardsClipboardFeedback.message }}
+              </v-alert>
+              <v-alert
+                v-if="rollAwardsImportError"
+                type="error"
+                density="comfortable"
+                variant="tonal"
+                class="mb-4"
+              >
+                {{ rollAwardsImportError }}
+              </v-alert>
               <v-progress-linear
                 v-if="rollAwardsManager.awardsLoading.value"
                 indeterminate
@@ -624,7 +677,7 @@
                                 size="small"
                                 variant="tonal"
                                 color="secondary"
-                                class="mr-2"
+                                class="mr-2 mt-2"
                               >
                                 {{ value }}
                               </v-chip>
@@ -665,6 +718,78 @@
           @click="saveSettings"
         >
           Save
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <v-dialog v-model="rollAwardsImportDialogOpen" max-width="560">
+    <v-card>
+      <v-card-title class="d-flex align-center justify-space-between">
+        <span>Import Roll Awards</span>
+        <v-btn icon="mdi-close" variant="text" @click="closeRollAwardsImportDialog" />
+      </v-card-title>
+      <v-divider />
+      <v-card-text>
+        <p class="text-caption text-medium-emphasis mb-3">
+          Review the awards detected from your clipboard before importing them into this room.
+        </p>
+        <template v-if="parsedRollAwardsForImport.length > 0">
+          <v-list density="comfortable">
+            <v-list-item
+              v-for="(award, index) in parsedRollAwardsForImport"
+              :key="`${award.name}-${index}`"
+              class="roll-awards-list-item"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                <span>{{ award.name }}</span>
+              </v-list-item-title>
+              <div v-if="award.description" class="text-body-2 text-medium-emphasis mb-1">
+                {{ award.description }}
+              </div>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <v-chip
+                  v-for="value in award.diceResults"
+                  :key="`${award.name}-${value}`"
+                  size="small"
+                  variant="tonal"
+                  color="secondary"
+                  class="mr-1"
+                >
+                  {{ value }}
+                </v-chip>
+              </div>
+              <div class="text-caption text-medium-emphasis">
+                <span v-if="award.diceNotations.length">Only counts rolls using {{ formatNotations(award.diceNotations) }}</span>
+                <span v-else>Counts every dice notation</span>
+              </div>
+            </v-list-item>
+          </v-list>
+        </template>
+        <v-alert v-else type="info" variant="tonal" density="comfortable">
+          No valid awards found to import.
+        </v-alert>
+      </v-card-text>
+      <v-card-actions class="d-flex flex-wrap gap-2">
+        <v-btn variant="text" @click="closeRollAwardsImportDialog">Cancel</v-btn>
+        <v-spacer />
+        <v-btn
+          color="primary"
+          variant="tonal"
+          :disabled="parsedRollAwardsForImport.length === 0 || rollAwardsImporting"
+          :loading="rollAwardsImporting && importMode === 'clean'"
+          @click="importParsedRollAwards(true)"
+          title="Remove existing awards and replace them"
+        >
+          Clean & Import
+        </v-btn>
+        <v-btn
+          color="primary"
+          :disabled="parsedRollAwardsForImport.length === 0 || rollAwardsImporting"
+          :loading="rollAwardsImporting && importMode === 'append'"
+          @click="importParsedRollAwards(false)"
+          title="Imported new awards"
+        >
+          Import
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -751,11 +876,26 @@ const isRoomCreator = computed(() => {
   return props.room.createdBy === props.currentUser.id;
 });
 
+type ImportableRollAward = {
+  name: string;
+  description: string | null;
+  diceResults: number[];
+  diceNotations: string[];
+};
+
 const rollAwardsEnabled = computed(() => rollAwardsManager.awardsEnabled.value);
 const canManageRollAwards = computed(() => isRoomCreator.value);
 const syncingRollWindow = ref(false);
 const rollAwardsWindowSaving = ref(false);
 const isEditingRollAward = computed(() => Boolean(editingRollAwardId.value));
+const clipboardLoading = ref(false);
+const clipboardAction = ref<'copy' | 'paste' | null>(null);
+const rollAwardsClipboardFeedback = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+const rollAwardsImportDialogOpen = ref(false);
+const rollAwardsImportError = ref<string | null>(null);
+const parsedRollAwardsForImport = ref<ImportableRollAward[]>([]);
+const rollAwardsImporting = ref(false);
+const importMode = ref<'append' | 'clean' | null>(null);
 
 watch(
   () => rollAwardsManager.rollAwardsWindowSize.value,
@@ -865,6 +1005,9 @@ watch(open, async (dialogOpen) => {
     }
   } else {
     clearSettingsFeedback();
+    closeRollAwardsImportDialog();
+    clearClipboardFeedback();
+    rollAwardsImportError.value = null;
   }
 });
 
@@ -940,6 +1083,11 @@ function resetSettingsState() {
   customRollAwardsWindow.value = '';
   customRollAwardsWindowError.value = null;
   rollAwardsWindowSelection.value = 'all';
+  clearClipboardFeedback();
+  rollAwardsImportError.value = null;
+  closeRollAwardsImportDialog();
+  clipboardLoading.value = false;
+  clipboardAction.value = null;
   if (!props.room) {
     open.value = false;
     clearSettingsFeedback();
@@ -1037,6 +1185,7 @@ async function handleRollAwardsToggle(value: boolean | null) {
   await rollAwardsManager.setAwardsEnabled(nextValue);
   if (!nextValue) {
     clearRollAwardForm();
+    closeRollAwardsImportDialog();
   }
 }
 
@@ -1135,6 +1284,186 @@ function parseRollAwardNotations(input: string): { notations: string[]; error?: 
   return { notations: normalized };
 }
 
+function buildExportableAward(award: RoomRollAward): ImportableRollAward {
+  return {
+    name: award.name,
+    description: award.description ?? null,
+    diceResults: [...award.diceResults],
+    diceNotations: getAwardNotations(award),
+  };
+}
+
+function clearClipboardFeedback() {
+  rollAwardsClipboardFeedback.value = null;
+}
+
+async function copyRollAwardsToClipboard() {
+  clearClipboardFeedback();
+  if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+    rollAwardsClipboardFeedback.value = { type: 'error', message: 'Clipboard is not available in this browser.' };
+    return;
+  }
+  const awardsToCopy = rollAwardsManager.awards.value.map(buildExportableAward);
+  clipboardLoading.value = true;
+  clipboardAction.value = 'copy';
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(awardsToCopy, null, 2));
+    rollAwardsClipboardFeedback.value = { type: 'success', message: 'Awards copied to clipboard.' };
+  } catch (error) {
+    rollAwardsClipboardFeedback.value = {
+      type: 'error',
+      message: error instanceof Error ? error.message : 'Unable to copy awards to clipboard.',
+    };
+  } finally {
+    clipboardLoading.value = false;
+    clipboardAction.value = null;
+  }
+}
+
+function normalizeClipboardAward(entry: unknown): ImportableRollAward | null {
+  if (!entry || typeof entry !== 'object') return null;
+  const raw = entry as Record<string, unknown>;
+  const name = typeof raw.name === 'string' ? raw.name.trim() : '';
+  if (!name) return null;
+  const description = typeof raw.description === 'string' ? raw.description.trim() : '';
+  const results = Array.isArray(raw.diceResults)
+    ? raw.diceResults
+        .map((value) => Number.parseInt(String(value), 10))
+        .filter(
+          (value, index, list) =>
+            Number.isFinite(value) &&
+            value >= ROLL_AWARD_RESULT_MIN &&
+            value <= ROLL_AWARD_RESULT_MAX &&
+            list.indexOf(value) === index
+        )
+    : [];
+  if (!results.length) return null;
+  if (results.length > ROLL_AWARD_MAX_RESULTS) {
+    results.length = ROLL_AWARD_MAX_RESULTS;
+  }
+  let notationSource: string[] = [];
+  if (Array.isArray(raw.diceNotations)) {
+    notationSource = raw.diceNotations.map((value) => (typeof value === 'string' ? value : '')).filter(Boolean);
+  } else if (typeof raw.diceNotation === 'string') {
+    notationSource = raw.diceNotation.split(/[\s,]+/);
+  }
+  const { notations, error } = parseRollAwardNotations(notationSource.join(','));
+  if (error) return null;
+  return {
+    name,
+    description: description || null,
+    diceResults: results,
+    diceNotations: notations,
+  };
+}
+
+function parseAwardsClipboard(raw: string): ImportableRollAward[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const entries = Array.isArray(parsed)
+    ? parsed
+    : parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).awards)
+      ? (parsed as Record<string, unknown>).awards
+      : [];
+  const normalized: ImportableRollAward[] = [];
+  for (const entry of entries) {
+    const award = normalizeClipboardAward(entry);
+    if (award) {
+      normalized.push(award);
+    }
+  }
+  return normalized;
+}
+
+async function handlePasteRollAwards() {
+  clearClipboardFeedback();
+  rollAwardsImportError.value = null;
+  if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
+    rollAwardsClipboardFeedback.value = { type: 'error', message: 'Clipboard is not available in this browser.' };
+    return;
+  }
+  clipboardLoading.value = true;
+  clipboardAction.value = 'paste';
+  try {
+    const clipboardText = await navigator.clipboard.readText();
+    const parsed = parseAwardsClipboard(clipboardText);
+    if (!parsed.length) {
+      rollAwardsImportError.value = 'No valid awards detected in clipboard.';
+      return;
+    }
+    parsedRollAwardsForImport.value = parsed;
+    rollAwardsImportDialogOpen.value = true;
+  } catch (error) {
+    rollAwardsClipboardFeedback.value = {
+      type: 'error',
+      message: error instanceof Error ? error.message : 'Unable to read from clipboard.',
+    };
+  } finally {
+    clipboardLoading.value = false;
+    clipboardAction.value = null;
+  }
+}
+
+function closeRollAwardsImportDialog() {
+  rollAwardsImportDialogOpen.value = false;
+  rollAwardsImportError.value = null;
+  parsedRollAwardsForImport.value = [];
+  importMode.value = null;
+}
+
+async function importParsedRollAwards(cleanExisting: boolean) {
+  if (!rollAwardsEnabled.value) {
+    rollAwardsImportError.value = 'Enable Roll Awards before importing.';
+    return;
+  }
+  if (!canManageRollAwards.value) {
+    rollAwardsImportError.value = 'Only the room creator can import awards.';
+    return;
+  }
+  if (!parsedRollAwardsForImport.value.length) {
+    rollAwardsImportError.value = 'No awards to import.';
+    return;
+  }
+  rollAwardsImportError.value = null;
+  rollAwardsImporting.value = true;
+  importMode.value = cleanExisting ? 'clean' : 'append';
+  try {
+    if (cleanExisting && rollAwardsManager.awards.value.length) {
+      for (const existing of [...rollAwardsManager.awards.value]) {
+        const deleted = await rollAwardsManager.deleteAward(existing.id);
+        if (!deleted) {
+          throw new Error(rollAwardsManager.awardMutationError.value ?? 'Failed to remove existing awards.');
+        }
+      }
+    }
+    for (const award of parsedRollAwardsForImport.value) {
+      const created = await rollAwardsManager.createAward(
+        award.name,
+        award.diceResults,
+        award.diceNotations,
+        award.description
+      );
+      if (!created) {
+        throw new Error(rollAwardsManager.awardMutationError.value ?? 'Failed to create an imported award.');
+      }
+    }
+    closeRollAwardsImportDialog();
+    rollAwardsClipboardFeedback.value = {
+      type: 'success',
+      message: cleanExisting ? 'Awards replaced successfully.' : 'Awards imported successfully.',
+    };
+  } catch (error) {
+    rollAwardsImportError.value = error instanceof Error ? error.message : 'Unable to import awards.';
+  } finally {
+    rollAwardsImporting.value = false;
+    importMode.value = null;
+  }
+}
+
 function startEditingRollAward(award: RoomRollAward) {
   editingRollAwardId.value = award.id;
   newRollAwardName.value = award.name;
@@ -1156,6 +1485,7 @@ function clearRollAwardForm() {
   newRollAwardError.value = null;
   editingRollAwardId.value = null;
   rollAwardsManager.awardMutationError.value = null;
+  clearClipboardFeedback();
 }
 
 async function handleSaveRollAward() {
