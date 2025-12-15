@@ -46,12 +46,18 @@
           :style="chatLayoutStyles"
         >
           <div class="chat-section">
-            <div ref="messageContainer" class="messages-container" @scroll.passive="handleScroll">
+            <v-infinite-scroll
+              ref="messageContainerRef"
+              class="messages-container"
+              side="start"
+              @load="handleInfiniteLoad"
+              @scroll.passive="handleScroll"
+            >
               <RoomMessagesList
                 :messages="messages"
                 :current-user-id="currentUser?.id ?? null"
               />
-            </div>
+            </v-infinite-scroll>
 
             <div class="chat-input mt-4">
               <v-text-field
@@ -139,6 +145,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
 import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, useRoomDiceManager } from 'core/composables/useRoomDiceManager';
@@ -158,9 +165,10 @@ const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
 type SettingsTab = 'room' | 'dices' | 'rollAwards';
-const TOP_SCROLL_THRESHOLD = 60;
 const BOTTOM_SCROLL_THRESHOLD = 120;
-type PrependAdjustment = { previousHeight: number; previousTop: number; startLength: number };
+type InfiniteScrollSide = 'start' | 'end' | 'both';
+type InfiniteScrollStatus = 'ok' | 'empty' | 'loading' | 'error';
+type InfiniteScrollDone = (status: InfiniteScrollStatus) => void;
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -179,10 +187,7 @@ const emit = defineEmits<{
 }>();
 
 const messageText = ref('');
-const messageContainer = ref<HTMLElement | null>(null);
 const messageInput = ref<{ focus: () => void } | null>(null);
-const shouldStickToBottom = ref(true);
-const pendingPrependScrollAdjustment = ref<PrependAdjustment | null>(null);
 const chatLayout = ref<HTMLElement | null>(null);
 const chatWidth = ref(loadInitialWidth());
 const isResizing = ref(false);
@@ -192,10 +197,19 @@ const settingsPanelTab = ref<SettingsTab>('room');
 const diceSidebarTab = ref<'dices' | 'rollAwards'>('dices');
 let resizeRaf: number | null = null;
 let pendingClientX: number | null = null;
+const pendingLoadDone = ref<InfiniteScrollDone | null>(null);
+const loadingOlder = ref(false);
+const hasLoadedOlder = ref(false);
 
 const inviteLink = computed(() => {
   if (!props.room || typeof window === 'undefined') return '';
   return `${window.location.origin}/rooms/${props.room.id}?invite=${props.room.inviteCode}`;
+});
+
+const messageContainerRef = ref<ComponentPublicInstance | null>(null);
+const messageContainer = computed<HTMLElement | null>(() => {
+  const element = messageContainerRef.value?.$el;
+  return (element as HTMLElement | null) ?? null;
 });
 
 const showInviteCode = ref(false);
@@ -241,9 +255,11 @@ watch(
   () => props.room?.id,
   () => {
     messageText.value = '';
-    shouldStickToBottom.value = true;
-    pendingPrependScrollAdjustment.value = null;
-    scrollToBottom();
+    pendingLoadDone.value?.('ok');
+    pendingLoadDone.value = null;
+    loadingOlder.value = false;
+    hasLoadedOlder.value = false;
+    resetInfiniteScroll();
     if (!props.room) {
       settingsDialog.value = false;
     } else {
@@ -257,7 +273,10 @@ watch(
 watch(
   () => props.messages.length,
   (length, previousLength) => {
-    nextTick(() => adjustScrollAfterMessagesChange(previousLength ?? 0));
+    const added = previousLength === undefined ? false : length > previousLength;
+    if (added && !props.historyLoading && !loadingOlder.value && !hasLoadedOlder.value) {
+      nextTick(scrollToBottom);
+    }
     if (props.room && length !== previousLength) {
       void refreshRollAwardsAfterMessageChange();
     }
@@ -267,9 +286,14 @@ watch(
 watch(
   () => props.historyLoading,
   (loading, wasLoading) => {
-    if (!loading && wasLoading && pendingPrependScrollAdjustment.value) {
-      if (props.messages.length === pendingPrependScrollAdjustment.value.startLength) {
-        pendingPrependScrollAdjustment.value = null;
+    if (!loading && wasLoading && pendingLoadDone.value) {
+      pendingLoadDone.value(props.canLoadOlder ? 'ok' : 'empty');
+      pendingLoadDone.value = null;
+    }
+    if (!loading && wasLoading) {
+      loadingOlder.value = false;
+      if (hasMounted) {
+        hasLoadedOlder.value = true;
       }
     }
   }
@@ -293,51 +317,54 @@ function loadInitialWidth() {
   return DEFAULT_CHAT_PERCENT;
 }
 
-function scrollToBottom() {
-  if (!messageContainer.value) return;
-  messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
-  shouldStickToBottom.value = true;
-}
-
-function adjustScrollAfterMessagesChange(previousLength: number) {
-  if (!messageContainer.value) return;
-  if (pendingPrependScrollAdjustment.value) {
-    const { previousHeight, previousTop } = pendingPrependScrollAdjustment.value;
-    const heightDelta = messageContainer.value.scrollHeight - previousHeight;
-    messageContainer.value.scrollTop = previousTop + heightDelta;
-    pendingPrependScrollAdjustment.value = null;
+function requestOlderMessagesWithDone(done?: InfiniteScrollDone) {
+  if (!props.canLoadOlder) {
+    done?.('empty');
     return;
   }
-  if (shouldStickToBottom.value || previousLength === 0) {
-    scrollToBottom();
-    if (shouldStickToBottom.value && props.messages.length > ROOM_MESSAGES_PAGE_SIZE) {
-      emit('trim-history');
-    }
+  if (props.historyLoading || pendingLoadDone.value) {
+    done?.('loading');
+    return;
   }
-}
-
-function requestOlderMessages() {
-  if (!props.canLoadOlder || props.historyLoading) return;
-  if (messageContainer.value) {
-    pendingPrependScrollAdjustment.value = {
-      previousHeight: messageContainer.value.scrollHeight,
-      previousTop: messageContainer.value.scrollTop,
-      startLength: props.messages.length,
-    };
-  }
+  pendingLoadDone.value = done ?? null;
+  loadingOlder.value = true;
   emit('load-older');
 }
 
-function handleScroll() {
-  if (!messageContainer.value) return;
-  const { scrollTop, scrollHeight, clientHeight } = messageContainer.value;
-  const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-  shouldStickToBottom.value = distanceFromBottom < BOTTOM_SCROLL_THRESHOLD;
+function handleInfiniteLoad({
+  side,
+  done,
+}: {
+  side: InfiniteScrollSide;
+  done: InfiniteScrollDone;
+}) {
+  if (side !== 'start') {
+    done('ok');
+    return;
+  }
+  requestOlderMessagesWithDone(done);
+}
 
-  if (scrollTop <= TOP_SCROLL_THRESHOLD) {
-    requestOlderMessages();
-  } else if (shouldStickToBottom.value && props.messages.length > ROOM_MESSAGES_PAGE_SIZE) {
+function resetInfiniteScroll() {
+  const instance = messageContainerRef.value as { reset?: (side?: InfiniteScrollSide) => void } | null;
+  instance?.reset?.('start');
+  hasLoadedOlder.value = false;
+}
+
+function scrollToBottom() {
+  const container = messageContainer.value;
+  if (!container) return;
+  container.scrollTop = container.scrollHeight;
+}
+
+function handleScroll() {
+  const container = messageContainer.value;
+  if (!container) return;
+  const { scrollTop, scrollHeight, clientHeight } = container;
+  const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+  if (distanceFromBottom < BOTTOM_SCROLL_THRESHOLD && props.messages.length > ROOM_MESSAGES_PAGE_SIZE) {
     emit('trim-history');
+    resetInfiniteScroll();
   }
 }
 
@@ -490,7 +517,6 @@ function focusMessageInput() {
 
 onMounted(() => {
   hasMounted = true;
-  nextTick(scrollToBottom);
   window.addEventListener('mousemove', handlePointerMove);
   window.addEventListener('mouseup', stopResize);
   window.addEventListener('touchmove', handlePointerMove, nonPassiveTouchOptions);
