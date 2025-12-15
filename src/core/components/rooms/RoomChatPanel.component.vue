@@ -24,7 +24,7 @@
             variant="text"
             :disabled="!room || !currentUser"
             :title="'Room settings'"
-            @click="openSettingsPanel()"
+            @click="openSettingsPanel"
           />
           <v-btn
             icon="mdi-content-copy"
@@ -169,6 +169,8 @@ const BOTTOM_SCROLL_THRESHOLD = 120;
 type InfiniteScrollSide = 'start' | 'end' | 'both';
 type InfiniteScrollStatus = 'ok' | 'empty' | 'loading' | 'error';
 type InfiniteScrollDone = (status: InfiniteScrollStatus) => void;
+type InfiniteScrollResettable = { reset?: (side?: InfiniteScrollSide) => void };
+const isBrowser = typeof window !== 'undefined';
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -195,22 +197,21 @@ const layoutBounds = ref<{ left: number; width: number } | null>(null);
 const settingsDialog = ref(false);
 const settingsPanelTab = ref<SettingsTab>('room');
 const diceSidebarTab = ref<'dices' | 'rollAwards'>('dices');
-let resizeRaf: number | null = null;
-let pendingClientX: number | null = null;
 const pendingLoadDone = ref<InfiniteScrollDone | null>(null);
 const loadingOlder = ref(false);
 const hasLoadedOlder = ref(false);
+let resizeRaf: number | null = null;
+let pendingClientX: number | null = null;
 
 const inviteLink = computed(() => {
-  if (!props.room || typeof window === 'undefined') return '';
+  if (!props.room || !isBrowser) return '';
   return `${window.location.origin}/rooms/${props.room.id}?invite=${props.room.inviteCode}`;
 });
 
 const messageContainerRef = ref<ComponentPublicInstance | null>(null);
-const messageContainer = computed<HTMLElement | null>(() => {
-  const element = messageContainerRef.value?.$el;
-  return (element as HTMLElement | null) ?? null;
-});
+const messageContainer = computed<HTMLElement | null>(
+  () => (messageContainerRef.value?.$el as HTMLElement | null) ?? null
+);
 
 const showInviteCode = ref(false);
 const maskedInviteCode = computed(() => {
@@ -246,34 +247,41 @@ const rollAwardsManager = useRoomRollAwardsManager(
 provide(RoomRollAwardsManagerKey, rollAwardsManager);
 
 let hasMounted = false;
+// Queue refreshes to avoid overlapping award loads when messages change quickly.
 const refreshRollAwardsAfterMessageChange = createQueuedAsyncTask(async () => {
   if (!props.room) return;
   await rollAwardsManager.ensureAwardsLoaded(true);
 });
 
+function finishPendingLoad(status: InfiniteScrollStatus = 'ok') {
+  pendingLoadDone.value?.(status);
+  pendingLoadDone.value = null;
+}
+
+function resetRoomState() {
+  messageText.value = '';
+  finishPendingLoad('ok');
+  loadingOlder.value = false;
+  hasLoadedOlder.value = false;
+  resetInfiniteScroll();
+  showInviteCode.value = false;
+  if (!props.room) {
+    settingsDialog.value = false;
+    return;
+  }
+  focusMessageInput();
+}
+
 watch(
   () => props.room?.id,
-  () => {
-    messageText.value = '';
-    pendingLoadDone.value?.('ok');
-    pendingLoadDone.value = null;
-    loadingOlder.value = false;
-    hasLoadedOlder.value = false;
-    resetInfiniteScroll();
-    if (!props.room) {
-      settingsDialog.value = false;
-    } else {
-      focusMessageInput();
-    }
-    showInviteCode.value = false;
-  },
+  resetRoomState,
   { immediate: true }
 );
 
 watch(
   () => props.messages.length,
   (length, previousLength) => {
-    const added = previousLength === undefined ? false : length > previousLength;
+    const added = previousLength !== undefined && length > previousLength;
     if (added && !props.historyLoading && !loadingOlder.value && !hasLoadedOlder.value) {
       nextTick(scrollToBottom);
     }
@@ -286,11 +294,8 @@ watch(
 watch(
   () => props.historyLoading,
   (loading, wasLoading) => {
-    if (!loading && wasLoading && pendingLoadDone.value) {
-      pendingLoadDone.value(props.canLoadOlder ? 'ok' : 'empty');
-      pendingLoadDone.value = null;
-    }
     if (!loading && wasLoading) {
+      finishPendingLoad(props.canLoadOlder ? 'ok' : 'empty');
       loadingOlder.value = false;
       if (hasMounted) {
         hasLoadedOlder.value = true;
@@ -309,8 +314,8 @@ watch(
 );
 
 function loadInitialWidth() {
-  if (typeof window === 'undefined') return DEFAULT_CHAT_PERCENT;
-  const value = Number(window.localStorage.getItem(RESIZE_STORAGE_KEY));
+  if (!isBrowser) return DEFAULT_CHAT_PERCENT;
+  const value = Number(localStorage.getItem(RESIZE_STORAGE_KEY));
   if (Number.isFinite(value) && value >= 30 && value <= 80) {
     return value;
   }
@@ -338,16 +343,15 @@ function handleInfiniteLoad({
   side: InfiniteScrollSide;
   done: InfiniteScrollDone;
 }) {
-  if (side !== 'start') {
-    done('ok');
+  if (side === 'start') {
+    requestOlderMessagesWithDone(done);
     return;
   }
-  requestOlderMessagesWithDone(done);
+  done('ok');
 }
 
 function resetInfiniteScroll() {
-  const instance = messageContainerRef.value as { reset?: (side?: InfiniteScrollSide) => void } | null;
-  instance?.reset?.('start');
+  (messageContainerRef.value as InfiniteScrollResettable | null)?.reset?.('start');
   hasLoadedOlder.value = false;
 }
 
@@ -362,7 +366,8 @@ function handleScroll() {
   if (!container) return;
   const { scrollTop, scrollHeight, clientHeight } = container;
   const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-  if (distanceFromBottom < BOTTOM_SCROLL_THRESHOLD && props.messages.length > ROOM_MESSAGES_PAGE_SIZE) {
+  const nearBottom = distanceFromBottom < BOTTOM_SCROLL_THRESHOLD;
+  if (nearBottom && props.messages.length > ROOM_MESSAGES_PAGE_SIZE) {
     emit('trim-history');
     resetInfiniteScroll();
   }
@@ -404,8 +409,8 @@ function openRollAwardsSettings() {
 }
 
 function persistChatWidth(value: number) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(RESIZE_STORAGE_KEY, String(value));
+  if (!isBrowser) return;
+  localStorage.setItem(RESIZE_STORAGE_KEY, String(value));
 }
 
 function createQueuedAsyncTask(task: () => Promise<void>) {
@@ -491,7 +496,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function isDesktop() {
-  if (typeof window === 'undefined') return false;
+  if (!isBrowser) return false;
   return window.innerWidth >= DESKTOP_BREAKPOINT;
 }
 
@@ -544,7 +549,6 @@ onUnmounted(() => {
 }
 
 .messages-container {
-  /* max-height: 360px; */
   overflow-y: auto;
   padding-right: 8px;
   height: 100%;
