@@ -69,6 +69,7 @@ async function createTables(): Promise<void> {
             created_by VARCHAR(64),
             roll_awards_enabled TINYINT(1) DEFAULT 0,
             roll_awards_window INT NULL,
+            room_criticals JSON NULL,
             archived_at TIMESTAMP NULL DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -234,6 +235,15 @@ async function ensureAllColumnsCreated(): Promise<void> {
         await query(`
             ALTER TABLE rooms
             ADD COLUMN roll_awards_window INT NULL
+        `);
+    }
+
+    if (!(await columnExists('rooms', 'room_criticals'))) {
+        logger.info('Creating missing "room_criticals" column in "rooms" table...');
+
+        await query(`
+            ALTER TABLE rooms
+            ADD COLUMN room_criticals JSON NULL
         `);
     }
 

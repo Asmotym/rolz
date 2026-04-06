@@ -56,6 +56,7 @@
               <RoomMessagesList
                 :messages="messages"
                 :current-user-id="currentUser?.id ?? null"
+                :room-criticals="room?.criticals ?? []"
               />
             </v-infinite-scroll>
 
@@ -164,7 +165,7 @@ const MIN_CHAT_WIDTH = 320;
 const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
-type SettingsTab = 'room' | 'dices' | 'rollAwards';
+type SettingsTab = 'room' | 'dices' | 'rollAwards' | 'criticals';
 const BOTTOM_SCROLL_THRESHOLD = 120;
 type InfiniteScrollSide = 'start' | 'end' | 'both';
 type InfiniteScrollStatus = 'ok' | 'empty' | 'loading' | 'error';

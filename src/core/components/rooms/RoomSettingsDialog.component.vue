@@ -25,6 +25,7 @@
           <v-tab value="room">Room</v-tab>
           <v-tab value="dices">Dices</v-tab>
           <v-tab value="rollAwards">Roll Awards</v-tab>
+          <v-tab value="criticals">Criticals</v-tab>
         </v-tabs>
 
         <v-window v-model="settingsTab">
@@ -706,6 +707,163 @@
               Roll Awards are currently disabled. Toggle the switch above to start configuring them.
             </v-alert>
           </v-window-item>
+
+          <v-window-item value="criticals">
+            <section class="mb-6">
+              <div class="text-subtitle-2 mb-2">Critical rules</div>
+              <p class="text-caption text-medium-emphasis mb-3">
+                Highlight dice messages when totals are above or below important thresholds. If multiple rules match, the last one in the list wins.
+              </p>
+              <v-alert
+                v-if="!canManageCriticals"
+                type="info"
+                variant="tonal"
+                density="comfortable"
+                class="mb-3"
+              >
+                Only the room creator can manage critical rules.
+              </v-alert>
+              <div class="critical-rule-form">
+                <div class="critical-rule-form__row">
+                  <v-text-field
+                    v-model="newCriticalThreshold"
+                    type="number"
+                    label="Number"
+                    variant="outlined"
+                    density="comfortable"
+                    placeholder="e.g., 20"
+                    :disabled="!canManageCriticals || criticalsSaving"
+                  />
+                        <v-select
+                          v-model="newCriticalOperator"
+                          :items="CRITICAL_OPERATOR_OPTIONS"
+                          item-title="title"
+                          item-value="value"
+                          label="Comparison"
+                          variant="outlined"
+                          density="comfortable"
+                          :disabled="!canManageCriticals || criticalsSaving"
+                        />
+                      </div>
+                <v-select
+                  v-model="newCriticalColorMode"
+                  :items="CRITICAL_COLOR_MODE_OPTIONS"
+                  item-title="title"
+                  item-value="value"
+                  label="Color source"
+                  variant="outlined"
+                  density="comfortable"
+                  class="mb-3"
+                  :disabled="!canManageCriticals || criticalsSaving"
+                />
+
+                <v-select
+                  v-if="newCriticalColorMode === 'preset'"
+                  v-model="newCriticalPresetColor"
+                  :items="CRITICAL_PRESET_COLORS"
+                  item-title="title"
+                  item-value="value"
+                  label="Preset color"
+                  variant="outlined"
+                  density="comfortable"
+                  class="mb-3"
+                  :disabled="!canManageCriticals || criticalsSaving"
+                />
+
+                <div v-else class="mb-3">
+                  <div class="text-caption text-medium-emphasis mb-2">Custom color</div>
+                  <input
+                    v-model="newCriticalCustomColor"
+                    type="color"
+                    class="critical-color-input"
+                    :disabled="!canManageCriticals || criticalsSaving"
+                  >
+                </div>
+
+                <div class="d-flex align-center flex-wrap gap-2 mb-4">
+                  <span class="text-caption text-medium-emphasis">Preview</span>
+                  <v-chip
+                    size="small"
+                    variant="flat"
+                    :style="getCriticalColorChipStyle(selectedCriticalColor)"
+                  >
+                    {{ selectedCriticalColor.toUpperCase() }}
+                  </v-chip>
+                </div>
+
+                <v-alert
+                  v-if="criticalsError"
+                  type="error"
+                  density="comfortable"
+                  variant="tonal"
+                  class="mb-4"
+                >
+                  {{ criticalsError }}
+                </v-alert>
+
+                <div class="d-flex flex-wrap gap-2">
+                  <v-btn
+                    color="primary"
+                    :disabled="!canManageCriticals || criticalsSaving"
+                    :loading="criticalsSaving"
+                    @click="addCriticalRule"
+                  >
+                    Add rule
+                  </v-btn>
+                  <v-btn
+                    variant="text"
+                    :disabled="criticalsSaving"
+                    @click="resetCriticalForm"
+                  >
+                    Clear
+                  </v-btn>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div class="d-flex align-center justify-space-between mb-2">
+                <div class="text-subtitle-2">Saved rules</div>
+                <v-chip size="small">{{ roomCriticals.length }}/{{ ROOM_CRITICALS_MAX_ITEMS }}</v-chip>
+              </div>
+              <template v-if="roomCriticals.length > 0">
+                <v-list density="comfortable">
+                  <v-list-item
+                    v-for="(critical, index) in roomCriticals"
+                    :key="`${critical.operator}-${critical.threshold}-${critical.color}-${index}`"
+                    class="critical-rule-item"
+                  >
+                    <v-list-item-title class="d-flex justify-space-between align-center flex-wrap gap-2">
+                      <span>{{ formatCriticalRule(critical) }}</span>
+                      <div class="d-flex align-center gap-2">
+                        <v-chip
+                          size="small"
+                          variant="flat"
+                          :style="getCriticalColorChipStyle(critical.color)"
+                        >
+                          {{ critical.color.toUpperCase() }}
+                        </v-chip>
+                        <v-btn
+                          icon="mdi-delete"
+                          variant="text"
+                          color="error"
+                          size="small"
+                          :disabled="!canManageCriticals || criticalsSaving"
+                          @click="removeCriticalRule(index)"
+                        />
+                      </div>
+                    </v-list-item-title>
+                    <div class="text-caption text-medium-emphasis">
+                      Highlights the full dice message when the result is {{ getCriticalOperatorText(critical.operator) }} {{ critical.threshold }}.
+                    </div>
+                  </v-list-item>
+                </v-list>
+              </template>
+              <p v-else class="text-caption text-medium-emphasis">
+                No critical rules yet. Add one above to color dice messages in this room.
+              </p>
+            </section>
+          </v-window-item>
         </v-window>
       </v-card-text>
       <v-card-actions>
@@ -798,14 +956,14 @@
 
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, watch, useTemplateRef } from 'vue';
-import type { RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
+import type { RoomCriticalRule, RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
 import { useRoomsStore } from 'core/stores/rooms.store';
 import { RoomDiceManagerKey, type RoomDiceManager } from 'core/composables/useRoomDiceManager';
 import { RoomRollAwardsManagerKey, type RoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
 
-type SettingsTab = 'room' | 'dices' | 'rollAwards';
+type SettingsTab = 'room' | 'dices' | 'criticals' | 'rollAwards';
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -841,6 +999,14 @@ const memberSettingsLoadedRoomId = ref<string | null>(null);
 const settingsSaving = ref(false);
 const settingsFeedback = ref<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 let settingsFeedbackTimer: number | null = null;
+const roomCriticals = ref<RoomCriticalRule[]>([]);
+const newCriticalThreshold = ref<number>(1);
+const newCriticalOperator = ref<RoomCriticalRule['operator']>('moreThan');
+const newCriticalColorMode = ref<'preset' | 'custom'>('preset');
+const newCriticalPresetColor = ref('#d32f2f');
+const newCriticalCustomColor = ref('#fdd835');
+const criticalsSaving = ref(false);
+const criticalsError = ref<string | null>(null);
 const rollAwardsPanelsOpen = ref<(string | number)[]>(['create']);
 const newRollAwardNumber = ref<number>(1);
 const newRollAwardNumbers = ref<number[]>([]);
@@ -860,6 +1026,27 @@ const ROLL_AWARD_DESCRIPTION_MAX_LENGTH = 255;
 const ROLL_AWARD_NOTATION_REGEX = /^d([1-9]\d*)$/i;
 const ROLL_AWARD_NOTATION_TOTAL_LIMIT = 64;
 const ROLL_AWARD_MAX_DICE_NOTATIONS = 10;
+const ROOM_CRITICALS_MAX_ITEMS = 20;
+const CRITICAL_OPERATOR_OPTIONS = [
+  { title: 'More than', value: 'moreThan' },
+  { title: 'Less than', value: 'lessThan' },
+  { title: 'More than or equal', value: 'moreThanOrEqual' },
+  { title: 'Less than or equal', value: 'lessThanOrEqual' },
+] as const;
+const CRITICAL_COLOR_MODE_OPTIONS = [
+  { title: 'Preset colors', value: 'preset' },
+  { title: 'Color picker', value: 'custom' },
+] as const;
+const CRITICAL_PRESET_COLORS = [
+  { title: 'Crimson', value: '#d32f2f' },
+  { title: 'Amber', value: '#f9a825' },
+  { title: 'Gold', value: '#fdd835' },
+  { title: 'Emerald', value: '#2e7d32' },
+  { title: 'Teal', value: '#00897b' },
+  { title: 'Sky', value: '#1e88e5' },
+  { title: 'Indigo', value: '#3949ab' },
+  { title: 'Rose', value: '#c2185b' },
+];
 const ROLL_AWARD_WINDOW_OPTIONS = [
   { title: 'All rolls', value: 'all' },
   { title: 'Last 10 rolls', value: '10' },
@@ -885,6 +1072,12 @@ type ImportableRollAward = {
 
 const rollAwardsEnabled = computed(() => rollAwardsManager.awardsEnabled.value);
 const canManageRollAwards = computed(() => isRoomCreator.value);
+const canManageCriticals = computed(() => isRoomCreator.value);
+const selectedCriticalColor = computed(() => (
+  newCriticalColorMode.value === 'custom'
+    ? newCriticalCustomColor.value
+    : newCriticalPresetColor.value
+));
 const syncingRollWindow = ref(false);
 const rollAwardsWindowSaving = ref(false);
 const isEditingRollAward = computed(() => Boolean(editingRollAwardId.value));
@@ -996,6 +1189,14 @@ watch(
   }
 );
 
+watch(
+  () => props.room?.criticals,
+  (criticals) => {
+    roomCriticals.value = cloneCriticalRules(criticals ?? []);
+  },
+  { immediate: true, deep: true }
+);
+
 watch(open, async (dialogOpen) => {
   if (dialogOpen) {
     settingsTab.value = props.initialTab ?? 'room';
@@ -1078,6 +1279,10 @@ function resetSettingsState() {
   memberSettingsError.value = null;
   memberSettingsLoading.value = false;
   settingsSaving.value = false;
+  roomCriticals.value = cloneCriticalRules(props.room?.criticals ?? []);
+  resetCriticalForm();
+  criticalsSaving.value = false;
+  criticalsError.value = null;
   clearRollAwardForm();
   rollAwardsPanelsOpen.value = ['create'];
   customRollAwardsWindow.value = '';
@@ -1112,6 +1317,149 @@ function showSettingsFeedback(type: 'success' | 'error' | 'info', message: strin
     settingsFeedback.value = null;
     settingsFeedbackTimer = null;
   }, 3500);
+}
+
+function cloneCriticalRules(criticals: RoomCriticalRule[]): RoomCriticalRule[] {
+  return criticals.map((critical) => ({ ...critical }));
+}
+
+function resetCriticalForm() {
+  newCriticalThreshold.value = 1;
+  newCriticalOperator.value = 'moreThan';
+  newCriticalColorMode.value = 'preset';
+  newCriticalPresetColor.value = CRITICAL_PRESET_COLORS[0]?.value ?? '#d32f2f';
+  newCriticalCustomColor.value = '#fdd835';
+  criticalsError.value = null;
+}
+
+function getCriticalOperatorText(operator: RoomCriticalRule['operator']) {
+  if (operator === 'moreThan') {
+    return 'more than';
+  }
+  if (operator === 'lessThan') {
+    return 'less than';
+  }
+  if (operator === 'moreThanOrEqual') {
+    return 'more than or equal to';
+  }
+  return 'less than or equal to';
+}
+
+function formatCriticalRule(rule: RoomCriticalRule) {
+  return `${getCriticalOperatorText(rule.operator)} ${rule.threshold}`;
+}
+
+function getCriticalColorChipStyle(color: string) {
+  return {
+    backgroundColor: color,
+    color: getContrastTextColor(color),
+  };
+}
+
+function getContrastTextColor(color: string) {
+  const normalized = color.trim().toLowerCase();
+  const hex = normalized.length === 4
+    ? `${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`
+    : normalized.slice(1);
+
+  if (!/^[0-9a-f]{6}$/i.test(hex)) {
+    return '#111111';
+  }
+
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
+  return brightness >= 150 ? '#111111' : '#ffffff';
+}
+
+async function saveCriticalRules(nextRules: RoomCriticalRule[]) {
+  if (!props.room || !props.currentUser) {
+    criticalsError.value = 'Sign in to manage critical rules.';
+    return false;
+  }
+
+  criticalsSaving.value = true;
+  criticalsError.value = null;
+
+  try {
+    const updatedRoom = await roomsStore.updateRoomCriticals({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      criticals: nextRules,
+    });
+    roomCriticals.value = cloneCriticalRules(updatedRoom.criticals ?? []);
+    showSettingsFeedback('success', 'Critical rules saved.');
+    return true;
+  } catch (error) {
+    criticalsError.value = error instanceof Error ? error.message : 'Unable to save critical rules.';
+    roomCriticals.value = cloneCriticalRules(props.room.criticals ?? []);
+    return false;
+  } finally {
+    criticalsSaving.value = false;
+  }
+}
+
+function updateNewCriticalThreshold() {
+  const value: number = Number.parseInt(String(newCriticalThreshold.value) || '1');
+  newCriticalThreshold.value = value;
+}
+
+async function addCriticalRule() {
+  criticalsError.value = null;
+
+  if (!canManageCriticals.value) {
+    criticalsError.value = 'Only the room creator can manage critical rules.';
+    return;
+  }
+  if (roomCriticals.value.length >= ROOM_CRITICALS_MAX_ITEMS) {
+    criticalsError.value = `You can only save up to ${ROOM_CRITICALS_MAX_ITEMS} critical rules.`;
+    return;
+  }
+
+  const trimmedThreshold = String(newCriticalThreshold.value).trim();
+  if (!trimmedThreshold) {
+    criticalsError.value = 'A number is required.';
+    return;
+  }
+
+  const parsedThreshold = Number(trimmedThreshold);
+  if (!Number.isFinite(parsedThreshold) || !Number.isInteger(parsedThreshold)) {
+    criticalsError.value = 'The number must be a whole number.';
+    return;
+  }
+
+  const duplicate = roomCriticals.value.some((critical) => (
+    critical.operator === newCriticalOperator.value &&
+    critical.threshold === parsedThreshold
+  ));
+  if (duplicate) {
+    criticalsError.value = 'A rule with this comparison and number already exists.';
+    return;
+  }
+
+  const saved = await saveCriticalRules([
+    ...roomCriticals.value,
+    {
+      threshold: parsedThreshold,
+      operator: newCriticalOperator.value,
+      color: selectedCriticalColor.value,
+    },
+  ]);
+
+  if (saved) {
+    resetCriticalForm();
+  }
+}
+
+async function removeCriticalRule(index: number) {
+  if (!canManageCriticals.value) {
+    criticalsError.value = 'Only the room creator can manage critical rules.';
+    return;
+  }
+
+  const nextRules = roomCriticals.value.filter((_, currentIndex) => currentIndex !== index);
+  await saveCriticalRules(nextRules);
 }
 
 async function saveSettings() {
@@ -1592,5 +1940,50 @@ onUnmounted(() => {
 
 .roll-award-number-btn {
   align-self: flex-end;
+}
+
+.critical-rule-form {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.critical-rule-form__row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.critical-rule-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+
+.critical-rule-item:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.critical-color-input {
+  appearance: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  height: 42px;
+  padding: 0;
+  width: 72px;
+}
+
+.critical-color-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .critical-rule-form__row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -138,6 +138,15 @@ export async function updateRollAwardsSettings(
     return getRoomById(roomId);
 }
 
+export async function updateRoomCriticals(roomId: string, criticals: string | null): Promise<DatabaseRoom | undefined> {
+    await ensureRoomCriticalsColumn();
+    await execute(
+        'UPDATE rooms SET room_criticals = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [criticals, roomId]
+    );
+    return getRoomById(roomId);
+}
+
 let rollAwardsColumnsChecked = false;
 async function ensureRollAwardsColumns() {
     if (rollAwardsColumnsChecked) return;
@@ -150,6 +159,16 @@ async function ensureRollAwardsColumns() {
         await execute('ALTER TABLE rooms ADD COLUMN roll_awards_window INT NULL');
     }
     rollAwardsColumnsChecked = true;
+}
+
+let roomCriticalsColumnChecked = false;
+async function ensureRoomCriticalsColumn() {
+    if (roomCriticalsColumnChecked) return;
+    const hasCriticals = await columnExists('rooms', 'room_criticals');
+    if (!hasCriticals) {
+        await execute('ALTER TABLE rooms ADD COLUMN room_criticals JSON NULL');
+    }
+    roomCriticalsColumnChecked = true;
 }
 
 async function columnExists(table: string, column: string): Promise<boolean> {

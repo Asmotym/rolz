@@ -1,5 +1,5 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
-import type { RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory, RoomRollAward } from 'netlify/core/types/data.types';
+import type { RoomCriticalRule, RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory, RoomRollAward } from 'netlify/core/types/data.types';
 
 const ROOMS_ENDPOINT = getApiUrl('/rooms');
 
@@ -114,6 +114,14 @@ export class RoomsService {
     static async updateRoom(payload: { roomId: string; userId: string; name: string }): Promise<RoomDetails> {
         const data = await request<{ room: RoomDetails }>({
             action: 'updateRoom',
+            payload
+        });
+        return data.room;
+    }
+
+    static async updateRoomCriticals(payload: { roomId: string; userId: string; criticals: RoomCriticalRule[] }): Promise<RoomDetails> {
+        const data = await request<{ room: RoomDetails }>({
+            action: 'updateCriticals',
             payload
         });
         return data.room;

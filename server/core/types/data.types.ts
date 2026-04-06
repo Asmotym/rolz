@@ -1,3 +1,11 @@
+export type RoomCriticalRuleOperator = 'moreThan' | 'lessThan' | 'moreThanOrEqual' | 'lessThanOrEqual';
+
+export interface RoomCriticalRule {
+    threshold: number;
+    operator: RoomCriticalRuleOperator;
+    color: string;
+}
+
 export interface RoomSummary {
     id: string;
     name: string;
@@ -15,6 +23,7 @@ export interface RoomDetails extends RoomSummary {
     createdAt?: string;
     rollAwardsEnabled?: boolean;
     rollAwardsWindow?: number | null;
+    criticals?: RoomCriticalRule[];
 }
 
 export interface RoomMemberDetails {

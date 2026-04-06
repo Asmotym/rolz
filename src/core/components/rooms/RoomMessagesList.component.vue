@@ -13,7 +13,11 @@
         <v-icon>mdi-account</v-icon>
       </template>
     </v-avatar>
-    <div class="message-content">
+    <div
+      class="message-content"
+      :class="{ 'has-critical': Boolean(getCriticalRule(message)) }"
+      :style="getMessageStyle(message)"
+    >
       <div class="message-meta">
         <span class="text-subtitle-2">{{ formatDisplayName(message.username, message.nickname) }}</span>
         <small class="text-medium-emphasis">{{ formatTimestamp(message.createdAt) }}</small>
@@ -45,13 +49,23 @@
 </template>
 
 <script setup lang="ts">
-import type { RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomCriticalRule, RoomMessage } from 'netlify/core/types/data.types';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
+import { findMatchingRoomCritical, getCriticalMessageStyle } from 'core/utils/room-criticals.utils';
 
-defineProps<{
+const props = defineProps<{
   messages: RoomMessage[];
   currentUserId: string | null;
+  roomCriticals: RoomCriticalRule[];
 }>();
+
+function getCriticalRule(message: RoomMessage) {
+  return findMatchingRoomCritical(message, props.roomCriticals);
+}
+
+function getMessageStyle(message: RoomMessage) {
+  return getCriticalMessageStyle(getCriticalRule(message));
+}
 </script>
 
 <style scoped>
@@ -71,14 +85,16 @@ defineProps<{
 }
 
 .message-row.is-self .message-content {
-  background-color: rgba(103, 80, 164, 0.1);
+  --message-bg: rgba(103, 80, 164, 0.1);
 }
 
 .message-content {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--message-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--message-border-color, transparent);
   border-radius: 12px;
   padding: 12px;
   flex: 1;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .message-meta {
@@ -88,7 +104,7 @@ defineProps<{
 }
 
 .dice-message {
-  background-color: rgba(255, 193, 7, 0.08);
+  background-color: var(--dice-message-bg, rgba(255, 193, 7, 0.08));
   border-radius: 12px;
 }
 </style>

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomCriticalRule, RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiceRoll } from 'core/utils/dice.utils';
 import { RoomsService } from 'core/services/rooms.service';
 
@@ -221,6 +221,17 @@ export const useRoomsStore = defineStore('rooms', {
                 return room;
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : 'Unable to update room settings');
+                throw error;
+            }
+        },
+        async updateRoomCriticals(payload: { roomId: string; userId: string; criticals: RoomCriticalRule[] }) {
+            this.setError(null);
+            try {
+                const room = await RoomsService.updateRoomCriticals(payload);
+                this.upsertRoom(room);
+                return room;
+            } catch (error) {
+                this.setError(error instanceof Error ? error.message : 'Unable to update room criticals');
                 throw error;
             }
         },

@@ -15,6 +15,8 @@ export interface DatabaseUserApiKey {
     last_used_at?: string | null;
 }
 
+import type { RoomCriticalRule } from './data.types';
+
 export interface DatabaseRoom {
     id: string;
     name: string;
@@ -24,6 +26,7 @@ export interface DatabaseRoom {
     created_by?: string | null;
     roll_awards_enabled?: number | boolean | null;
     roll_awards_window?: number | null;
+    room_criticals?: string | RoomCriticalRule[] | null;
     archived_at?: string | null;
     created_at?: string;
     updated_at?: string;

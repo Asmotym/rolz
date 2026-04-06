@@ -7,7 +7,8 @@ import {
     touchRoom,
     updateRoomName,
     setRoomArchived,
-    updateRollAwardsSettings
+    updateRollAwardsSettings,
+    updateRoomCriticals as updateRoomCriticalsRecord
 } from '../core/database/tables/rooms.table';
 import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname, removeMember, touchMember } from '../core/database/tables/room-members.table';
 import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
@@ -36,7 +37,7 @@ import type {
     DatabaseRoomMessage,
     DatabaseRoomRollAward
 } from '../core/types/database.types';
-import type { RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
+import type { RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
 
@@ -56,6 +57,10 @@ const ROLL_AWARD_RESULT_MIN = 1;
 const ROLL_AWARD_RESULT_MAX = 1000;
 const ROLL_AWARD_WINDOW_OPTIONS = [10, 50, 100];
 const ROLL_AWARD_DICE_NOTATION_REGEX = /^d([1-9]\d*)$/i;
+const ROOM_CRITICALS_MAX_ITEMS = 20;
+const ROOM_CRITICAL_HEX_COLOR_REGEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+const ROOM_CRITICAL_INT_MIN = -2147483648;
+const ROOM_CRITICAL_INT_MAX = 2147483647;
 
 async function requireRoom(roomId: string): Promise<DatabaseRoom> {
     const room = await getRoomById(roomId);
@@ -74,6 +79,7 @@ export type RoomsAction =
     | { action: 'members'; payload: { roomId: string } }
     | { action: 'member'; payload: { roomId: string; userId: string } }
     | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
+    | { action: 'updateCriticals'; payload: { roomId: string; userId: string; criticals: RoomCriticalRule[] } }
     | { action: 'updateNickname'; payload: { roomId: string; userId: string; nickname?: string | null } }
     | { action: 'leaveRoom'; payload: { roomId: string; userId: string } }
     | { action: 'archiveRoom'; payload: { roomId: string; userId: string } }
@@ -127,6 +133,8 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
             return { member: await handleGetMember(payload.payload) };
         case 'updateRoom':
             return { room: await handleUpdateRoom(payload.payload) };
+        case 'updateCriticals':
+            return { room: await handleUpdateCriticals(payload.payload) };
         case 'updateNickname':
             return { member: await handleUpdateNickname(payload.payload) };
         case 'leaveRoom':
@@ -386,6 +394,26 @@ async function handleUpdateRoom(payload: { roomId: string; userId: string; name:
 
     const updated = await updateRoomName(payload.roomId, trimmedName);
     if (!updated) throw new Error('Failed to update room');
+
+    const memberCount = await countMembers(payload.roomId);
+    return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
+}
+
+async function handleUpdateCriticals(payload: { roomId: string; userId: string; criticals: RoomCriticalRule[] }): Promise<RoomDetails> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+
+    const room = await requireRoom(payload.roomId);
+    if (!room.created_by || room.created_by !== payload.userId) {
+        throw new Error('Only the room creator can update criticals');
+    }
+
+    const criticals = normalizeRoomCriticals(payload.criticals);
+    const updated = await updateRoomCriticalsRecord(
+        payload.roomId,
+        criticals.length ? JSON.stringify(criticals) : null
+    );
+    if (!updated) throw new Error('Failed to update criticals');
 
     const memberCount = await countMembers(payload.roomId);
     return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
@@ -796,6 +824,70 @@ function normalizeRollAwardWindowSize(value?: number | null): number | null {
     return ROLL_AWARD_WINDOW_OPTIONS.includes(normalized) ? normalized : null;
 }
 
+function normalizeRoomCriticals(values: RoomCriticalRule[]): RoomCriticalRule[] {
+    if (!Array.isArray(values)) {
+        throw new Error('Criticals must be provided as a list.');
+    }
+    if (values.length > ROOM_CRITICALS_MAX_ITEMS) {
+        throw new Error(`You can only save up to ${ROOM_CRITICALS_MAX_ITEMS} critical rules.`);
+    }
+
+    const normalized: RoomCriticalRule[] = [];
+    const seen = new Set<string>();
+
+    for (const value of values) {
+        if (!value || typeof value !== 'object') {
+            throw new Error('Each critical rule must be a valid object.');
+        }
+        const threshold = normalizeRoomCriticalThreshold(value.threshold);
+        const operator = normalizeRoomCriticalOperator(value.operator);
+        const color = normalizeRoomCriticalColor(value.color);
+        const dedupeKey = `${operator}:${threshold}`;
+        if (seen.has(dedupeKey)) {
+            throw new Error('Critical rules must use unique threshold and comparison pairs.');
+        }
+        seen.add(dedupeKey);
+        normalized.push({ threshold, operator, color });
+    }
+
+    return normalized;
+}
+
+function normalizeRoomCriticalThreshold(value: number): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        throw new Error('Critical thresholds must be whole numbers.');
+    }
+    if (parsed < ROOM_CRITICAL_INT_MIN || parsed > ROOM_CRITICAL_INT_MAX) {
+        throw new Error('Critical thresholds are out of range.');
+    }
+    return parsed;
+}
+
+function normalizeRoomCriticalOperator(value: string): RoomCriticalRule['operator'] {
+    if (
+        value === 'moreThan' ||
+        value === 'lessThan' ||
+        value === 'moreThanOrEqual' ||
+        value === 'lessThanOrEqual'
+    ) {
+        return value;
+    }
+    throw new Error('Critical comparison must be one of "moreThan", "lessThan", "moreThanOrEqual", or "lessThanOrEqual".');
+}
+
+function normalizeRoomCriticalColor(value: string): string {
+    const trimmed = value?.trim() ?? '';
+    if (!ROOM_CRITICAL_HEX_COLOR_REGEX.test(trimmed)) {
+        throw new Error('Critical colors must be valid hex colors.');
+    }
+    const normalized = trimmed.toLowerCase();
+    if (normalized.length === 4) {
+        return `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`;
+    }
+    return normalized;
+}
+
 async function ensureDiceCategoriesForUser(roomId: string, userId: string): Promise<DatabaseRoomDiceCategory[]> {
     let categories = await listRoomDiceCategories(roomId, userId);
     if (!categories.length) {
@@ -909,8 +1001,55 @@ function mapRoomToSummary(room: DatabaseRoom, options?: { currentUserId?: string
         createdBy: room.created_by,
         createdAt: room.created_at ?? undefined,
         rollAwardsEnabled: Boolean(room.roll_awards_enabled),
-        rollAwardsWindow: normalizeRollAwardWindowSize(room.roll_awards_window)
+        rollAwardsWindow: normalizeRollAwardWindowSize(room.roll_awards_window),
+        criticals: parseStoredRoomCriticals(room.room_criticals)
     };
+}
+
+function parseStoredRoomCriticals(value?: string | RoomCriticalRule[] | null): RoomCriticalRule[] {
+    if (!value) return [];
+
+    let parsed: unknown;
+    if (Array.isArray(value)) {
+        parsed = value;
+    } else {
+        try {
+            parsed = JSON.parse(value);
+        } catch {
+            return [];
+        }
+    }
+
+    if (!Array.isArray(parsed)) {
+        return [];
+    }
+
+    const normalized: RoomCriticalRule[] = [];
+    const seen = new Set<string>();
+
+    for (const entry of parsed) {
+        try {
+            if (!entry || typeof entry !== 'object') {
+                continue;
+            }
+            const threshold = normalizeRoomCriticalThreshold((entry as RoomCriticalRule).threshold);
+            const operator = normalizeRoomCriticalOperator((entry as RoomCriticalRule).operator);
+            const color = normalizeRoomCriticalColor((entry as RoomCriticalRule).color);
+            const dedupeKey = `${operator}:${threshold}`;
+            if (seen.has(dedupeKey)) {
+                continue;
+            }
+            seen.add(dedupeKey);
+            normalized.push({ threshold, operator, color });
+            if (normalized.length >= ROOM_CRITICALS_MAX_ITEMS) {
+                break;
+            }
+        } catch {
+            continue;
+        }
+    }
+
+    return normalized;
 }
 
 function mapRoomDiceRecord(record: DatabaseRoomDice, categories?: Map<string, RoomDiceCategory>): RoomDice {
