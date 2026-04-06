@@ -1400,11 +1400,6 @@ async function saveCriticalRules(nextRules: RoomCriticalRule[]) {
   }
 }
 
-function updateNewCriticalThreshold() {
-  const value: number = Number.parseInt(String(newCriticalThreshold.value) || '1');
-  newCriticalThreshold.value = value;
-}
-
 async function addCriticalRule() {
   criticalsError.value = null;
 
