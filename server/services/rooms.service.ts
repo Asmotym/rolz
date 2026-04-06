@@ -46,7 +46,7 @@ const NICKNAME_MAX_LENGTH = 40;
 const DICE_NOTATION_MAX_LENGTH = 64;
 const DICE_DESCRIPTION_MAX_LENGTH = 255;
 const DICE_CATEGORY_NAME_MAX_LENGTH = 80;
-const DICE_NOTATION_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
+const DICE_NOTATION_REGEX = /^([+-])?(\d+)?d(\d+)([+-]\d+)?$/i;
 const ONLINE_MEMBER_WINDOW_MS = 1000 * 60 * 2;
 const DEFAULT_DICE_CATEGORY_NAME = 'General';
 const ROLL_AWARD_NAME_MAX_LENGTH = 120;
@@ -717,6 +717,11 @@ function normalizeDiceNotation(value: string): string {
     if (!DICE_NOTATION_REGEX.test(trimmed)) {
         throw new Error('Invalid dice notation');
     }
+    const match = trimmed.match(DICE_NOTATION_REGEX);
+    const count = Number.parseInt(match?.[2] ?? '1', 10);
+    if ((match?.[1] === '+' || match?.[1] === '-') && count <= 1) {
+        throw new Error('Advantage and disadvantage require rolling more than one die');
+    }
     return trimmed;
 }
 
@@ -867,13 +872,11 @@ function normalizeRoomCriticalThreshold(value: number): number {
 function normalizeRoomCriticalOperator(value: string): RoomCriticalRule['operator'] {
     if (
         value === 'moreThan' ||
-        value === 'lessThan' ||
-        value === 'moreThanOrEqual' ||
-        value === 'lessThanOrEqual'
+        value === 'lessThan'
     ) {
         return value;
     }
-    throw new Error('Critical comparison must be one of "moreThan", "lessThan", "moreThanOrEqual", or "lessThanOrEqual".');
+    throw new Error('Critical comparison must be one of "moreThan" or "lessThan".');
 }
 
 function normalizeRoomCriticalColor(value: string): string {

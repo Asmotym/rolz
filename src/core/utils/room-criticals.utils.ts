@@ -29,13 +29,7 @@ export function matchesRoomCritical(rule: RoomCriticalRule, total: number): bool
   if (rule.operator === 'moreThan') {
     return total > rule.threshold;
   }
-  if (rule.operator === 'lessThan') {
-    return total < rule.threshold;
-  }
-  if (rule.operator === 'moreThanOrEqual') {
-    return total >= rule.threshold;
-  }
-  return total <= rule.threshold;
+  return total < rule.threshold;
 }
 
 export function findMatchingRoomCritical(message: RoomMessage, rules: RoomCriticalRule[]): RoomCriticalRule | null {

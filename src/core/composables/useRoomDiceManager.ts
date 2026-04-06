@@ -123,7 +123,7 @@ export function useRoomDiceManager(
     try {
       parseDiceNotation(notation);
     } catch {
-      newDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3).';
+      newDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3 or +2d100).';
       return;
     }
     const categoryId = getValidCategoryId(newDiceCategoryId.value);
@@ -179,7 +179,7 @@ export function useRoomDiceManager(
     try {
       parseDiceNotation(notation);
     } catch {
-      editDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3).';
+      editDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3 or +2d100).';
       return;
     }
     const categoryId = getValidCategoryId(editDiceCategoryId.value);

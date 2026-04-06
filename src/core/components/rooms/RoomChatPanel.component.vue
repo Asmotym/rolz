@@ -64,7 +64,7 @@
               <v-text-field
                 ref="messageInput"
                 v-model="messageText"
-                label="Send a message"
+                label="Send a message or roll a dice (e.g. d100, 2d100, +2d100, ...)"
                 variant="outlined"
                 density="comfortable"
                 @keyup.enter="sendMessage"
@@ -80,6 +80,12 @@
                   />
                 </template>
               </v-text-field>
+              <div class="text-caption text-medium-emphasis d-flex flex-column">
+                <span>You can prepend a dice roll with a "+"" or "-"", while "+" will count the roll as an advantage</span>
+                <span>Examples:</span>
+                <span class="ml-4">- "+2d100" will count the roll as an advantage and keep the best roll</span>
+                <span class="ml-4">- "-2d100" will count the roll as a disadvantage and keep the worst roll</span>
+              </div>
             </div>
           </div>
 

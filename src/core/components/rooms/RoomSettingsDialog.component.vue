@@ -109,14 +109,14 @@
                   </template>
                   <template v-else>
                     <p class="text-caption text-medium-emphasis mb-3">
-                      Provide a dice notation (e.g., 1d20+3) and optionally a description to remember what it is for.
+                      Provide a dice notation (e.g., 1d20+3, +2d100, or -2d100) and optionally a description to remember what it is for.
                     </p>
                     <v-text-field
                       v-model="diceManager.newDiceNotation.value"
                       label="Dice notation"
                       variant="outlined"
                       density="comfortable"
-                      placeholder="e.g., 2d6+1"
+                      placeholder="e.g., +2d100"
                       :disabled="diceManager.diceMutationLoading.value"
                       :error-messages="diceManager.newDiceError.value ? [diceManager.newDiceError.value] : []"
                     />
@@ -1030,8 +1030,6 @@ const ROOM_CRITICALS_MAX_ITEMS = 20;
 const CRITICAL_OPERATOR_OPTIONS = [
   { title: 'More than', value: 'moreThan' },
   { title: 'Less than', value: 'lessThan' },
-  { title: 'More than or equal', value: 'moreThanOrEqual' },
-  { title: 'Less than or equal', value: 'lessThanOrEqual' },
 ] as const;
 const CRITICAL_COLOR_MODE_OPTIONS = [
   { title: 'Preset colors', value: 'preset' },
@@ -1336,13 +1334,7 @@ function getCriticalOperatorText(operator: RoomCriticalRule['operator']) {
   if (operator === 'moreThan') {
     return 'more than';
   }
-  if (operator === 'lessThan') {
-    return 'less than';
-  }
-  if (operator === 'moreThanOrEqual') {
-    return 'more than or equal to';
-  }
-  return 'less than or equal to';
+  return 'less than';
 }
 
 function formatCriticalRule(rule: RoomCriticalRule) {

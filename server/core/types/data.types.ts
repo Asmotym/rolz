@@ -1,4 +1,4 @@
-export type RoomCriticalRuleOperator = 'moreThan' | 'lessThan' | 'moreThanOrEqual' | 'lessThanOrEqual';
+export type RoomCriticalRuleOperator = 'moreThan' | 'lessThan';
 
 export interface RoomCriticalRule {
     threshold: number;

@@ -16,6 +16,8 @@ export interface DiceRollOptions {
   fumbleRange?: number;
 }
 
+export type DiceRollMode = 'sum' | 'advantage' | 'disadvantage';
+
 /**
  * Rolls a single die of specified sides
  * @param sides - Number of sides on the die
@@ -44,19 +46,34 @@ export function parseDiceNotation(notation: string): {
   count: number;
   sides: number;
   modifier: number;
+  mode: DiceRollMode;
 } {
-  const regex = /^(\d+)?d(\d+)([+-]\d+)?$/i;
+  const regex = /^([+-])?(\d+)?d(\d+)([+-]\d+)?$/i;
   const match = notation.toLowerCase().match(regex);
   
   if (!match) {
     throw new Error(`Invalid dice notation: ${notation}`);
   }
   
-  const count = parseInt(match[1] || '1');
-  const sides = parseInt(match[2]);
-  const modifier = parseInt(match[3] || '0');
+  const prefix = match[1];
+  const count = parseInt(match[2] || '1');
+  const sides = parseInt(match[3]);
+  const modifier = parseInt(match[4] || '0');
+  const mode: DiceRollMode = prefix === '+'
+    ? 'advantage'
+    : prefix === '-'
+      ? 'disadvantage'
+      : 'sum';
+
+  if (count < 1 || sides < 1) {
+    throw new Error(`Invalid dice notation: ${notation}`);
+  }
+
+  if (mode !== 'sum' && count === 1) {
+    throw new Error(`Advantage and disadvantage require rolling more than one die: ${notation}`);
+  }
   
-  return { count, sides, modifier };
+  return { count, sides, modifier, mode };
 }
 
 /**
@@ -70,16 +87,22 @@ export function rollDiceNotation(
   options: DiceRollOptions = {},
   description?: string
 ): DiceRoll {
-  const { count, sides, modifier } = parseDiceNotation(notation);
+  const { count, sides, modifier, mode: parsedMode } = parseDiceNotation(notation);
+  const mode = resolveRollMode(parsedMode, options);
   const rolls = rollDice(count, sides);
-  const total = rolls.reduce((sum, roll) => sum + roll, 0) + (options.modifier || 0) + modifier;
+  const selectedRoll = selectRollResult(rolls, mode);
+  const baseTotal = mode === 'sum'
+    ? rolls.reduce((sum, roll) => sum + roll, 0)
+    : selectedRoll;
+  const total = baseTotal + (options.modifier || 0) + modifier;
   const normalizedDescription = description?.trim() || undefined;
   
-  // Handle critical hits and fumbles
-  const criticalRange = options.criticalRange || 20;
-  const fumbleRange = options.fumbleRange || 1;
-  const critical = rolls[0] <= criticalRange;
-  const fumble = rolls[0] >= fumbleRange;
+  const critical = typeof options.criticalRange === 'number'
+    ? selectedRoll <= options.criticalRange
+    : undefined;
+  const fumble = typeof options.fumbleRange === 'number'
+    ? selectedRoll >= options.fumbleRange
+    : undefined;
   
   return {
     dice: notation,
@@ -117,9 +140,14 @@ export const COMMON_DICE = {
  */
 export function formatDiceRoll(roll: DiceRoll): string {
   let result = `${roll.dice}: `;
-  
+
+  const { mode } = parseDiceNotation(roll.dice);
   if (roll.rolls.length === 1) {
     result += `${roll.total}`;
+  } else if (mode === 'advantage') {
+    result += `[${roll.rolls.join(', ')}] => ${Math.min(...roll.rolls)} = ${roll.total}`;
+  } else if (mode === 'disadvantage') {
+    result += `[${roll.rolls.join(', ')}] => ${Math.max(...roll.rolls)} = ${roll.total}`;
   } else {
     result += `[${roll.rolls.join(', ')}] = ${roll.total}`;
   }
@@ -147,7 +175,7 @@ export function parseInlineDiceCommand(input: string | null | undefined): Inline
   const trimmed = input.trim();
   if (!trimmed) return null;
 
-  const match = trimmed.match(/^([0-9]*d[0-9]+(?:[+-][0-9]+)?)(?:\s+(.*))?$/i);
+  const match = trimmed.match(/^([+-]?[0-9]*d[0-9]+(?:[+-][0-9]+)?)(?:\s+(.*))?$/i);
   if (!match) {
     return null;
   }
@@ -164,4 +192,33 @@ export function parseInlineDiceCommand(input: string | null | undefined): Inline
     notation: notation.toLowerCase(),
     description: description?.length ? description : undefined,
   };
+}
+
+function resolveRollMode(parsedMode: DiceRollMode, options: DiceRollOptions): DiceRollMode {
+  if (parsedMode !== 'sum') {
+    return parsedMode;
+  }
+  if (options.advantage && options.disadvantage) {
+    throw new Error('Cannot roll with both advantage and disadvantage.');
+  }
+  if (options.advantage) {
+    return 'advantage';
+  }
+  if (options.disadvantage) {
+    return 'disadvantage';
+  }
+  return 'sum';
+}
+
+function selectRollResult(rolls: number[], mode: DiceRollMode): number {
+  if (!rolls.length) {
+    throw new Error('At least one die must be rolled.');
+  }
+  if (mode === 'advantage') {
+    return Math.min(...rolls);
+  }
+  if (mode === 'disadvantage') {
+    return Math.max(...rolls);
+  }
+  return rolls[0];
 }
