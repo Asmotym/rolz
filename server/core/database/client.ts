@@ -70,7 +70,8 @@ function buildPoolConfig(): mysql.PoolOptions {
 }
 
 const pool = mysql.createPool(buildPoolConfig());
-type QueryValues = mysql.QueryOptions['values'];
+type QueryValues = NonNullable<Parameters<mysql.Pool['query']>[1]>;
+type ExecuteValues = NonNullable<Parameters<mysql.Pool['execute']>[1]>;
 
 function formatUnavailableMessage(): string {
     const label = getDatabaseConnectionLabel();
@@ -96,7 +97,7 @@ export async function query<T = mysql.RowDataPacket[]>(statement: string, params
     });
 }
 
-export async function execute(statement: string, params: QueryValues = []): Promise<mysql.ResultSetHeader> {
+export async function execute(statement: string, params: ExecuteValues = []): Promise<mysql.ResultSetHeader> {
     return withDatabaseHandling(async () => {
         const [result] = await pool.execute(statement, params);
         return result as mysql.ResultSetHeader;
