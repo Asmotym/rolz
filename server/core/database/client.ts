@@ -70,6 +70,7 @@ function buildPoolConfig(): mysql.PoolOptions {
 }
 
 const pool = mysql.createPool(buildPoolConfig());
+type QueryValues = mysql.QueryOptions['values'];
 
 function formatUnavailableMessage(): string {
     const label = getDatabaseConnectionLabel();
@@ -88,14 +89,14 @@ async function withDatabaseHandling<T>(operation: () => Promise<T>): Promise<T> 
     }
 }
 
-export async function query<T = mysql.RowDataPacket[]>(statement: string, params: unknown[] = []): Promise<T> {
+export async function query<T = mysql.RowDataPacket[]>(statement: string, params: QueryValues = []): Promise<T> {
     return withDatabaseHandling(async () => {
         const [rows] = await pool.query(statement, params);
         return rows as T;
     });
 }
 
-export async function execute(statement: string, params: unknown[] = []): Promise<mysql.ResultSetHeader> {
+export async function execute(statement: string, params: QueryValues = []): Promise<mysql.ResultSetHeader> {
     return withDatabaseHandling(async () => {
         const [result] = await pool.execute(statement, params);
         return result as mysql.ResultSetHeader;
