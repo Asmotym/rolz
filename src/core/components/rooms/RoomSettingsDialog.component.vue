@@ -117,6 +117,8 @@
                       variant="outlined"
                       density="comfortable"
                       placeholder="e.g., +2d100"
+                      hint="Use + for advantage and - for disadvantage, such as +2d100 or -2d100."
+                      persistent-hint
                       :disabled="diceManager.diceMutationLoading.value"
                       :error-messages="diceManager.newDiceError.value ? [diceManager.newDiceError.value] : []"
                     />
@@ -298,6 +300,9 @@
                           label="Dice notation"
                           variant="outlined"
                           density="comfortable"
+                          placeholder="e.g., -2d100"
+                          hint="Use + for advantage and - for disadvantage, such as +2d100 or -2d100."
+                          persistent-hint
                           :disabled="diceManager.diceMutationLoading.value"
                           :error-messages="diceManager.editDiceError.value ? [diceManager.editDiceError.value] : []"
                         />

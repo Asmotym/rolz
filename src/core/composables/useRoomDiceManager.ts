@@ -5,6 +5,7 @@ import { RoomsService } from 'core/services/rooms.service';
 import { parseDiceNotation, rollDiceNotation, type DiceRoll } from 'core/utils/dice.utils';
 
 export const RoomDiceManagerKey = Symbol('RoomDiceManager');
+const DICE_NOTATION_ERROR_MESSAGE = 'Enter a valid dice notation (e.g., 1d20+3, +2d100, or -2d100).';
 
 export function useRoomDiceManager(
   getRoom: () => RoomDetails | null,
@@ -123,7 +124,7 @@ export function useRoomDiceManager(
     try {
       parseDiceNotation(notation);
     } catch {
-      newDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3 or +2d100).';
+      newDiceError.value = DICE_NOTATION_ERROR_MESSAGE;
       return;
     }
     const categoryId = getValidCategoryId(newDiceCategoryId.value);
@@ -179,7 +180,7 @@ export function useRoomDiceManager(
     try {
       parseDiceNotation(notation);
     } catch {
-      editDiceError.value = 'Enter a valid dice notation (e.g., 1d20+3 or +2d100).';
+      editDiceError.value = DICE_NOTATION_ERROR_MESSAGE;
       return;
     }
     const categoryId = getValidCategoryId(editDiceCategoryId.value);
