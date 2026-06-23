@@ -15,18 +15,18 @@
         :append-icon="menuOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
         @click="handleMembersChipClick"
       >
-        {{ membersCount }} members
+        {{ t('members.count', { count: membersCount }) }}
       </v-chip>
     </template>
 
     <v-card class="members-popover pa-3" elevation="8">
       <div class="members-popover__header">
         <div>
-          <div class="text-subtitle-2">Room members</div>
+          <div class="text-subtitle-2">{{ t('members.title') }}</div>
           <small class="text-medium-emphasis">
-            {{ members.length }} total
+            {{ t('members.total', { count: members.length }) }}
             <span class="dot-separator" aria-hidden="true">•</span>
-            {{ onlineMembers.length }} online
+            {{ t('members.online', { count: onlineMembers.length }) }}
           </small>
         </div>
         <v-btn
@@ -84,20 +84,20 @@
                 class="member-online-pill"
               >
                 <span class="member-online-pill__dot" aria-hidden="true" />
-                Connected
+                {{ t('members.connected') }}
               </span>
             </v-list-item-title>
             <v-list-item-subtitle class="text-caption">
-              <span>Joined {{ formatTimestamp(member.joinedAt) }}</span>
+              <span>{{ t('members.joined', { date: formatTimestamp(member.joinedAt) }) }}</span>
               <span class="dot-separator" aria-hidden="true">•</span>
-              <span v-if="member.isOnline">Connected now</span>
-              <span v-else>Last seen {{ formatTimestamp(member.lastSeen) }}</span>
+              <span v-if="member.isOnline">{{ t('members.connectedNow') }}</span>
+              <span v-else>{{ t('members.lastSeen', { date: formatTimestamp(member.lastSeen) }) }}</span>
             </v-list-item-subtitle>
           </v-list-item>
         </v-list>
 
         <div v-else class="text-medium-emphasis text-caption">
-          No members yet. Invite a friend to get started.
+          {{ t('members.empty') }}
         </div>
       </template>
     </v-card>
@@ -106,6 +106,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { RoomDetails, RoomMemberDetails } from 'netlify/core/types/data.types';
 import { RoomsService } from 'core/services/rooms.service';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
@@ -113,6 +114,8 @@ import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.u
 const props = defineProps<{
   room: RoomDetails;
 }>();
+
+const { t } = useI18n();
 
 const menuOpen = ref(false);
 const members = ref<RoomMemberDetails[]>([]);
@@ -165,7 +168,7 @@ async function fetchMembers(roomId: string) {
     }
   } catch (error) {
     if (props.room.id === roomId) {
-      membersError.value = error instanceof Error ? error.message : 'Unable to load members';
+      membersError.value = error instanceof Error ? error.message : t('members.loadError');
     }
   } finally {
     if (props.room.id === roomId) {

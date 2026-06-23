@@ -2,7 +2,18 @@
   "common": {
     "title": "Rolz",
     "disconnect": "Cerrar sesión",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "logoAlt": "Icono d100 de Rolz",
+    "reportIssue": "Informar de un error o pedir una función",
+    "retry": "Reintentar",
+    "clear": "Limpiar",
+    "save": "Guardar",
+    "close": "Cerrar",
+    "saveChanges": "Guardar cambios",
+    "manage": "Gestionar",
+    "someone": "Alguien",
+    "unknownAdventurer": "Aventurero desconocido",
+    "unknownDate": "Fecha desconocida"
   },
   "navigation": {
     "home": "Inicio",
@@ -97,6 +108,322 @@
         "deleteSuccess": "La sala {name} fue archivada.",
         "restoreSuccess": "La sala {name} vuelve a estar activa."
       }
+    }
+  },
+  "language": {
+    "current": "Idioma actual: {language}",
+    "changeError": "No se pudo cambiar el idioma:"
+  },
+  "discord": {
+    "login_text": "Iniciar sesión con Discord"
+  },
+  "errors": {
+    "invalidServerResponse": "Respuesta del servidor no válida",
+    "unknown": "Error desconocido",
+    "unexpectedServer": "Error inesperado del servidor"
+  },
+  "rooms": {
+    "sidebar": {
+      "title": "Salas",
+      "empty": "Aún no hay salas. Crea una para empezar a tirar.",
+      "createTitle": "Crear una sala",
+      "roomName": "Nombre de la sala",
+      "passwordOptional": "Contraseña (opcional)",
+      "publicRoomHint": "Déjala vacía para una sala pública",
+      "create": "Crear sala",
+      "joinTitle": "Unirse con invitación",
+      "inviteCode": "Código de invitación",
+      "passwordIfNeeded": "Contraseña (si hace falta)",
+      "join": "Unirse a sala",
+      "noActivity": "Sin actividad todavía"
+    },
+    "feedback": {
+      "joinedViaInvite": "Te uniste a la sala mediante enlace de invitación",
+      "created": "Sala creada correctamente",
+      "joined": "Te uniste a la sala"
+    },
+    "errors": {
+      "load": "No se pudieron cargar las salas",
+      "create": "No se pudo crear la sala",
+      "join": "No se pudo unir a la sala",
+      "loadMessages": "No se pudieron cargar los mensajes",
+      "sendMessage": "No se pudo enviar el mensaje",
+      "sendDice": "No se pudo enviar el resultado del dado",
+      "loadOlderMessages": "No se pudieron cargar mensajes anteriores"
+    }
+  },
+  "chat": {
+    "inviteCode": "Código de invitación: {code}",
+    "hideInviteCode": "Ocultar código de invitación",
+    "showInviteCode": "Mostrar código de invitación",
+    "roomSettings": "Configuración de la sala",
+    "copyInviteLink": "Copiar enlace de invitación",
+    "messageInput": "Envía un mensaje o tira un dado (p. ej., d100, 2d100, +2d100, ...)",
+    "dicePrefixHelp": "Puedes anteponer \"+\" o \"-\" a una tirada; \"+\" cuenta como ventaja.",
+    "examples": "Ejemplos:",
+    "advantageExample": "- \"+2d100\" cuenta como ventaja y conserva la mejor tirada",
+    "disadvantageExample": "- \"-2d100\" cuenta como desventaja y conserva la peor tirada",
+    "emptyTitle": "Selecciona o crea una sala",
+    "emptyDescription": "Elige una sala de la lista izquierda o crea una nueva para empezar a chatear y tirar dados.",
+    "copyInviteLinkError": "No se pudo copiar el enlace de invitación"
+  },
+  "messages": {
+    "rolled": "{name} tiró {notation}",
+    "rolledWithDescription": "{name} tiró {notation} ({description})",
+    "result": "Resultado",
+    "rolls": "Tiradas"
+  },
+  "members": {
+    "count": "{count} miembro | {count} miembros",
+    "title": "Miembros de la sala",
+    "total": "{count} en total",
+    "online": "{count} en línea",
+    "connected": "Conectado",
+    "joined": "Se unió {date}",
+    "connectedNow": "Conectado ahora",
+    "lastSeen": "Última vez {date}",
+    "empty": "Aún no hay miembros. Invita a alguien para empezar.",
+    "loadError": "No se pudieron cargar los miembros"
+  },
+  "dice": {
+    "roller": {
+      "rollD100": "Tirar D100"
+    },
+    "actions": {
+      "add": "Añadir dado",
+      "addNew": "Añadir un dado personalizado"
+    },
+    "confirmDelete": "¿Eliminar este dado?",
+    "fields": {
+      "notation": "Notación del dado",
+      "notationPlaceholderAdvantage": "p. ej., +2d100",
+      "notationPlaceholderDisadvantage": "p. ej., -2d100",
+      "notationHint": "Usa + para ventaja y - para desventaja, como +2d100 o -2d100.",
+      "descriptionOptional": "Descripción (opcional)",
+      "descriptionPlaceholder": "p. ej., tirada de ataque",
+      "customDescriptionPlaceholder": "p. ej., ataque con espada larga"
+    },
+    "category": {
+      "title": "Categorías de dados",
+      "label": "Categoría",
+      "default": "Predeterminada",
+      "other": "Otra",
+      "general": "General",
+      "loading": "Cargando categorías...",
+      "hint": "Agrupa dados similares",
+      "signIn": "Inicia sesión para gestionar categorías de esta sala.",
+      "description": "Agrupa dados similares creando categorías reutilizables.",
+      "name": "Nombre de categoría",
+      "placeholder": "p. ej., Ataques",
+      "create": "Crear categoría",
+      "display": "Categoría: {category}"
+    },
+    "panel": {
+      "title": "Tirada de dados",
+      "signIn": "Inicia sesión para gestionar y tirar tus dados personalizados en esta sala.",
+      "empty": "Aún no has guardado dados para esta sala. Añade uno desde Configuración -> Dados."
+    },
+    "settings": {
+      "createTitle": "Crear un dado personalizado",
+      "signInDice": "Inicia sesión para gestionar tus dados en esta sala.",
+      "createHelp": "Indica una notación de dado (p. ej., 1d20+3, +2d100 o -2d100) y, opcionalmente, una descripción.",
+      "myDice": "Mis dados",
+      "signInView": "Los dados de sala están ligados a tu cuenta. Inicia sesión para verlos.",
+      "empty": "Aún no has guardado dados para esta sala. Usa el formulario superior para añadir uno."
+    },
+    "errors": {
+      "loadRoomDice": "No se pudieron cargar los dados de la sala",
+      "rollDice": "No se pudo tirar este dado.",
+      "needRoomForDice": "Debes estar en una sala para añadir dados.",
+      "notationRequired": "La notación del dado es obligatoria.",
+      "invalidNotation": "Introduce una notación válida (p. ej., 1d20+3, +2d100 o -2d100).",
+      "addDice": "No se pudo añadir el dado.",
+      "updateDice": "No se pudo actualizar el dado.",
+      "deleteDice": "No se pudo eliminar el dado.",
+      "needRoomForCategory": "Debes estar en una sala para añadir categorías.",
+      "categoryRequired": "El nombre de categoría es obligatorio.",
+      "createCategory": "No se pudo crear la categoría.",
+      "invalidNotationLog": "Notación de dado no válida:"
+    }
+  },
+  "roomSettings": {
+    "title": "Configuración",
+    "tabs": {
+      "room": "Sala",
+      "dices": "Dados",
+      "rollAwards": "Premios",
+      "criticals": "Críticos"
+    },
+    "roomDetails": {
+      "title": "Detalles de la sala",
+      "creatorHelp": "Puedes renombrar esta sala para todos.",
+      "nonCreatorHelp": "Solo el creador puede renombrar esta sala.",
+      "maxRoomName": "Máx. 80 caracteres"
+    },
+    "nickname": {
+      "title": "Mi apodo",
+      "help": "Define un apodo visible solo en esta sala. Déjalo vacío para usar tu usuario de Discord.",
+      "label": "Apodo",
+      "maxNickname": "Máx. 40 caracteres",
+      "preview": "Vista previa: {name}"
+    },
+    "feedback": {
+      "saved": "Configuración guardada.",
+      "noChanges": "No hay cambios que guardar."
+    },
+    "errors": {
+      "loadMemberSettings": "No se pudo cargar tu configuración",
+      "updateSettings": "No se pudo actualizar la configuración de la sala",
+      "roomNameRequired": "El nombre de la sala es obligatorio.",
+      "updateRoomName": "No se pudo actualizar el nombre de la sala.",
+      "updateNickname": "No se pudo actualizar el apodo."
+    }
+  },
+  "rollAwards": {
+    "title": "Premios de tiradas",
+    "onlyCounting": "Solo contando tiradas {notations}",
+    "onlyCountsUsing": "Solo cuenta tiradas con {notations}",
+    "countsEveryNotation": "Cuenta cualquier notación de dado",
+    "panel": {
+      "description": "Estos premios se asignan automáticamente a quienes más coinciden con los resultados seguidos.",
+      "disabled": "Los premios de tiradas están desactivados para esta sala.",
+      "window": "Considerando las últimas {count} tiradas.",
+      "empty": "No hay premios definidos. Usa Gestionar para crear uno.",
+      "showAll": "Mostrar todos los premios",
+      "showObtained": "Mostrar solo obtenidos",
+      "noObtained": "Todavía no se obtuvo ningún premio. Muestra todos para ver cada entrada.",
+      "tracking": "Seguimiento",
+      "noWinner": "Sin ganador aún",
+      "currentLeader": "Líder actual con {count} acierto. | Líder actual con {count} aciertos.",
+      "tiedLeaders": "Líderes empatados con {count} acierto. | Líderes empatados con {count} aciertos."
+    },
+    "settings": {
+      "description": "Sigue resultados icónicos y destaca automáticamente a quienes los tiran con más frecuencia.",
+      "creatorOnly": "Solo el creador de la sala puede activar y editar premios.",
+      "enable": "Activar premios en esta sala",
+      "countFrom": "Contar resultados desde",
+      "numberOfRolls": "Número de tiradas",
+      "saveHint": "Los cambios se aplican al guardar.",
+      "disabled": "Los premios están desactivados. Activa el interruptor superior para configurarlos."
+    },
+    "window": {
+      "all": "Todas las tiradas",
+      "last": "Últimas {count} tiradas",
+      "custom": "Personalizado"
+    },
+    "clipboard": {
+      "copy": "Copiar premios",
+      "paste": "Pegar premios",
+      "unavailable": "El portapapeles no está disponible en este navegador.",
+      "copySuccess": "Premios copiados al portapapeles.",
+      "copyError": "No se pudieron copiar los premios.",
+      "readError": "No se pudo leer el portapapeles."
+    },
+    "form": {
+      "createTitle": "Crear premio de tirada",
+      "help": "Añade los resultados que contarán para este premio y dale un nombre. Opcionalmente limítalo a una notación.",
+      "editing": "Editando premio existente. Los cambios actualizarán \"{name}\".",
+      "thisAward": "este premio",
+      "diceResult": "Resultado del dado",
+      "addDiceResult": "Añadir resultado de dado",
+      "notationFilter": "Filtro de notación (opcional)",
+      "notationPlaceholder": "d20, d100",
+      "notationHint": "Separa tamaños de dado con comas (p. ej., d20, d100). Déjalo vacío para incluir todos.",
+      "awardName": "Nombre del premio",
+      "awardNamePlaceholder": "p. ej., Campeón del 20 natural",
+      "descriptionPlaceholder": "¿Qué hace especial a este premio?",
+      "ownerHelp": "Quienes sumen más resultados seguidos poseen automáticamente este premio.",
+      "update": "Actualizar premio",
+      "save": "Guardar premio",
+      "cancelEdit": "Cancelar edición",
+      "existing": "Premios existentes",
+      "empty": "No hay premios creados. Usa el formulario superior para añadir el primero."
+    },
+    "import": {
+      "title": "Importar premios",
+      "description": "Revisa los premios detectados en el portapapeles antes de importarlos a esta sala.",
+      "noneFound": "No se encontraron premios válidos para importar.",
+      "cleanTitle": "Eliminar premios existentes y reemplazarlos",
+      "clean": "Limpiar e importar",
+      "importTitle": "Importar premios nuevos",
+      "import": "Importar",
+      "noValidClipboard": "No se detectaron premios válidos en el portapapeles.",
+      "enableFirst": "Activa los premios antes de importar.",
+      "creatorOnly": "Solo el creador puede importar premios.",
+      "noAwards": "No hay premios que importar.",
+      "removeExistingError": "No se pudieron eliminar los premios existentes.",
+      "createAwardError": "No se pudo crear un premio importado.",
+      "replaceSuccess": "Premios reemplazados correctamente.",
+      "importSuccess": "Premios importados correctamente.",
+      "importError": "No se pudieron importar los premios."
+    },
+    "errors": {
+      "load": "No se pudieron cargar los premios",
+      "loadRecentDiceRolls": "No se pudieron cargar tiradas recientes",
+      "creatorSetting": "Solo el creador puede cambiar esta opción.",
+      "updateSetting": "No se pudo actualizar la opción",
+      "signIn": "Inicia sesión para gestionar premios.",
+      "save": "No se pudo guardar el premio",
+      "delete": "No se pudo eliminar el premio",
+      "update": "No se pudo actualizar el premio",
+      "windowRequired": "Introduce el número de tiradas a considerar.",
+      "windowRange": "Introduce un valor entre {min} y {max}.",
+      "resultRequired": "Introduce un resultado de dado para añadir.",
+      "resultRange": "Los resultados deben estar entre {min} y {max}.",
+      "duplicateResult": "Este resultado ya está incluido.",
+      "maxResults": "Solo puedes seguir hasta {count} resultados por premio.",
+      "notationFormat": "La notación debe parecerse a d20 o d100.",
+      "maxNotations": "Solo puedes filtrar hasta {count} notaciones.",
+      "notationLength": "Los filtros de notación son demasiado largos (máx. {count} caracteres combinados).",
+      "enableBeforeManage": "Activa los premios antes de gestionar entradas.",
+      "nameRequired": "El nombre del premio es obligatorio.",
+      "descriptionLength": "La descripción debe tener {count} caracteres o menos.",
+      "atLeastOneResult": "Añade al menos un resultado de dado."
+    }
+  },
+  "criticals": {
+    "title": "Reglas críticas",
+    "description": "Resalta mensajes de dados cuando los totales estén por encima o por debajo de umbrales importantes. Si varias reglas coinciden, gana la última de la lista.",
+    "creatorOnly": "Solo el creador puede gestionar reglas críticas.",
+    "number": "Número",
+    "numberPlaceholder": "p. ej., 20",
+    "comparison": "Comparación",
+    "colorSource": "Origen del color",
+    "presetColor": "Color predefinido",
+    "customColor": "Color personalizado",
+    "preview": "Vista previa",
+    "addRule": "Añadir regla",
+    "savedRules": "Reglas guardadas",
+    "ruleDescription": "Resalta todo el mensaje de dados cuando el resultado es {operator} {threshold}.",
+    "empty": "Aún no hay reglas críticas. Añade una arriba para colorear mensajes de dados.",
+    "operators": {
+      "moreThan": "Más que",
+      "lessThan": "Menos que"
+    },
+    "colorModes": {
+      "preset": "Colores predefinidos",
+      "custom": "Selector de color"
+    },
+    "colors": {
+      "crimson": "Carmesí",
+      "amber": "Ámbar",
+      "gold": "Oro",
+      "emerald": "Esmeralda",
+      "teal": "Verde azulado",
+      "sky": "Cielo",
+      "indigo": "Índigo",
+      "rose": "Rosa"
+    },
+    "feedback": {
+      "saved": "Reglas críticas guardadas."
+    },
+    "errors": {
+      "signIn": "Inicia sesión para gestionar reglas críticas.",
+      "save": "No se pudieron guardar las reglas críticas.",
+      "maxRules": "Solo puedes guardar hasta {count} reglas críticas.",
+      "numberRequired": "Se requiere un número.",
+      "wholeNumber": "El número debe ser entero.",
+      "duplicate": "Ya existe una regla con esta comparación y número."
     }
   }
 }

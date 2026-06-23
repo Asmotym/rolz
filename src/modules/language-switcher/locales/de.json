@@ -2,7 +2,18 @@
   "common": {
     "title": "Rolz",
     "disconnect": "Abmelden",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "logoAlt": "Rolz-d100-Symbol",
+    "reportIssue": "Fehler melden oder Funktion anfragen",
+    "retry": "Erneut versuchen",
+    "clear": "Leeren",
+    "save": "Speichern",
+    "close": "Schließen",
+    "saveChanges": "Änderungen speichern",
+    "manage": "Verwalten",
+    "someone": "Jemand",
+    "unknownAdventurer": "Unbekannter Abenteurer",
+    "unknownDate": "Unbekanntes Datum"
   },
   "navigation": {
     "home": "Startseite",
@@ -97,6 +108,322 @@
         "deleteSuccess": "Der Raum {name} wurde archiviert.",
         "restoreSuccess": "Der Raum {name} ist wieder aktiv."
       }
+    }
+  },
+  "language": {
+    "current": "Aktuelle Sprache: {language}",
+    "changeError": "Sprache konnte nicht geändert werden:"
+  },
+  "discord": {
+    "login_text": "Mit Discord anmelden"
+  },
+  "errors": {
+    "invalidServerResponse": "Ungültige Serverantwort",
+    "unknown": "Unbekannter Fehler",
+    "unexpectedServer": "Unerwarteter Serverfehler"
+  },
+  "rooms": {
+    "sidebar": {
+      "title": "Räume",
+      "empty": "Noch keine Räume. Erstelle einen, um loszuwürfeln.",
+      "createTitle": "Raum erstellen",
+      "roomName": "Raumname",
+      "passwordOptional": "Passwort (optional)",
+      "publicRoomHint": "Leer lassen für einen öffentlichen Raum",
+      "create": "Raum erstellen",
+      "joinTitle": "Per Einladung beitreten",
+      "inviteCode": "Einladungscode",
+      "passwordIfNeeded": "Passwort (falls nötig)",
+      "join": "Raum beitreten",
+      "noActivity": "Noch keine Aktivität"
+    },
+    "feedback": {
+      "joinedViaInvite": "Raum per Einladungslink beigetreten",
+      "created": "Raum erfolgreich erstellt",
+      "joined": "Raum beigetreten"
+    },
+    "errors": {
+      "load": "Räume konnten nicht geladen werden",
+      "create": "Raum konnte nicht erstellt werden",
+      "join": "Raum konnte nicht betreten werden",
+      "loadMessages": "Nachrichten konnten nicht geladen werden",
+      "sendMessage": "Nachricht konnte nicht gesendet werden",
+      "sendDice": "Würfelergebnis konnte nicht gesendet werden",
+      "loadOlderMessages": "Ältere Nachrichten konnten nicht geladen werden"
+    }
+  },
+  "chat": {
+    "inviteCode": "Einladungscode: {code}",
+    "hideInviteCode": "Einladungscode ausblenden",
+    "showInviteCode": "Einladungscode anzeigen",
+    "roomSettings": "Raumeinstellungen",
+    "copyInviteLink": "Einladungslink kopieren",
+    "messageInput": "Nachricht senden oder würfeln (z. B. d100, 2d100, +2d100, ...)",
+    "dicePrefixHelp": "Du kannst einem Wurf \"+\" oder \"-\" voranstellen; \"+\" zählt als Vorteil.",
+    "examples": "Beispiele:",
+    "advantageExample": "- \"+2d100\" zählt als Vorteil und behält den besten Wurf",
+    "disadvantageExample": "- \"-2d100\" zählt als Nachteil und behält den schlechtesten Wurf",
+    "emptyTitle": "Raum auswählen oder erstellen",
+    "emptyDescription": "Wähle links einen Raum aus oder erstelle einen neuen, um zu chatten und zu würfeln.",
+    "copyInviteLinkError": "Einladungslink konnte nicht kopiert werden"
+  },
+  "messages": {
+    "rolled": "{name} würfelte {notation}",
+    "rolledWithDescription": "{name} würfelte {notation} ({description})",
+    "result": "Ergebnis",
+    "rolls": "Würfe"
+  },
+  "members": {
+    "count": "{count} Mitglied | {count} Mitglieder",
+    "title": "Raummitglieder",
+    "total": "{count} gesamt",
+    "online": "{count} online",
+    "connected": "Verbunden",
+    "joined": "Beigetreten {date}",
+    "connectedNow": "Jetzt verbunden",
+    "lastSeen": "Zuletzt gesehen {date}",
+    "empty": "Noch keine Mitglieder. Lade jemanden ein, um loszulegen.",
+    "loadError": "Mitglieder konnten nicht geladen werden"
+  },
+  "dice": {
+    "roller": {
+      "rollD100": "D100 würfeln"
+    },
+    "actions": {
+      "add": "Würfel hinzufügen",
+      "addNew": "Neuen eigenen Würfel hinzufügen"
+    },
+    "confirmDelete": "Diesen Würfel löschen?",
+    "fields": {
+      "notation": "Würfelnotation",
+      "notationPlaceholderAdvantage": "z. B. +2d100",
+      "notationPlaceholderDisadvantage": "z. B. -2d100",
+      "notationHint": "Nutze + für Vorteil und - für Nachteil, zum Beispiel +2d100 oder -2d100.",
+      "descriptionOptional": "Beschreibung (optional)",
+      "descriptionPlaceholder": "z. B. Angriffswurf",
+      "customDescriptionPlaceholder": "z. B. Langschwertangriff"
+    },
+    "category": {
+      "title": "Würfelkategorien",
+      "label": "Kategorie",
+      "default": "Standard",
+      "other": "Andere",
+      "general": "Allgemein",
+      "loading": "Kategorien werden geladen...",
+      "hint": "Ähnliche Würfel gruppieren",
+      "signIn": "Melde dich an, um Kategorien für diesen Raum zu verwalten.",
+      "description": "Gruppiere ähnliche Würfel mit wiederverwendbaren Kategorien.",
+      "name": "Kategoriename",
+      "placeholder": "z. B. Angriffe",
+      "create": "Kategorie erstellen",
+      "display": "Kategorie: {category}"
+    },
+    "panel": {
+      "title": "Würfelwurf",
+      "signIn": "Melde dich an, um eigene Würfel in diesem Raum zu verwalten und zu würfeln.",
+      "empty": "Du hast noch keine Würfel für diesen Raum gespeichert. Füge einen unter Einstellungen -> Würfel hinzu."
+    },
+    "settings": {
+      "createTitle": "Eigenen Würfel erstellen",
+      "signInDice": "Melde dich an, um deine Würfel in diesem Raum zu verwalten.",
+      "createHelp": "Gib eine Würfelnotation an (z. B. 1d20+3, +2d100 oder -2d100) und optional eine Beschreibung.",
+      "myDice": "Meine Würfel",
+      "signInView": "Raumwürfel sind an dein Konto gebunden. Melde dich an, um sie zu sehen.",
+      "empty": "Du hast noch keine Würfel für diesen Raum gespeichert. Nutze das Formular oben, um einen hinzuzufügen."
+    },
+    "errors": {
+      "loadRoomDice": "Raumwürfel konnten nicht geladen werden",
+      "rollDice": "Dieser Würfel konnte nicht gewürfelt werden.",
+      "needRoomForDice": "Du musst in einem Raum sein, um Würfel hinzuzufügen.",
+      "notationRequired": "Würfelnotation ist erforderlich.",
+      "invalidNotation": "Gib eine gültige Notation ein (z. B. 1d20+3, +2d100 oder -2d100).",
+      "addDice": "Würfel konnte nicht hinzugefügt werden.",
+      "updateDice": "Würfel konnte nicht aktualisiert werden.",
+      "deleteDice": "Würfel konnte nicht gelöscht werden.",
+      "needRoomForCategory": "Du musst in einem Raum sein, um Kategorien hinzuzufügen.",
+      "categoryRequired": "Kategoriename ist erforderlich.",
+      "createCategory": "Kategorie konnte nicht erstellt werden.",
+      "invalidNotationLog": "Ungültige Würfelnotation:"
+    }
+  },
+  "roomSettings": {
+    "title": "Einstellungen",
+    "tabs": {
+      "room": "Raum",
+      "dices": "Würfel",
+      "rollAwards": "Auszeichnungen",
+      "criticals": "Kritische Regeln"
+    },
+    "roomDetails": {
+      "title": "Raumdetails",
+      "creatorHelp": "Du kannst diesen Raum für alle umbenennen.",
+      "nonCreatorHelp": "Nur der Ersteller kann diesen Raum umbenennen.",
+      "maxRoomName": "Max. 80 Zeichen"
+    },
+    "nickname": {
+      "title": "Mein Spitzname",
+      "help": "Lege einen Anzeigenamen nur für diesen Raum fest. Leer lassen, um deinen Discord-Namen zu verwenden.",
+      "label": "Spitzname",
+      "maxNickname": "Max. 40 Zeichen",
+      "preview": "Vorschau: {name}"
+    },
+    "feedback": {
+      "saved": "Einstellungen gespeichert.",
+      "noChanges": "Keine Änderungen zu speichern."
+    },
+    "errors": {
+      "loadMemberSettings": "Deine Einstellungen konnten nicht geladen werden",
+      "updateSettings": "Raumeinstellungen konnten nicht aktualisiert werden",
+      "roomNameRequired": "Raumname ist erforderlich.",
+      "updateRoomName": "Raumname konnte nicht aktualisiert werden.",
+      "updateNickname": "Spitzname konnte nicht aktualisiert werden."
+    }
+  },
+  "rollAwards": {
+    "title": "Wurfauszeichnungen",
+    "onlyCounting": "Zählt nur {notations}-Würfe",
+    "onlyCountsUsing": "Zählt nur Würfe mit {notations}",
+    "countsEveryNotation": "Zählt jede Würfelnotation",
+    "panel": {
+      "description": "Diese Auszeichnungen gehen automatisch an die Spieler, die die verfolgten Würfelergebnisse am häufigsten erzielen.",
+      "disabled": "Wurfauszeichnungen sind für diesen Raum deaktiviert.",
+      "window": "Berücksichtigt werden die letzten {count} Würfe.",
+      "empty": "Noch keine Auszeichnungen definiert. Nutze Verwalten, um eine zu erstellen.",
+      "showAll": "Alle Auszeichnungen anzeigen",
+      "showObtained": "Nur erhaltene anzeigen",
+      "noObtained": "Noch keine Auszeichnungen erhalten. Zeige alle an, um jede zu sehen.",
+      "tracking": "Verfolgung",
+      "noWinner": "Noch kein Gewinner",
+      "currentLeader": "Aktueller Führender mit {count} Treffer. | Aktueller Führender mit {count} Treffern.",
+      "tiedLeaders": "Gleichstand mit {count} Treffer. | Gleichstand mit {count} Treffern."
+    },
+    "settings": {
+      "description": "Verfolge besondere Würfelergebnisse und hebe automatisch die Spieler hervor, die sie am häufigsten würfeln.",
+      "creatorOnly": "Nur der Raumersteller kann Auszeichnungen aktivieren und bearbeiten.",
+      "enable": "Wurfauszeichnungen für diesen Raum aktivieren",
+      "countFrom": "Ergebnisse zählen aus",
+      "numberOfRolls": "Anzahl Würfe",
+      "saveHint": "Änderungen gelten nach dem Speichern.",
+      "disabled": "Wurfauszeichnungen sind deaktiviert. Aktiviere den Schalter oben, um sie einzurichten."
+    },
+    "window": {
+      "all": "Alle Würfe",
+      "last": "Letzte {count} Würfe",
+      "custom": "Benutzerdefiniert"
+    },
+    "clipboard": {
+      "copy": "Auszeichnungen kopieren",
+      "paste": "Auszeichnungen einfügen",
+      "unavailable": "Die Zwischenablage ist in diesem Browser nicht verfügbar.",
+      "copySuccess": "Auszeichnungen wurden in die Zwischenablage kopiert.",
+      "copyError": "Auszeichnungen konnten nicht kopiert werden.",
+      "readError": "Zwischenablage konnte nicht gelesen werden."
+    },
+    "form": {
+      "createTitle": "Wurfauszeichnung erstellen",
+      "help": "Füge Würfelergebnisse hinzu, die für diese Auszeichnung zählen, und gib ihr einen Namen. Optional kannst du sie auf eine bestimmte Notation beschränken.",
+      "editing": "Bestehende Auszeichnung wird bearbeitet. Änderungen aktualisieren „{name}”.",
+      "thisAward": "diese Auszeichnung",
+      "diceResult": "Würfelergebnis",
+      "addDiceResult": "Würfelergebnis hinzufügen",
+      "notationFilter": "Notationsfilter (optional)",
+      "notationPlaceholder": "d20, d100",
+      "notationHint": "Trenne Würfelgrößen mit Kommas (z. B. d20, d100). Leer lassen, um alle Würfel einzuschließen.",
+      "awardName": "Name der Auszeichnung",
+      "awardNamePlaceholder": "z. B. Champion der natürlichen 20",
+      "descriptionPlaceholder": "Was macht diese Auszeichnung besonders?",
+      "ownerHelp": "Spieler mit den meisten verfolgten Ergebnissen besitzen diese Auszeichnung automatisch.",
+      "update": "Auszeichnung aktualisieren",
+      "save": "Auszeichnung speichern",
+      "cancelEdit": "Bearbeitung abbrechen",
+      "existing": "Bestehende Auszeichnungen",
+      "empty": "Noch keine Auszeichnungen erstellt. Nutze das Formular oben, um die erste hinzuzufügen."
+    },
+    "import": {
+      "title": "Wurfauszeichnungen importieren",
+      "description": "Prüfe die Auszeichnungen aus deiner Zwischenablage, bevor du sie in diesen Raum importierst.",
+      "noneFound": "Keine gültigen Auszeichnungen zum Importieren gefunden.",
+      "cleanTitle": "Bestehende Auszeichnungen entfernen und ersetzen",
+      "clean": "Bereinigen und importieren",
+      "importTitle": "Neue Auszeichnungen importieren",
+      "import": "Importieren",
+      "noValidClipboard": "Keine gültigen Auszeichnungen in der Zwischenablage erkannt.",
+      "enableFirst": "Aktiviere Wurfauszeichnungen vor dem Import.",
+      "creatorOnly": "Nur der Raumersteller kann Auszeichnungen importieren.",
+      "noAwards": "Keine Auszeichnungen zum Importieren.",
+      "removeExistingError": "Bestehende Auszeichnungen konnten nicht entfernt werden.",
+      "createAwardError": "Importierte Auszeichnung konnte nicht erstellt werden.",
+      "replaceSuccess": "Auszeichnungen erfolgreich ersetzt.",
+      "importSuccess": "Auszeichnungen erfolgreich importiert.",
+      "importError": "Auszeichnungen konnten nicht importiert werden."
+    },
+    "errors": {
+      "load": "Wurfauszeichnungen konnten nicht geladen werden",
+      "loadRecentDiceRolls": "Aktuelle Würfe konnten nicht geladen werden",
+      "creatorSetting": "Nur der Raumersteller kann diese Einstellung ändern.",
+      "updateSetting": "Einstellung konnte nicht aktualisiert werden",
+      "signIn": "Melde dich an, um Auszeichnungen zu verwalten.",
+      "save": "Auszeichnung konnte nicht gespeichert werden",
+      "delete": "Auszeichnung konnte nicht gelöscht werden",
+      "update": "Auszeichnung konnte nicht aktualisiert werden",
+      "windowRequired": "Gib die Anzahl der zu berücksichtigenden Würfe ein.",
+      "windowRange": "Gib einen Wert zwischen {min} und {max} ein.",
+      "resultRequired": "Gib ein Würfelergebnis zum Hinzufügen ein.",
+      "resultRange": "Würfelergebnisse müssen zwischen {min} und {max} liegen.",
+      "duplicateResult": "Dieses Ergebnis ist bereits enthalten.",
+      "maxResults": "Du kannst höchstens {count} Ergebnisse pro Auszeichnung verfolgen.",
+      "notationFormat": "Die Notation muss wie d20 oder d100 aussehen.",
+      "maxNotations": "Du kannst höchstens nach {count} Würfelnotationen filtern.",
+      "notationLength": "Die Notationsfilter sind zu lang (max. {count} Zeichen insgesamt).",
+      "enableBeforeManage": "Aktiviere Wurfauszeichnungen, bevor du Einträge verwaltest.",
+      "nameRequired": "Der Name der Auszeichnung ist erforderlich.",
+      "descriptionLength": "Die Beschreibung darf höchstens {count} Zeichen haben.",
+      "atLeastOneResult": "Füge mindestens ein Würfelergebnis hinzu."
+    }
+  },
+  "criticals": {
+    "title": "Kritische Regeln",
+    "description": "Hebe Würfelnachrichten hervor, wenn Werte über oder unter wichtigen Schwellen liegen. Treffen mehrere Regeln zu, gewinnt die letzte in der Liste.",
+    "creatorOnly": "Nur der Raumersteller kann kritische Regeln verwalten.",
+    "number": "Zahl",
+    "numberPlaceholder": "z. B. 20",
+    "comparison": "Vergleich",
+    "colorSource": "Farbquelle",
+    "presetColor": "Vordefinierte Farbe",
+    "customColor": "Eigene Farbe",
+    "preview": "Vorschau",
+    "addRule": "Regel hinzufügen",
+    "savedRules": "Gespeicherte Regeln",
+    "ruleDescription": "Hebt die ganze Würfelnachricht hervor, wenn das Ergebnis {operator} {threshold} ist.",
+    "empty": "Noch keine kritischen Regeln. Füge oben eine hinzu, um Würfelnachrichten einzufärben.",
+    "operators": {
+      "moreThan": "Mehr als",
+      "lessThan": "Weniger als"
+    },
+    "colorModes": {
+      "preset": "Vordefinierte Farben",
+      "custom": "Farbauswahl"
+    },
+    "colors": {
+      "crimson": "Karmesin",
+      "amber": "Bernstein",
+      "gold": "Gold",
+      "emerald": "Smaragd",
+      "teal": "Türkis",
+      "sky": "Himmelblau",
+      "indigo": "Indigo",
+      "rose": "Rosa"
+    },
+    "feedback": {
+      "saved": "Kritische Regeln gespeichert."
+    },
+    "errors": {
+      "signIn": "Melde dich an, um kritische Regeln zu verwalten.",
+      "save": "Kritische Regeln konnten nicht gespeichert werden.",
+      "maxRules": "Du kannst höchstens {count} kritische Regeln speichern.",
+      "numberRequired": "Eine Zahl ist erforderlich.",
+      "wholeNumber": "Die Zahl muss ganzzahlig sein.",
+      "duplicate": "Eine Regel mit diesem Vergleich und dieser Zahl existiert bereits."
     }
   }
 }

@@ -29,19 +29,24 @@
         <div class="d-flex align-center gap-2 mb-1">
           <v-icon color="amber" class="mr-2">mdi-dice-multiple</v-icon>
           <span v-if="message.content" class="font-weight-medium">
-            {{ formatDisplayName(message.username, message.nickname, 'Someone') }} rolled
-            {{ message.diceNotation }} ({{ message.content }})
+            {{ t('messages.rolledWithDescription', {
+              name: formatDisplayName(message.username, message.nickname, t('common.someone')),
+              notation: message.diceNotation,
+              description: message.content,
+            }) }}
           </span>
           <span v-else class="font-weight-medium">
-            {{ formatDisplayName(message.username, message.nickname, 'Someone') }} rolled
-            {{ message.diceNotation }}
+            {{ t('messages.rolled', {
+              name: formatDisplayName(message.username, message.nickname, t('common.someone')),
+              notation: message.diceNotation,
+            }) }}
           </span>
         </div>
         <div class="text-body-2">
-          Result: <strong>{{ message.diceTotal }}</strong>
+          {{ t('messages.result') }}: <strong>{{ message.diceTotal }}</strong>
         </div>
         <div class="text-caption">
-          Rolls: {{ (message.diceRolls || []).join(', ') }}
+          {{ t('messages.rolls') }}: {{ (message.diceRolls || []).join(', ') }}
         </div>
       </div>
     </div>
@@ -49,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { RoomCriticalRule, RoomMessage } from 'netlify/core/types/data.types';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
 import { findMatchingRoomCritical, getCriticalMessageStyle } from 'core/utils/room-criticals.utils';
@@ -58,6 +64,8 @@ const props = defineProps<{
   currentUserId: string | null;
   roomCriticals: RoomCriticalRule[];
 }>();
+
+const { t } = useI18n();
 
 function getCriticalRule(message: RoomMessage) {
   return findMatchingRoomCritical(message, props.roomCriticals);

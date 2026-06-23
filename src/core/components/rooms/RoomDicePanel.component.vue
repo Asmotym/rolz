@@ -1,9 +1,9 @@
 <template>
   <section class="dice-panel">
-    <h3 class="text-subtitle-1 mb-2">🎲 Dice Roll</h3>
+      <h3 class="text-subtitle-1 mb-2">🎲 {{ t('dice.panel.title') }}</h3>
     <template v-if="!currentUser">
       <v-alert type="info" variant="tonal" density="comfortable">
-        Sign in to manage and roll your custom dice for this room.
+        {{ t('dice.panel.signIn') }}
       </v-alert>
     </template>
     <template v-else>
@@ -22,7 +22,7 @@
       >
         {{ diceManager.roomDicesError.value }}
         <template #append>
-          <v-btn variant="text" size="small" @click="diceManager.ensureRoomDicesLoaded(true)">Retry</v-btn>
+          <v-btn variant="text" size="small" @click="diceManager.ensureRoomDicesLoaded(true)">{{ t('common.retry') }}</v-btn>
         </template>
       </v-alert>
       <v-alert
@@ -31,7 +31,7 @@
         variant="tonal"
         density="comfortable"
       >
-        You haven't saved any dice for this room yet. Add one from Settings → Dices.
+        {{ t('dice.panel.empty') }}
         <template #append>
           <v-btn
             variant="tonal"
@@ -39,7 +39,7 @@
             color="primary"
             @click="emit('manage-dice')"
           >
-            Add dice
+            {{ t('dice.actions.add') }}
           </v-btn>
         </template>
       </v-alert>
@@ -59,7 +59,7 @@
                 class="custom-dice-group__badge"
                 variant="outlined"
               >
-                Default
+                {{ t('dice.category.default') }}
               </v-chip>
             </div>
             <div class="custom-dice-chip-group">
@@ -90,12 +90,12 @@
               size="large"
               class="custom-dice-chip custom-dice-chip--action"
               color="primary"
-              title="Add a new custom dice"
+              :title="t('dice.actions.addNew')"
               @click="emit('manage-dice')"
             >
               <div class="custom-dice-chip__content">
                 <v-icon icon="mdi-plus" size="18" class="mr-1" />
-                <span>Add dice</span>
+                <span>{{ t('dice.actions.add') }}</span>
               </div>
             </v-chip>
           </div>
@@ -116,6 +116,7 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, type RoomDiceManager } from 'core/composables/useRoomDiceManager';
 import type { RoomDice } from 'netlify/core/types/data.types';
@@ -127,6 +128,8 @@ defineProps<{
 const emit = defineEmits<{
   (event: 'manage-dice'): void;
 }>();
+
+const { t } = useI18n();
 
 const diceManager = inject<RoomDiceManager>(RoomDiceManagerKey);
 
@@ -180,7 +183,7 @@ const diceGroups = computed<DiceGroup[]>(() => {
   if (leftover?.length) {
     groups.push({
       key: fallbackKey,
-      name: 'Other',
+      name: t('dice.category.other'),
       dices: leftover,
       isDefault: false,
     });
@@ -191,7 +194,7 @@ const diceGroups = computed<DiceGroup[]>(() => {
     if (!dice.length) return;
     groups.push({
       key: `misc-${key}`,
-      name: 'Other',
+      name: t('dice.category.other'),
       dices: dice,
       isDefault: false,
     });

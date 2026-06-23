@@ -2,7 +2,7 @@
   <v-dialog v-model="open" max-width="520">
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">
-        <span>Settings</span>
+        <span>{{ t('roomSettings.title') }}</span>
         <v-btn icon="mdi-close" variant="text" @click="open = false" />
       </v-card-title>
       <v-divider />
@@ -22,29 +22,29 @@
           align-tabs="start"
           class="mb-4"
         >
-          <v-tab value="room">Room</v-tab>
-          <v-tab value="dices">Dices</v-tab>
-          <v-tab value="rollAwards">Roll Awards</v-tab>
-          <v-tab value="criticals">Criticals</v-tab>
+          <v-tab value="room">{{ t('roomSettings.tabs.room') }}</v-tab>
+          <v-tab value="dices">{{ t('roomSettings.tabs.dices') }}</v-tab>
+          <v-tab value="rollAwards">{{ t('roomSettings.tabs.rollAwards') }}</v-tab>
+          <v-tab value="criticals">{{ t('roomSettings.tabs.criticals') }}</v-tab>
         </v-tabs>
 
         <v-window v-model="settingsTab">
           <v-window-item value="room">
             <section class="mb-6">
-              <div class="text-subtitle-2 mb-2">Room details</div>
+              <div class="text-subtitle-2 mb-2">{{ t('roomSettings.roomDetails.title') }}</div>
               <p class="text-caption text-medium-emphasis mb-3">
-                {{ isRoomCreator ? 'You can rename this room for everyone.' : 'Only the creator can rename this room.' }}
+                {{ isRoomCreator ? t('roomSettings.roomDetails.creatorHelp') : t('roomSettings.roomDetails.nonCreatorHelp') }}
               </p>
               <v-text-field
                 v-model="roomNameInput"
-                label="Room name"
+                :label="t('rooms.sidebar.roomName')"
                 variant="outlined"
                 density="comfortable"
                 :counter="80"
                 maxlength="80"
                 :disabled="!isRoomCreator || settingsSaving"
                 :error-messages="roomNameError ? [roomNameError] : []"
-                hint="Max 80 characters"
+                :hint="t('roomSettings.roomDetails.maxRoomName')"
                 persistent-hint
               />
             </section>
@@ -52,9 +52,9 @@
             <v-divider class="my-4" />
 
             <section>
-              <div class="text-subtitle-2 mb-2">My nickname</div>
+              <div class="text-subtitle-2 mb-2">{{ t('roomSettings.nickname.title') }}</div>
               <p class="text-caption text-medium-emphasis mb-3">
-                Set a display nickname for this room only. Leave blank to use your Discord username.
+                {{ t('roomSettings.nickname.help') }}
               </p>
               <v-alert
                 v-if="memberSettingsError"
@@ -70,7 +70,7 @@
                   class="ml-2"
                   @click="ensureMemberSettingsLoaded(true)"
                 >
-                  Retry
+                  {{ t('common.retry') }}
                 </v-btn>
               </v-alert>
               <v-progress-linear
@@ -81,18 +81,18 @@
               />
               <v-text-field
                 v-model="nicknameInput"
-                label="Nickname"
+                :label="t('roomSettings.nickname.label')"
                 variant="outlined"
                 density="comfortable"
                 :counter="40"
                 maxlength="40"
                 :disabled="memberSettingsLoading || settingsSaving"
                 :error-messages="nicknameError ? [nicknameError] : []"
-                hint="Max 40 characters"
+                :hint="t('roomSettings.nickname.maxNickname')"
                 persistent-hint
               />
               <div class="text-caption text-medium-emphasis mb-3">
-                Preview: {{ nicknamePreview }}
+                {{ t('roomSettings.nickname.preview', { name: nicknamePreview }) }}
               </div>
             </section>
           </v-window-item>
@@ -100,34 +100,34 @@
           <v-window-item value="dices">
             <v-expansion-panels v-model="dicePanelsOpen" class="mb-6" variant="accordion">
               <v-expansion-panel value="custom" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                <v-expansion-panel-title>Create a custom dice</v-expansion-panel-title>
+                <v-expansion-panel-title>{{ t('dice.settings.createTitle') }}</v-expansion-panel-title>
                 <v-expansion-panel-text>
                   <template v-if="!currentUser">
                     <v-alert type="info" variant="tonal" density="comfortable">
-                      Sign in to manage your dice for this room.
+                      {{ t('dice.settings.signInDice') }}
                     </v-alert>
                   </template>
                   <template v-else>
                     <p class="text-caption text-medium-emphasis mb-3">
-                      Provide a dice notation (e.g., 1d20+3, +2d100, or -2d100) and optionally a description to remember what it is for.
+                      {{ t('dice.settings.createHelp') }}
                     </p>
                     <v-text-field
                       v-model="diceManager.newDiceNotation.value"
-                      label="Dice notation"
+                      :label="t('dice.fields.notation')"
                       variant="outlined"
                       density="comfortable"
-                      placeholder="e.g., +2d100"
-                      hint="Use + for advantage and - for disadvantage, such as +2d100 or -2d100."
+                      :placeholder="t('dice.fields.notationPlaceholderAdvantage')"
+                      :hint="t('dice.fields.notationHint')"
                       persistent-hint
                       :disabled="diceManager.diceMutationLoading.value"
                       :error-messages="diceManager.newDiceError.value ? [diceManager.newDiceError.value] : []"
                     />
                     <v-text-field
                       v-model="diceManager.newDiceDescription.value"
-                      label="Description (optional)"
+                      :label="t('dice.fields.descriptionOptional')"
                       variant="outlined"
                       density="comfortable"
-                      placeholder="e.g., Longsword attack"
+                      :placeholder="t('dice.fields.customDescriptionPlaceholder')"
                       :disabled="diceManager.diceMutationLoading.value"
                       class="mt-3"
                     />
@@ -136,13 +136,13 @@
                       :items="diceManager.diceCategories.value"
                       item-title="name"
                       item-value="id"
-                      label="Category"
+                      :label="t('dice.category.label')"
                       variant="outlined"
                       density="comfortable"
                       class="mt-3"
                       :disabled="diceManager.diceMutationLoading.value || diceManager.roomDicesLoading.value"
                       :loading="diceManager.roomDicesLoading.value"
-                      :hint="diceManager.roomDicesLoading.value ? 'Loading categories…' : 'Group similar dice together'"
+                      :hint="diceManager.roomDicesLoading.value ? t('dice.category.loading') : t('dice.category.hint')"
                       persistent-hint
                     />
                     <v-alert
@@ -161,14 +161,14 @@
                         :loading="diceManager.diceMutationLoading.value"
                         @click="diceManager.addCustomDice"
                       >
-                        Add dice
+                        {{ t('dice.actions.add') }}
                       </v-btn>
                       <v-btn
                         variant="text"
                         :disabled="diceManager.diceMutationLoading.value"
                         @click="diceManager.clearNewDiceForm"
                       >
-                        Clear
+                        {{ t('common.clear') }}
                       </v-btn>
                     </div>
                   </template>
@@ -176,23 +176,23 @@
               </v-expansion-panel>
 
               <v-expansion-panel value="categories" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                <v-expansion-panel-title>Dice categories</v-expansion-panel-title>
+                <v-expansion-panel-title>{{ t('dice.category.title') }}</v-expansion-panel-title>
                 <v-expansion-panel-text>
                   <template v-if="!currentUser">
                     <v-alert type="info" variant="tonal" density="comfortable">
-                      Sign in to manage categories for this room.
+                      {{ t('dice.category.signIn') }}
                     </v-alert>
                   </template>
                   <template v-else>
                     <p class="text-caption text-medium-emphasis mb-3">
-                      Group similar dice together by creating categories you can reuse.
+                      {{ t('dice.category.description') }}
                     </p>
                     <v-text-field
                       v-model="diceManager.newCategoryName.value"
-                      label="Category name"
+                      :label="t('dice.category.name')"
                       variant="outlined"
                       density="comfortable"
-                      placeholder="e.g., Attacks"
+                      :placeholder="t('dice.category.placeholder')"
                       :disabled="diceManager.categoryMutationLoading.value"
                       :error-messages="diceManager.newCategoryError.value ? [diceManager.newCategoryError.value] : []"
                     />
@@ -212,14 +212,14 @@
                         :loading="diceManager.categoryMutationLoading.value"
                         @click="diceManager.addDiceCategory"
                       >
-                        Create category
+                        {{ t('dice.category.create') }}
                       </v-btn>
                       <v-btn
                         variant="text"
                         :disabled="diceManager.categoryMutationLoading.value"
                         @click="diceManager.newCategoryName.value = ''"
                       >
-                        Clear
+                        {{ t('common.clear') }}
                       </v-btn>
                     </div>
                   </template>
@@ -228,10 +228,10 @@
             </v-expansion-panels>
 
             <section>
-              <div class="text-subtitle-2 mb-2">My dice</div>
+              <div class="text-subtitle-2 mb-2">{{ t('dice.settings.myDice') }}</div>
               <template v-if="!currentUser">
                 <p class="text-caption text-medium-emphasis">
-                  Room dice are tied to your account access. Sign in to view them.
+                  {{ t('dice.settings.signInView') }}
                 </p>
               </template>
               <template v-else>
@@ -250,12 +250,12 @@
                 >
                   {{ diceManager.roomDicesError.value }}
                   <template #append>
-                    <v-btn variant="text" size="small" @click="diceManager.ensureRoomDicesLoaded(true)">Retry</v-btn>
+                    <v-btn variant="text" size="small" @click="diceManager.ensureRoomDicesLoaded(true)">{{ t('common.retry') }}</v-btn>
                   </template>
                 </v-alert>
                 <template v-else-if="diceManager.customDices.value.length === 0">
                   <p class="text-caption text-medium-emphasis">
-                    You haven't saved any dice for this room yet. Use the form above to add one.
+                    {{ t('dice.settings.empty') }}
                   </p>
                 </template>
                 <template v-else>
@@ -273,7 +273,7 @@
                             {{ dice.description }}
                           </div>
                           <div class="text-caption text-medium-emphasis mt-1">
-                            Category: {{ dice.categoryName ?? 'General' }}
+                            {{ t('dice.category.display', { category: dice.categoryName ?? t('dice.category.general') }) }}
                           </div>
                         </div>
                         <div class="custom-dice-card__actions">
@@ -297,18 +297,18 @@
                       <div v-else>
                         <v-text-field
                           v-model="diceManager.editDiceNotation.value"
-                          label="Dice notation"
+                          :label="t('dice.fields.notation')"
                           variant="outlined"
                           density="comfortable"
-                          placeholder="e.g., -2d100"
-                          hint="Use + for advantage and - for disadvantage, such as +2d100 or -2d100."
+                          :placeholder="t('dice.fields.notationPlaceholderDisadvantage')"
+                          :hint="t('dice.fields.notationHint')"
                           persistent-hint
                           :disabled="diceManager.diceMutationLoading.value"
                           :error-messages="diceManager.editDiceError.value ? [diceManager.editDiceError.value] : []"
                         />
                         <v-text-field
                           v-model="diceManager.editDiceDescription.value"
-                          label="Description (optional)"
+                          :label="t('dice.fields.descriptionOptional')"
                           variant="outlined"
                           density="comfortable"
                           class="mt-3"
@@ -319,7 +319,7 @@
                           :items="diceManager.diceCategories.value"
                           item-title="name"
                           item-value="id"
-                          label="Category"
+                          :label="t('dice.category.label')"
                           variant="outlined"
                           density="comfortable"
                           class="mt-3"
@@ -331,7 +331,7 @@
                             :disabled="diceManager.diceMutationLoading.value"
                             @click="diceManager.cancelEditingDice"
                           >
-                            Cancel
+                            {{ t('common.cancel') }}
                           </v-btn>
                           <v-btn
                             color="primary"
@@ -339,7 +339,7 @@
                             :loading="diceManager.diceMutationLoading.value"
                             @click="diceManager.saveEditingDice"
                           >
-                            Save
+                            {{ t('common.save') }}
                           </v-btn>
                         </div>
                       </div>
@@ -352,9 +352,9 @@
 
           <v-window-item value="rollAwards">
             <section class="mb-6">
-              <div class="text-subtitle-2 mb-2">Roll Awards</div>
+              <div class="text-subtitle-2 mb-2">{{ t('rollAwards.title') }}</div>
               <p class="text-caption text-medium-emphasis mb-3">
-                Track iconic dice results and automatically highlight the players who roll them most often.
+                {{ t('rollAwards.settings.description') }}
               </p>
               <v-alert
                 v-if="!isRoomCreator"
@@ -363,7 +363,7 @@
                 density="comfortable"
                 class="mb-3"
               >
-                Only the room creator can enable and edit Roll Awards.
+                {{ t('rollAwards.settings.creatorOnly') }}
               </v-alert>
               <v-switch
                 :model-value="rollAwardsEnabled"
@@ -375,7 +375,7 @@
                 @update:model-value="handleRollAwardsToggle"
               >
                 <template #label>
-                  <span>Enable Roll Awards for this room</span>
+                  <span>{{ t('rollAwards.settings.enable') }}</span>
                 </template>
               </v-switch>
               <v-select
@@ -384,7 +384,7 @@
                 :items="ROLL_AWARD_WINDOW_OPTIONS"
                 item-title="title"
                 item-value="value"
-                label="Count results from"
+                :label="t('rollAwards.settings.countFrom')"
                 variant="outlined"
                 density="comfortable"
                 class="mb-3"
@@ -394,7 +394,7 @@
                 v-if="rollAwardsEnabled && rollAwardsWindowSelection === 'custom'"
                 v-model="customRollAwardsWindow"
                 type="number"
-                label="Number of rolls"
+                :label="t('rollAwards.settings.numberOfRolls')"
                 variant="outlined"
                 density="comfortable"
                 :min="CUSTOM_ROLL_WINDOW_MIN"
@@ -420,10 +420,10 @@
                   :loading="rollAwardsWindowSaving"
                   @click="saveRollAwardsWindowSetting"
                 >
-                  Save Changes
+                  {{ t('common.saveChanges') }}
                 </v-btn>
                 <span class="text-caption text-medium-emphasis ml-4">
-                  Changes apply after saving.
+                  {{ t('rollAwards.settings.saveHint') }}
                 </span>
               </div>
               <v-alert
@@ -454,7 +454,7 @@
                   @click="copyRollAwardsToClipboard"
                   class="mr-2"
                 >
-                  Copy awards
+                  {{ t('rollAwards.clipboard.copy') }}
                 </v-btn>
                 <v-btn
                   variant="tonal"
@@ -470,7 +470,7 @@
                   :loading="clipboardLoading && clipboardAction === 'paste'"
                   @click="handlePasteRollAwards"
                 >
-                  Paste awards
+                  {{ t('rollAwards.clipboard.paste') }}
                 </v-btn>
               </div>
               <v-alert
@@ -506,16 +506,16 @@
               >
                 {{ rollAwardsManager.awardsError.value }}
                 <template #append>
-                  <v-btn variant="text" size="small" @click="rollAwardsManager.ensureAwardsLoaded(true)">Retry</v-btn>
+                  <v-btn variant="text" size="small" @click="rollAwardsManager.ensureAwardsLoaded(true)">{{ t('common.retry') }}</v-btn>
                 </template>
               </v-alert>
               <template v-else>
                 <v-expansion-panels v-model="rollAwardsPanelsOpen" variant="accordion">
                   <v-expansion-panel value="create" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                    <v-expansion-panel-title>Create a Roll Award</v-expansion-panel-title>
+                    <v-expansion-panel-title>{{ t('rollAwards.form.createTitle') }}</v-expansion-panel-title>
                     <v-expansion-panel-text>
                       <div class="text-caption text-medium-emphasis mb-3">
-                        Add the dice results that should count toward this award, then give it a descriptive name. Optionally filter it to a specific dice notation.
+                        {{ t('rollAwards.form.help') }}
                       </div>
                       <div class="d-flex flex-column gap-3">
                         <v-alert
@@ -525,12 +525,12 @@
                           variant="tonal"
                           class="mb-2"
                         >
-                          Editing existing award. Changes will update "{{ newRollAwardName || 'this award' }}".
+                          {{ t('rollAwards.form.editing', { name: newRollAwardName || t('rollAwards.form.thisAward') }) }}
                         </v-alert>
                         <div class="roll-award-number-row mb-4">
                           <v-number-input
                             ref="addRollAwardNumberInput"
-                            label="Dice result"
+                            :label="t('rollAwards.form.diceResult')"
                             variant="outlined"
                             density="comfortable"
                             control-variant="stacked"
@@ -549,7 +549,7 @@
                             icon="mdi-plus"
                             class="roll-award-number-btn"
                             :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                            :aria-label="'Add dice result'"
+                            :aria-label="t('rollAwards.form.addDiceResult')"
                             @click="addRollAwardNumber"
                           />
                         </div>
@@ -571,35 +571,35 @@
                         </div>
                         <v-text-field
                           v-model="newRollAwardDiceNotation"
-                          label="Dice notation filter (optional)"
+                          :label="t('rollAwards.form.notationFilter')"
                           variant="outlined"
                           density="comfortable"
-                          placeholder="d20, d100"
-                          hint="Separate die sizes with commas (e.g., d20, d100). Leave blank to include all dice."
+                          :placeholder="t('rollAwards.form.notationPlaceholder')"
+                          :hint="t('rollAwards.form.notationHint')"
                           persistent-hint
                           :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                         />
                         <v-text-field
                           v-model="newRollAwardName"
-                          label="Award name"
+                          :label="t('rollAwards.form.awardName')"
                           variant="outlined"
                           density="comfortable"
-                          placeholder="e.g., Natural 20 Champion"
+                          :placeholder="t('rollAwards.form.awardNamePlaceholder')"
                           :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                         />
                         <v-textarea
                           v-model="newRollAwardDescription"
-                          label="Description (optional)"
+                          :label="t('dice.fields.descriptionOptional')"
                           variant="outlined"
                           density="comfortable"
-                          placeholder="What makes this award special?"
+                          :placeholder="t('rollAwards.form.descriptionPlaceholder')"
                           :counter="ROLL_AWARD_DESCRIPTION_MAX_LENGTH"
                           :maxlength="ROLL_AWARD_DESCRIPTION_MAX_LENGTH"
                           auto-grow
                           :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
                         />
                         <div class="text-caption text-medium-emphasis mb-2">
-                          Players who total the most tracked results automatically own this award.
+                          {{ t('rollAwards.form.ownerHelp') }}
                         </div>
                         <v-alert
                           v-if="newRollAwardError"
@@ -625,14 +625,14 @@
                             :loading="rollAwardsManager.awardMutationLoading.value"
                             @click="handleSaveRollAward"
                           >
-                            {{ isEditingRollAward ? 'Update award' : 'Save award' }}
+                            {{ isEditingRollAward ? t('rollAwards.form.update') : t('rollAwards.form.save') }}
                           </v-btn>
                           <v-btn
                             variant="text"
                             :disabled="rollAwardsManager.awardMutationLoading.value"
                             @click="clearRollAwardForm"
                           >
-                            {{ isEditingRollAward ? 'Cancel edit' : 'Clear' }}
+                            {{ isEditingRollAward ? t('rollAwards.form.cancelEdit') : t('common.clear') }}
                           </v-btn>
                         </div>
                       </div>
@@ -640,7 +640,7 @@
                   </v-expansion-panel>
                   <v-expansion-panel value="list" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
                     <v-expansion-panel-title>
-                      <span>Existing awards</span>
+                      <span>{{ t('rollAwards.form.existing') }}</span>
                       <v-chip class="ml-2">{{ rollAwardsManager.awards.value.length }}</v-chip>
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
@@ -689,14 +689,14 @@
                               </v-chip>
                             </div>
                             <div class="text-caption text-medium-emphasis mb-1">
-                              <span v-if="getAwardNotations(award).length">Only counts rolls using {{ formatAwardNotations(award) }}</span>
-                              <span v-else>Counts every dice notation</span>
+                              <span v-if="getAwardNotations(award).length">{{ t('rollAwards.onlyCountsUsing', { notations: formatAwardNotations(award) }) }}</span>
+                              <span v-else>{{ t('rollAwards.countsEveryNotation') }}</span>
                             </div>
                           </v-list-item>
                         </v-list>
                       </template>
                       <p v-else class="text-caption text-medium-emphasis">
-                        No awards created yet. Use the form above to add your first Roll Award.
+                        {{ t('rollAwards.form.empty') }}
                       </p>
                     </v-expansion-panel-text>
                   </v-expansion-panel>
@@ -709,15 +709,15 @@
               variant="tonal"
               density="comfortable"
             >
-              Roll Awards are currently disabled. Toggle the switch above to start configuring them.
+              {{ t('rollAwards.settings.disabled') }}
             </v-alert>
           </v-window-item>
 
           <v-window-item value="criticals">
             <section class="mb-6">
-              <div class="text-subtitle-2 mb-2">Critical rules</div>
+              <div class="text-subtitle-2 mb-2">{{ t('criticals.title') }}</div>
               <p class="text-caption text-medium-emphasis mb-3">
-                Highlight dice messages when totals are above or below important thresholds. If multiple rules match, the last one in the list wins.
+                {{ t('criticals.description') }}
               </p>
               <v-alert
                 v-if="!canManageCriticals"
@@ -726,17 +726,17 @@
                 density="comfortable"
                 class="mb-3"
               >
-                Only the room creator can manage critical rules.
+                {{ t('criticals.creatorOnly') }}
               </v-alert>
               <div class="critical-rule-form">
                 <div class="critical-rule-form__row">
                   <v-text-field
                     v-model="newCriticalThreshold"
                     type="number"
-                    label="Number"
+                    :label="t('criticals.number')"
                     variant="outlined"
                     density="comfortable"
-                    placeholder="e.g., 20"
+                    :placeholder="t('criticals.numberPlaceholder')"
                     :disabled="!canManageCriticals || criticalsSaving"
                   />
                         <v-select
@@ -744,7 +744,7 @@
                           :items="CRITICAL_OPERATOR_OPTIONS"
                           item-title="title"
                           item-value="value"
-                          label="Comparison"
+                          :label="t('criticals.comparison')"
                           variant="outlined"
                           density="comfortable"
                           :disabled="!canManageCriticals || criticalsSaving"
@@ -755,7 +755,7 @@
                   :items="CRITICAL_COLOR_MODE_OPTIONS"
                   item-title="title"
                   item-value="value"
-                  label="Color source"
+                  :label="t('criticals.colorSource')"
                   variant="outlined"
                   density="comfortable"
                   class="mb-3"
@@ -768,7 +768,7 @@
                   :items="CRITICAL_PRESET_COLORS"
                   item-title="title"
                   item-value="value"
-                  label="Preset color"
+                  :label="t('criticals.presetColor')"
                   variant="outlined"
                   density="comfortable"
                   class="mb-3"
@@ -776,7 +776,7 @@
                 />
 
                 <div v-else class="mb-3">
-                  <div class="text-caption text-medium-emphasis mb-2">Custom color</div>
+                  <div class="text-caption text-medium-emphasis mb-2">{{ t('criticals.customColor') }}</div>
                   <input
                     v-model="newCriticalCustomColor"
                     type="color"
@@ -786,7 +786,7 @@
                 </div>
 
                 <div class="d-flex align-center flex-wrap gap-2 mb-4">
-                  <span class="text-caption text-medium-emphasis">Preview</span>
+                  <span class="text-caption text-medium-emphasis">{{ t('criticals.preview') }}</span>
                   <v-chip
                     size="small"
                     variant="flat"
@@ -813,14 +813,14 @@
                     :loading="criticalsSaving"
                     @click="addCriticalRule"
                   >
-                    Add rule
+                    {{ t('criticals.addRule') }}
                   </v-btn>
                   <v-btn
                     variant="text"
                     :disabled="criticalsSaving"
                     @click="resetCriticalForm"
                   >
-                    Clear
+                    {{ t('common.clear') }}
                   </v-btn>
                 </div>
               </div>
@@ -828,7 +828,7 @@
 
             <section>
               <div class="d-flex align-center justify-space-between mb-2">
-                <div class="text-subtitle-2">Saved rules</div>
+                <div class="text-subtitle-2">{{ t('criticals.savedRules') }}</div>
                 <v-chip size="small">{{ roomCriticals.length }}/{{ ROOM_CRITICALS_MAX_ITEMS }}</v-chip>
               </div>
               <template v-if="roomCriticals.length > 0">
@@ -859,13 +859,13 @@
                       </div>
                     </v-list-item-title>
                     <div class="text-caption text-medium-emphasis">
-                      Highlights the full dice message when the result is {{ getCriticalOperatorText(critical.operator) }} {{ critical.threshold }}.
+                      {{ t('criticals.ruleDescription', { operator: getCriticalOperatorText(critical.operator), threshold: critical.threshold }) }}
                     </div>
                   </v-list-item>
                 </v-list>
               </template>
               <p v-else class="text-caption text-medium-emphasis">
-                No critical rules yet. Add one above to color dice messages in this room.
+                {{ t('criticals.empty') }}
               </p>
             </section>
           </v-window-item>
@@ -873,14 +873,14 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn variant="text" @click="open = false">Close</v-btn>
+        <v-btn variant="text" @click="open = false">{{ t('common.close') }}</v-btn>
         <v-btn
           color="primary"
           :disabled="settingsTab !== 'room' || settingsSaving || !hasPendingChanges"
           :loading="settingsSaving"
           @click="saveSettings"
         >
-          Save
+          {{ t('common.save') }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -888,13 +888,13 @@
   <v-dialog v-model="rollAwardsImportDialogOpen" max-width="560">
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">
-        <span>Import Roll Awards</span>
+        <span>{{ t('rollAwards.import.title') }}</span>
         <v-btn icon="mdi-close" variant="text" @click="closeRollAwardsImportDialog" />
       </v-card-title>
       <v-divider />
       <v-card-text>
         <p class="text-caption text-medium-emphasis mb-3">
-          Review the awards detected from your clipboard before importing them into this room.
+          {{ t('rollAwards.import.description') }}
         </p>
         <template v-if="parsedRollAwardsForImport.length > 0">
           <v-list density="comfortable">
@@ -922,18 +922,18 @@
                 </v-chip>
               </div>
               <div class="text-caption text-medium-emphasis">
-                <span v-if="award.diceNotations.length">Only counts rolls using {{ formatNotations(award.diceNotations) }}</span>
-                <span v-else>Counts every dice notation</span>
+                <span v-if="award.diceNotations.length">{{ t('rollAwards.onlyCountsUsing', { notations: formatNotations(award.diceNotations) }) }}</span>
+                <span v-else>{{ t('rollAwards.countsEveryNotation') }}</span>
               </div>
             </v-list-item>
           </v-list>
         </template>
         <v-alert v-else type="info" variant="tonal" density="comfortable">
-          No valid awards found to import.
+          {{ t('rollAwards.import.noneFound') }}
         </v-alert>
       </v-card-text>
       <v-card-actions class="d-flex flex-wrap gap-2">
-        <v-btn variant="text" @click="closeRollAwardsImportDialog">Cancel</v-btn>
+        <v-btn variant="text" @click="closeRollAwardsImportDialog">{{ t('common.cancel') }}</v-btn>
         <v-spacer />
         <v-btn
           color="primary"
@@ -941,18 +941,18 @@
           :disabled="parsedRollAwardsForImport.length === 0 || rollAwardsImporting"
           :loading="rollAwardsImporting && importMode === 'clean'"
           @click="importParsedRollAwards(true)"
-          title="Remove existing awards and replace them"
+          :title="t('rollAwards.import.cleanTitle')"
         >
-          Clean & Import
+          {{ t('rollAwards.import.clean') }}
         </v-btn>
         <v-btn
           color="primary"
           :disabled="parsedRollAwardsForImport.length === 0 || rollAwardsImporting"
           :loading="rollAwardsImporting && importMode === 'append'"
           @click="importParsedRollAwards(false)"
-          title="Imported new awards"
+          :title="t('rollAwards.import.importTitle')"
         >
-          Import
+          {{ t('rollAwards.import.import') }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -961,6 +961,7 @@
 
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, watch, useTemplateRef } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { RoomCriticalRule, RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
@@ -978,6 +979,7 @@ const props = defineProps<{
 
 const open = defineModel<boolean>('open', { default: false });
 const roomsStore = useRoomsStore();
+const { t } = useI18n();
 const diceManager = inject<RoomDiceManager>(RoomDiceManagerKey);
 const injectedRollAwardsManager = inject<RoomRollAwardsManager>(RoomRollAwardsManagerKey);
 
@@ -1032,31 +1034,31 @@ const ROLL_AWARD_NOTATION_REGEX = /^d([1-9]\d*)$/i;
 const ROLL_AWARD_NOTATION_TOTAL_LIMIT = 64;
 const ROLL_AWARD_MAX_DICE_NOTATIONS = 10;
 const ROOM_CRITICALS_MAX_ITEMS = 20;
-const CRITICAL_OPERATOR_OPTIONS = [
-  { title: 'More than', value: 'moreThan' },
-  { title: 'Less than', value: 'lessThan' },
-] as const;
-const CRITICAL_COLOR_MODE_OPTIONS = [
-  { title: 'Preset colors', value: 'preset' },
-  { title: 'Color picker', value: 'custom' },
-] as const;
-const CRITICAL_PRESET_COLORS = [
-  { title: 'Crimson', value: '#d32f2f' },
-  { title: 'Amber', value: '#f9a825' },
-  { title: 'Gold', value: '#fdd835' },
-  { title: 'Emerald', value: '#2e7d32' },
-  { title: 'Teal', value: '#00897b' },
-  { title: 'Sky', value: '#1e88e5' },
-  { title: 'Indigo', value: '#3949ab' },
-  { title: 'Rose', value: '#c2185b' },
-];
-const ROLL_AWARD_WINDOW_OPTIONS = [
-  { title: 'All rolls', value: 'all' },
-  { title: 'Last 10 rolls', value: '10' },
-  { title: 'Last 50 rolls', value: '50' },
-  { title: 'Last 100 rolls', value: '100' },
-  { title: 'Custom', value: 'custom' },
-];
+const CRITICAL_OPERATOR_OPTIONS = computed(() => [
+  { title: t('criticals.operators.moreThan'), value: 'moreThan' },
+  { title: t('criticals.operators.lessThan'), value: 'lessThan' },
+] as const);
+const CRITICAL_COLOR_MODE_OPTIONS = computed(() => [
+  { title: t('criticals.colorModes.preset'), value: 'preset' },
+  { title: t('criticals.colorModes.custom'), value: 'custom' },
+] as const);
+const CRITICAL_PRESET_COLORS = computed(() => [
+  { title: t('criticals.colors.crimson'), value: '#d32f2f' },
+  { title: t('criticals.colors.amber'), value: '#f9a825' },
+  { title: t('criticals.colors.gold'), value: '#fdd835' },
+  { title: t('criticals.colors.emerald'), value: '#2e7d32' },
+  { title: t('criticals.colors.teal'), value: '#00897b' },
+  { title: t('criticals.colors.sky'), value: '#1e88e5' },
+  { title: t('criticals.colors.indigo'), value: '#3949ab' },
+  { title: t('criticals.colors.rose'), value: '#c2185b' },
+] as const);
+const ROLL_AWARD_WINDOW_OPTIONS = computed(() => [
+  { title: t('rollAwards.window.all'), value: 'all' },
+  { title: t('rollAwards.window.last', { count: 10 }), value: '10' },
+  { title: t('rollAwards.window.last', { count: 50 }), value: '50' },
+  { title: t('rollAwards.window.last', { count: 100 }), value: '100' },
+  { title: t('rollAwards.window.custom'), value: 'custom' },
+]);
 const PRESET_ROLL_AWARD_WINDOW_VALUES = ['10', '50', '100'];
 const CUSTOM_ROLL_WINDOW_MIN = 1;
 const CUSTOM_ROLL_WINDOW_MAX = 5000;
@@ -1141,7 +1143,7 @@ const nicknameDirty = computed(() => normalizedNicknameInput.value !== currentNi
 const hasPendingChanges = computed(() => roomNameDirty.value || nicknameDirty.value);
 
 const nicknamePreview = computed(() => {
-  const baseName = props.currentUser?.username ?? 'Unknown Adventurer';
+  const baseName = props.currentUser?.username ?? t('common.unknownAdventurer');
   return normalizedNicknameInput.value ? `${normalizedNicknameInput.value} (${baseName})` : baseName;
 });
 
@@ -1154,14 +1156,17 @@ function getSelectedRollAwardsWindow(showErrors = false): number | null | undefi
     const trimmed = customRollAwardsWindow.value?.trim() ?? '';
     if (!trimmed) {
       if (showErrors) {
-        customRollAwardsWindowError.value = 'Enter the number of rolls to consider.';
+        customRollAwardsWindowError.value = t('rollAwards.errors.windowRequired');
       }
       return undefined;
     }
     const parsed = Number(trimmed);
     if (!Number.isFinite(parsed) || parsed < CUSTOM_ROLL_WINDOW_MIN || parsed > CUSTOM_ROLL_WINDOW_MAX) {
       if (showErrors) {
-        customRollAwardsWindowError.value = `Enter a value between ${CUSTOM_ROLL_WINDOW_MIN} and ${CUSTOM_ROLL_WINDOW_MAX}.`;
+        customRollAwardsWindowError.value = t('rollAwards.errors.windowRange', {
+          min: CUSTOM_ROLL_WINDOW_MIN,
+          max: CUSTOM_ROLL_WINDOW_MAX,
+        });
       }
       return undefined;
     }
@@ -1266,7 +1271,7 @@ async function ensureMemberSettingsLoaded(force = false) {
     nicknameInput.value = member.nickname ?? '';
     memberSettingsLoadedRoomId.value = props.room.id;
   } catch (error) {
-    memberSettingsError.value = error instanceof Error ? error.message : 'Unable to load your settings';
+    memberSettingsError.value = error instanceof Error ? error.message : t('roomSettings.errors.loadMemberSettings');
   } finally {
     memberSettingsLoading.value = false;
   }
@@ -1330,16 +1335,16 @@ function resetCriticalForm() {
   newCriticalThreshold.value = 1;
   newCriticalOperator.value = 'moreThan';
   newCriticalColorMode.value = 'preset';
-  newCriticalPresetColor.value = CRITICAL_PRESET_COLORS[0]?.value ?? '#d32f2f';
+  newCriticalPresetColor.value = CRITICAL_PRESET_COLORS.value[0]?.value ?? '#d32f2f';
   newCriticalCustomColor.value = '#fdd835';
   criticalsError.value = null;
 }
 
 function getCriticalOperatorText(operator: RoomCriticalRule['operator']) {
   if (operator === 'moreThan') {
-    return 'more than';
+    return t('criticals.operators.moreThan').toLowerCase();
   }
-  return 'less than';
+  return t('criticals.operators.lessThan').toLowerCase();
 }
 
 function formatCriticalRule(rule: RoomCriticalRule) {
@@ -1372,7 +1377,7 @@ function getContrastTextColor(color: string) {
 
 async function saveCriticalRules(nextRules: RoomCriticalRule[]) {
   if (!props.room || !props.currentUser) {
-    criticalsError.value = 'Sign in to manage critical rules.';
+    criticalsError.value = t('criticals.errors.signIn');
     return false;
   }
 
@@ -1386,10 +1391,10 @@ async function saveCriticalRules(nextRules: RoomCriticalRule[]) {
       criticals: nextRules,
     });
     roomCriticals.value = cloneCriticalRules(updatedRoom.criticals ?? []);
-    showSettingsFeedback('success', 'Critical rules saved.');
+    showSettingsFeedback('success', t('criticals.feedback.saved'));
     return true;
   } catch (error) {
-    criticalsError.value = error instanceof Error ? error.message : 'Unable to save critical rules.';
+    criticalsError.value = error instanceof Error ? error.message : t('criticals.errors.save');
     roomCriticals.value = cloneCriticalRules(props.room.criticals ?? []);
     return false;
   } finally {
@@ -1401,23 +1406,23 @@ async function addCriticalRule() {
   criticalsError.value = null;
 
   if (!canManageCriticals.value) {
-    criticalsError.value = 'Only the room creator can manage critical rules.';
+    criticalsError.value = t('criticals.creatorOnly');
     return;
   }
   if (roomCriticals.value.length >= ROOM_CRITICALS_MAX_ITEMS) {
-    criticalsError.value = `You can only save up to ${ROOM_CRITICALS_MAX_ITEMS} critical rules.`;
+    criticalsError.value = t('criticals.errors.maxRules', { count: ROOM_CRITICALS_MAX_ITEMS });
     return;
   }
 
   const trimmedThreshold = String(newCriticalThreshold.value).trim();
   if (!trimmedThreshold) {
-    criticalsError.value = 'A number is required.';
+    criticalsError.value = t('criticals.errors.numberRequired');
     return;
   }
 
   const parsedThreshold = Number(trimmedThreshold);
   if (!Number.isFinite(parsedThreshold) || !Number.isInteger(parsedThreshold)) {
-    criticalsError.value = 'The number must be a whole number.';
+    criticalsError.value = t('criticals.errors.wholeNumber');
     return;
   }
 
@@ -1426,7 +1431,7 @@ async function addCriticalRule() {
     critical.threshold === parsedThreshold
   ));
   if (duplicate) {
-    criticalsError.value = 'A rule with this comparison and number already exists.';
+    criticalsError.value = t('criticals.errors.duplicate');
     return;
   }
 
@@ -1446,7 +1451,7 @@ async function addCriticalRule() {
 
 async function removeCriticalRule(index: number) {
   if (!canManageCriticals.value) {
-    criticalsError.value = 'Only the room creator can manage critical rules.';
+    criticalsError.value = t('criticals.creatorOnly');
     return;
   }
 
@@ -1457,7 +1462,7 @@ async function removeCriticalRule(index: number) {
 async function saveSettings() {
   if (!props.room || !props.currentUser) return;
   if (!hasPendingChanges.value) {
-    showSettingsFeedback('info', 'No changes to save.');
+    showSettingsFeedback('info', t('roomSettings.feedback.noChanges'));
     return;
   }
 
@@ -1471,10 +1476,10 @@ async function saveSettings() {
   try {
     if (roomNameDirty.value) {
       if (!isRoomCreator.value) {
-        roomNameError.value = 'Only the room creator can rename this room.';
+        roomNameError.value = t('roomSettings.roomDetails.nonCreatorHelp');
         lastError = roomNameError.value;
       } else if (!normalizedRoomName.value) {
-        roomNameError.value = 'Room name is required.';
+        roomNameError.value = t('roomSettings.errors.roomNameRequired');
         lastError = roomNameError.value;
       } else {
         try {
@@ -1485,7 +1490,7 @@ async function saveSettings() {
           });
           anySuccess = true;
         } catch (error) {
-          roomNameError.value = error instanceof Error ? error.message : 'Unable to update room name.';
+          roomNameError.value = error instanceof Error ? error.message : t('roomSettings.errors.updateRoomName');
           lastError = roomNameError.value;
         }
       }
@@ -1503,17 +1508,17 @@ async function saveSettings() {
         memberSettingsLoadedRoomId.value = props.room.id;
         anySuccess = true;
       } catch (error) {
-        nicknameError.value = error instanceof Error ? error.message : 'Unable to update nickname.';
+        nicknameError.value = error instanceof Error ? error.message : t('roomSettings.errors.updateNickname');
         lastError = nicknameError.value;
       }
     }
 
     if (anySuccess) {
-      showSettingsFeedback('success', 'Settings saved.');
+      showSettingsFeedback('success', t('roomSettings.feedback.saved'));
     } else if (lastError) {
       showSettingsFeedback('error', lastError);
     } else {
-      showSettingsFeedback('info', 'No changes to save.');
+      showSettingsFeedback('info', t('roomSettings.feedback.noChanges'));
     }
   } finally {
     settingsSaving.value = false;
@@ -1547,19 +1552,19 @@ function addRollAwardNumber() {
   newRollAwardError.value = null;
   const value = Number.parseInt(addRollAwardNumberInput.value?.value || '1');
   if (value === null || Number.isNaN(value)) {
-    newRollAwardError.value = 'Enter a dice result to add.';
+    newRollAwardError.value = t('rollAwards.errors.resultRequired');
     return;
   }
   if (value < ROLL_AWARD_RESULT_MIN || value > ROLL_AWARD_RESULT_MAX) {
-    newRollAwardError.value = `Dice results must be between ${ROLL_AWARD_RESULT_MIN} and ${ROLL_AWARD_RESULT_MAX}.`;
+    newRollAwardError.value = t('rollAwards.errors.resultRange', { min: ROLL_AWARD_RESULT_MIN, max: ROLL_AWARD_RESULT_MAX });
     return;
   }
   if (newRollAwardNumbers.value.includes(value)) {
-    newRollAwardError.value = 'This result is already included.';
+    newRollAwardError.value = t('rollAwards.errors.duplicateResult');
     return;
   }
   if (newRollAwardNumbers.value.length >= ROLL_AWARD_MAX_RESULTS) {
-    newRollAwardError.value = `You can only track up to ${ROLL_AWARD_MAX_RESULTS} results per award.`;
+    newRollAwardError.value = t('rollAwards.errors.maxResults', { count: ROLL_AWARD_MAX_RESULTS });
     return;
   }
   newRollAwardNumbers.value = [...newRollAwardNumbers.value, value];
@@ -1604,21 +1609,21 @@ function parseRollAwardNotations(input: string): { notations: string[]; error?: 
   for (const value of parts) {
     const match = value.match(ROLL_AWARD_NOTATION_REGEX);
     if (!match) {
-      return { notations: [], error: 'Dice notation must look like d20 or d100.' };
+      return { notations: [], error: t('rollAwards.errors.notationFormat') };
     }
     const notation = `d${match[1]}`.toLowerCase();
     if (!normalized.includes(notation)) {
       normalized.push(notation);
     }
     if (normalized.length > ROLL_AWARD_MAX_DICE_NOTATIONS) {
-      return { notations: [], error: `You can only filter by up to ${ROLL_AWARD_MAX_DICE_NOTATIONS} dice notations.` };
+      return { notations: [], error: t('rollAwards.errors.maxNotations', { count: ROLL_AWARD_MAX_DICE_NOTATIONS }) };
     }
   }
   const combinedLength = normalized.join(',').length;
   if (combinedLength > ROLL_AWARD_NOTATION_TOTAL_LIMIT) {
     return {
       notations: [],
-      error: `Dice notation filters are too long (max ${ROLL_AWARD_NOTATION_TOTAL_LIMIT} characters combined).`,
+      error: t('rollAwards.errors.notationLength', { count: ROLL_AWARD_NOTATION_TOTAL_LIMIT }),
     };
   }
   return { notations: normalized };
@@ -1640,7 +1645,7 @@ function clearClipboardFeedback() {
 async function copyRollAwardsToClipboard() {
   clearClipboardFeedback();
   if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-    rollAwardsClipboardFeedback.value = { type: 'error', message: 'Clipboard is not available in this browser.' };
+    rollAwardsClipboardFeedback.value = { type: 'error', message: t('rollAwards.clipboard.unavailable') };
     return;
   }
   const awardsToCopy = rollAwardsManager.awards.value.map(buildExportableAward);
@@ -1648,11 +1653,11 @@ async function copyRollAwardsToClipboard() {
   clipboardAction.value = 'copy';
   try {
     await navigator.clipboard.writeText(JSON.stringify(awardsToCopy, null, 2));
-    rollAwardsClipboardFeedback.value = { type: 'success', message: 'Awards copied to clipboard.' };
+    rollAwardsClipboardFeedback.value = { type: 'success', message: t('rollAwards.clipboard.copySuccess') };
   } catch (error) {
     rollAwardsClipboardFeedback.value = {
       type: 'error',
-      message: error instanceof Error ? error.message : 'Unable to copy awards to clipboard.',
+      message: error instanceof Error ? error.message : t('rollAwards.clipboard.copyError'),
     };
   } finally {
     clipboardLoading.value = false;
@@ -1722,7 +1727,7 @@ async function handlePasteRollAwards() {
   clearClipboardFeedback();
   rollAwardsImportError.value = null;
   if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
-    rollAwardsClipboardFeedback.value = { type: 'error', message: 'Clipboard is not available in this browser.' };
+    rollAwardsClipboardFeedback.value = { type: 'error', message: t('rollAwards.clipboard.unavailable') };
     return;
   }
   clipboardLoading.value = true;
@@ -1731,7 +1736,7 @@ async function handlePasteRollAwards() {
     const clipboardText = await navigator.clipboard.readText();
     const parsed = parseAwardsClipboard(clipboardText);
     if (!parsed.length) {
-      rollAwardsImportError.value = 'No valid awards detected in clipboard.';
+      rollAwardsImportError.value = t('rollAwards.import.noValidClipboard');
       return;
     }
     parsedRollAwardsForImport.value = parsed;
@@ -1739,7 +1744,7 @@ async function handlePasteRollAwards() {
   } catch (error) {
     rollAwardsClipboardFeedback.value = {
       type: 'error',
-      message: error instanceof Error ? error.message : 'Unable to read from clipboard.',
+      message: error instanceof Error ? error.message : t('rollAwards.clipboard.readError'),
     };
   } finally {
     clipboardLoading.value = false;
@@ -1756,15 +1761,15 @@ function closeRollAwardsImportDialog() {
 
 async function importParsedRollAwards(cleanExisting: boolean) {
   if (!rollAwardsEnabled.value) {
-    rollAwardsImportError.value = 'Enable Roll Awards before importing.';
+    rollAwardsImportError.value = t('rollAwards.import.enableFirst');
     return;
   }
   if (!canManageRollAwards.value) {
-    rollAwardsImportError.value = 'Only the room creator can import awards.';
+    rollAwardsImportError.value = t('rollAwards.import.creatorOnly');
     return;
   }
   if (!parsedRollAwardsForImport.value.length) {
-    rollAwardsImportError.value = 'No awards to import.';
+    rollAwardsImportError.value = t('rollAwards.import.noAwards');
     return;
   }
   rollAwardsImportError.value = null;
@@ -1775,7 +1780,7 @@ async function importParsedRollAwards(cleanExisting: boolean) {
       for (const existing of [...rollAwardsManager.awards.value]) {
         const deleted = await rollAwardsManager.deleteAward(existing.id);
         if (!deleted) {
-          throw new Error(rollAwardsManager.awardMutationError.value ?? 'Failed to remove existing awards.');
+          throw new Error(rollAwardsManager.awardMutationError.value ?? t('rollAwards.import.removeExistingError'));
         }
       }
     }
@@ -1787,16 +1792,16 @@ async function importParsedRollAwards(cleanExisting: boolean) {
         award.description
       );
       if (!created) {
-        throw new Error(rollAwardsManager.awardMutationError.value ?? 'Failed to create an imported award.');
+        throw new Error(rollAwardsManager.awardMutationError.value ?? t('rollAwards.import.createAwardError'));
       }
     }
     closeRollAwardsImportDialog();
     rollAwardsClipboardFeedback.value = {
       type: 'success',
-      message: cleanExisting ? 'Awards replaced successfully.' : 'Awards imported successfully.',
+      message: cleanExisting ? t('rollAwards.import.replaceSuccess') : t('rollAwards.import.importSuccess'),
     };
   } catch (error) {
-    rollAwardsImportError.value = error instanceof Error ? error.message : 'Unable to import awards.';
+    rollAwardsImportError.value = error instanceof Error ? error.message : t('rollAwards.import.importError');
   } finally {
     rollAwardsImporting.value = false;
     importMode.value = null;
@@ -1830,21 +1835,21 @@ function clearRollAwardForm() {
 async function handleSaveRollAward() {
   newRollAwardError.value = null;
   if (!rollAwardsEnabled.value) {
-    newRollAwardError.value = 'Enable Roll Awards before managing entries.';
+    newRollAwardError.value = t('rollAwards.errors.enableBeforeManage');
     return;
   }
   const trimmedName = newRollAwardName.value.trim();
   if (!trimmedName) {
-    newRollAwardError.value = 'Award name is required.';
+    newRollAwardError.value = t('rollAwards.errors.nameRequired');
     return;
   }
   const trimmedDescription = newRollAwardDescription.value.trim();
   if (trimmedDescription.length > ROLL_AWARD_DESCRIPTION_MAX_LENGTH) {
-    newRollAwardError.value = `Description must be ${ROLL_AWARD_DESCRIPTION_MAX_LENGTH} characters or fewer.`;
+    newRollAwardError.value = t('rollAwards.errors.descriptionLength', { count: ROLL_AWARD_DESCRIPTION_MAX_LENGTH });
     return;
   }
   if (newRollAwardNumbers.value.length === 0) {
-    newRollAwardError.value = 'Add at least one dice result.';
+    newRollAwardError.value = t('rollAwards.errors.atLeastOneResult');
     return;
   }
   const notationResult = parseRollAwardNotations(newRollAwardDiceNotation.value);

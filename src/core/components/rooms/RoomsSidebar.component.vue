@@ -2,7 +2,7 @@
   <div class="rooms-sidebar">
     <v-card class="mb-4">
       <v-card-title class="d-flex justify-space-between align-center">
-        <span class="text-subtitle-1">Rooms</span>
+        <span class="text-subtitle-1">{{ t('rooms.sidebar.title') }}</span>
         <v-chip v-if="rooms.length" size="small" color="primary" variant="flat">
           {{ rooms.length }}
         </v-chip>
@@ -44,18 +44,18 @@
             v-if="!rooms.length"
             class="text-medium-emphasis text-center py-6"
           >
-            No rooms yet. Create one to get rolling.
+            {{ t('rooms.sidebar.empty') }}
           </div>
         </v-list>
       </v-card-text>
     </v-card>
 
     <v-card class="mb-4">
-      <v-card-title class="text-subtitle-1">Create a room</v-card-title>
+      <v-card-title class="text-subtitle-1">{{ t('rooms.sidebar.createTitle') }}</v-card-title>
       <v-card-text>
         <v-text-field
           v-model="createForm.name"
-          label="Room name"
+          :label="t('rooms.sidebar.roomName')"
           variant="outlined"
           density="comfortable"
           maxlength="80"
@@ -64,10 +64,10 @@
         <v-text-field
           v-model="createForm.password"
           type="password"
-          label="Password (optional)"
+          :label="t('rooms.sidebar.passwordOptional')"
           variant="outlined"
           density="comfortable"
-          hint="Leave empty for a public room"
+          :hint="t('rooms.sidebar.publicRoomHint')"
           persistent-hint
           class="mb-4"
         />
@@ -78,17 +78,17 @@
           :disabled="!createForm.name.trim()"
           @click="createRoom"
         >
-          Create room
+          {{ t('rooms.sidebar.create') }}
         </v-btn>
       </v-card-text>
     </v-card>
 
     <v-card>
-      <v-card-title class="text-subtitle-1">Join via invite</v-card-title>
+      <v-card-title class="text-subtitle-1">{{ t('rooms.sidebar.joinTitle') }}</v-card-title>
       <v-card-text>
         <v-text-field
           v-model="joinForm.inviteCode"
-          label="Invite code"
+          :label="t('rooms.sidebar.inviteCode')"
           variant="outlined"
           density="comfortable"
           class="mb-3"
@@ -96,7 +96,7 @@
         <v-text-field
           v-model="joinForm.password"
           type="password"
-          label="Password (if needed)"
+          :label="t('rooms.sidebar.passwordIfNeeded')"
           variant="outlined"
           density="comfortable"
           class="mb-4"
@@ -109,7 +109,7 @@
           :disabled="!joinForm.inviteCode.trim()"
           @click="joinRoom"
         >
-          Join room
+          {{ t('rooms.sidebar.join') }}
         </v-btn>
       </v-card-text>
     </v-card>
@@ -118,6 +118,7 @@
 
 <script setup lang="ts">
 import { reactive } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { RoomDetails } from 'netlify/core/types/data.types';
 
 defineProps<{
@@ -134,6 +135,8 @@ const emit = defineEmits<{
   (event: 'join', payload: { inviteCode: string; password?: string | null }): void;
 }>();
 
+const { t } = useI18n();
+
 const createForm = reactive({
   name: '',
   password: '',
@@ -145,7 +148,7 @@ const joinForm = reactive({
 });
 
 function formatActivity(timestamp?: string | null) {
-  if (!timestamp) return 'No activity yet';
+  if (!timestamp) return t('rooms.sidebar.noActivity');
   try {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: 'medium',

@@ -2,7 +2,18 @@
   "common": {
     "title": "Rolz",
     "disconnect": "Se déconnecter",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "logoAlt": "Icône d100 de Rolz",
+    "reportIssue": "Signaler un bug ou demander une fonctionnalité",
+    "retry": "Réessayer",
+    "clear": "Effacer",
+    "save": "Enregistrer",
+    "close": "Fermer",
+    "saveChanges": "Enregistrer les changements",
+    "manage": "Gérer",
+    "someone": "Quelqu’un",
+    "unknownAdventurer": "Aventurier inconnu",
+    "unknownDate": "Date inconnue"
   },
   "navigation": {
     "home": "Accueil",
@@ -97,6 +108,322 @@
         "deleteSuccess": "La salle {name} a été archivée.",
         "restoreSuccess": "La salle {name} est de nouveau active."
       }
+    }
+  },
+  "language": {
+    "current": "Langue actuelle : {language}",
+    "changeError": "Échec du changement de langue :"
+  },
+  "discord": {
+    "login_text": "Connexion avec Discord"
+  },
+  "errors": {
+    "invalidServerResponse": "Réponse serveur invalide",
+    "unknown": "Erreur inconnue",
+    "unexpectedServer": "Erreur serveur inattendue"
+  },
+  "rooms": {
+    "sidebar": {
+      "title": "Salles",
+      "empty": "Aucune salle pour le moment. Créez-en une pour commencer à lancer les dés.",
+      "createTitle": "Créer une salle",
+      "roomName": "Nom de la salle",
+      "passwordOptional": "Mot de passe (facultatif)",
+      "publicRoomHint": "Laissez vide pour une salle publique",
+      "create": "Créer la salle",
+      "joinTitle": "Rejoindre via invitation",
+      "inviteCode": "Code d’invitation",
+      "passwordIfNeeded": "Mot de passe (si nécessaire)",
+      "join": "Rejoindre la salle",
+      "noActivity": "Aucune activité"
+    },
+    "feedback": {
+      "joinedViaInvite": "Salle rejointe via le lien d’invitation",
+      "created": "Salle créée avec succès",
+      "joined": "Salle rejointe"
+    },
+    "errors": {
+      "load": "Impossible de charger les salles",
+      "create": "Impossible de créer la salle",
+      "join": "Impossible de rejoindre la salle",
+      "loadMessages": "Impossible de charger les messages",
+      "sendMessage": "Impossible d’envoyer le message",
+      "sendDice": "Impossible d’envoyer le résultat du dé",
+      "loadOlderMessages": "Impossible de charger les anciens messages"
+    }
+  },
+  "chat": {
+    "inviteCode": "Code d’invitation : {code}",
+    "hideInviteCode": "Masquer le code d’invitation",
+    "showInviteCode": "Afficher le code d’invitation",
+    "roomSettings": "Paramètres de la salle",
+    "copyInviteLink": "Copier le lien d’invitation",
+    "messageInput": "Envoyer un message ou lancer un dé (ex. d100, 2d100, +2d100, ...)",
+    "dicePrefixHelp": "Vous pouvez préfixer un jet avec « + » ou « - » ; « + » compte comme un avantage.",
+    "examples": "Exemples :",
+    "advantageExample": "- « +2d100 » compte comme un avantage et garde le meilleur jet",
+    "disadvantageExample": "- « -2d100 » compte comme un désavantage et garde le pire jet",
+    "emptyTitle": "Sélectionnez ou créez une salle",
+    "emptyDescription": "Choisissez une salle dans la liste de gauche ou créez-en une pour commencer à discuter et lancer les dés.",
+    "copyInviteLinkError": "Impossible de copier le lien d’invitation"
+  },
+  "messages": {
+    "rolled": "{name} a lancé {notation}",
+    "rolledWithDescription": "{name} a lancé {notation} ({description})",
+    "result": "Résultat",
+    "rolls": "Jets"
+  },
+  "members": {
+    "count": "{count} membre | {count} membres",
+    "title": "Membres de la salle",
+    "total": "{count} au total",
+    "online": "{count} en ligne",
+    "connected": "Connecté",
+    "joined": "A rejoint le {date}",
+    "connectedNow": "Connecté maintenant",
+    "lastSeen": "Vu pour la dernière fois le {date}",
+    "empty": "Aucun membre pour le moment. Invitez quelqu’un pour commencer.",
+    "loadError": "Impossible de charger les membres"
+  },
+  "dice": {
+    "roller": {
+      "rollD100": "Lancer D100"
+    },
+    "actions": {
+      "add": "Ajouter un dé",
+      "addNew": "Ajouter un nouveau dé personnalisé"
+    },
+    "confirmDelete": "Supprimer ce dé ?",
+    "fields": {
+      "notation": "Notation du dé",
+      "notationPlaceholderAdvantage": "ex. +2d100",
+      "notationPlaceholderDisadvantage": "ex. -2d100",
+      "notationHint": "Utilisez + pour un avantage et - pour un désavantage, par exemple +2d100 ou -2d100.",
+      "descriptionOptional": "Description (facultative)",
+      "descriptionPlaceholder": "ex. Jet d’attaque",
+      "customDescriptionPlaceholder": "ex. Attaque à l’épée longue"
+    },
+    "category": {
+      "title": "Catégories de dés",
+      "label": "Catégorie",
+      "default": "Par défaut",
+      "other": "Autre",
+      "general": "Général",
+      "loading": "Chargement des catégories...",
+      "hint": "Regroupez les dés similaires",
+      "signIn": "Connectez-vous pour gérer les catégories de cette salle.",
+      "description": "Regroupez les dés similaires en créant des catégories réutilisables.",
+      "name": "Nom de la catégorie",
+      "placeholder": "ex. Attaques",
+      "create": "Créer la catégorie",
+      "display": "Catégorie : {category}"
+    },
+    "panel": {
+      "title": "Lancer de dé",
+      "signIn": "Connectez-vous pour gérer et lancer vos dés personnalisés dans cette salle.",
+      "empty": "Vous n’avez enregistré aucun dé pour cette salle. Ajoutez-en un depuis Paramètres -> Dés."
+    },
+    "settings": {
+      "createTitle": "Créer un dé personnalisé",
+      "signInDice": "Connectez-vous pour gérer vos dés dans cette salle.",
+      "createHelp": "Indiquez une notation de dé (ex. 1d20+3, +2d100 ou -2d100) et éventuellement une description.",
+      "myDice": "Mes dés",
+      "signInView": "Les dés de salle sont liés à votre compte. Connectez-vous pour les voir.",
+      "empty": "Vous n’avez enregistré aucun dé pour cette salle. Utilisez le formulaire ci-dessus pour en ajouter un."
+    },
+    "errors": {
+      "loadRoomDice": "Impossible de charger les dés de la salle",
+      "rollDice": "Impossible de lancer ce dé.",
+      "needRoomForDice": "Vous devez être dans une salle pour ajouter un dé.",
+      "notationRequired": "La notation du dé est requise.",
+      "invalidNotation": "Entrez une notation valide (ex. 1d20+3, +2d100 ou -2d100).",
+      "addDice": "Impossible d’ajouter le dé.",
+      "updateDice": "Impossible de modifier le dé.",
+      "deleteDice": "Impossible de supprimer le dé.",
+      "needRoomForCategory": "Vous devez être dans une salle pour ajouter des catégories.",
+      "categoryRequired": "Le nom de catégorie est requis.",
+      "createCategory": "Impossible de créer la catégorie.",
+      "invalidNotationLog": "Notation de dé invalide :"
+    }
+  },
+  "roomSettings": {
+    "title": "Paramètres",
+    "tabs": {
+      "room": "Salle",
+      "dices": "Dés",
+      "rollAwards": "Récompenses",
+      "criticals": "Critiques"
+    },
+    "roomDetails": {
+      "title": "Détails de la salle",
+      "creatorHelp": "Vous pouvez renommer cette salle pour tout le monde.",
+      "nonCreatorHelp": "Seul le créateur peut renommer cette salle.",
+      "maxRoomName": "80 caractères max"
+    },
+    "nickname": {
+      "title": "Mon surnom",
+      "help": "Définissez un surnom d’affichage uniquement pour cette salle. Laissez vide pour utiliser votre nom Discord.",
+      "label": "Surnom",
+      "maxNickname": "40 caractères max",
+      "preview": "Aperçu : {name}"
+    },
+    "feedback": {
+      "saved": "Paramètres enregistrés.",
+      "noChanges": "Aucun changement à enregistrer."
+    },
+    "errors": {
+      "loadMemberSettings": "Impossible de charger vos paramètres",
+      "updateSettings": "Impossible de modifier les paramètres de la salle",
+      "roomNameRequired": "Le nom de la salle est requis.",
+      "updateRoomName": "Impossible de modifier le nom de la salle.",
+      "updateNickname": "Impossible de modifier le surnom."
+    }
+  },
+  "rollAwards": {
+    "title": "Récompenses de jets",
+    "onlyCounting": "Compte uniquement les jets {notations}",
+    "onlyCountsUsing": "Compte uniquement les jets avec {notations}",
+    "countsEveryNotation": "Compte toutes les notations de dés",
+    "panel": {
+      "description": "Ces récompenses reviennent automatiquement aux joueurs qui obtiennent le plus souvent les résultats suivis.",
+      "disabled": "Les récompenses de jets sont désactivées pour cette salle.",
+      "window": "Analyse des {count} derniers jets de dés.",
+      "empty": "Aucune récompense définie. Utilisez Gérer pour en créer une.",
+      "showAll": "Afficher toutes les récompenses",
+      "showObtained": "Afficher seulement obtenues",
+      "noObtained": "Aucune récompense obtenue pour le moment. Affichez toutes les récompenses pour voir chaque entrée.",
+      "tracking": "Suivi",
+      "noWinner": "Aucun gagnant",
+      "currentLeader": "Leader actuel avec {count} réussite. | Leader actuel avec {count} réussites.",
+      "tiedLeaders": "Leaders à égalité avec {count} réussite. | Leaders à égalité avec {count} réussites."
+    },
+    "settings": {
+      "description": "Suivez des résultats de dés marquants et mettez automatiquement en avant les joueurs qui les obtiennent le plus souvent.",
+      "creatorOnly": "Seul le créateur de la salle peut activer et modifier les récompenses.",
+      "enable": "Activer les récompenses pour cette salle",
+      "countFrom": "Compter les résultats depuis",
+      "numberOfRolls": "Nombre de jets",
+      "saveHint": "Les changements s’appliquent après enregistrement.",
+      "disabled": "Les récompenses sont désactivées. Activez l’interrupteur ci-dessus pour les configurer."
+    },
+    "window": {
+      "all": "Tous les jets",
+      "last": "{count} derniers jets",
+      "custom": "Personnalisé"
+    },
+    "clipboard": {
+      "copy": "Copier les récompenses",
+      "paste": "Coller les récompenses",
+      "unavailable": "Le presse-papiers n’est pas disponible dans ce navigateur.",
+      "copySuccess": "Récompenses copiées dans le presse-papiers.",
+      "copyError": "Impossible de copier les récompenses.",
+      "readError": "Impossible de lire le presse-papiers."
+    },
+    "form": {
+      "createTitle": "Créer une récompense",
+      "help": "Ajoutez les résultats de dés qui comptent pour cette récompense, puis donnez-lui un nom. Vous pouvez aussi la limiter à une notation.",
+      "editing": "Modification d’une récompense existante. Les changements mettront à jour « {name} ».",
+      "thisAward": "cette récompense",
+      "diceResult": "Résultat du dé",
+      "addDiceResult": "Ajouter un résultat de dé",
+      "notationFilter": "Filtre de notation (facultatif)",
+      "notationPlaceholder": "d20, d100",
+      "notationHint": "Séparez les tailles de dés par des virgules (ex. d20, d100). Laissez vide pour inclure tous les dés.",
+      "awardName": "Nom de la récompense",
+      "awardNamePlaceholder": "ex. Champion du 20 naturel",
+      "descriptionPlaceholder": "Qu’est-ce qui rend cette récompense spéciale ?",
+      "ownerHelp": "Les joueurs qui totalisent le plus de résultats suivis possèdent automatiquement cette récompense.",
+      "update": "Mettre à jour",
+      "save": "Enregistrer la récompense",
+      "cancelEdit": "Annuler la modification",
+      "existing": "Récompenses existantes",
+      "empty": "Aucune récompense créée. Utilisez le formulaire ci-dessus pour ajouter la première."
+    },
+    "import": {
+      "title": "Importer des récompenses",
+      "description": "Vérifiez les récompenses détectées dans le presse-papiers avant de les importer dans cette salle.",
+      "noneFound": "Aucune récompense valide à importer.",
+      "cleanTitle": "Supprimer les récompenses existantes et les remplacer",
+      "clean": "Nettoyer et importer",
+      "importTitle": "Importer de nouvelles récompenses",
+      "import": "Importer",
+      "noValidClipboard": "Aucune récompense valide détectée dans le presse-papiers.",
+      "enableFirst": "Activez les récompenses avant d’importer.",
+      "creatorOnly": "Seul le créateur de la salle peut importer des récompenses.",
+      "noAwards": "Aucune récompense à importer.",
+      "removeExistingError": "Impossible de supprimer les récompenses existantes.",
+      "createAwardError": "Impossible de créer une récompense importée.",
+      "replaceSuccess": "Récompenses remplacées avec succès.",
+      "importSuccess": "Récompenses importées avec succès.",
+      "importError": "Impossible d’importer les récompenses."
+    },
+    "errors": {
+      "load": "Impossible de charger les récompenses",
+      "loadRecentDiceRolls": "Impossible de charger les jets récents",
+      "creatorSetting": "Seul le créateur de la salle peut modifier ce paramètre.",
+      "updateSetting": "Impossible de modifier le paramètre",
+      "signIn": "Connectez-vous pour gérer les récompenses.",
+      "save": "Impossible d’enregistrer la récompense",
+      "delete": "Impossible de supprimer la récompense",
+      "update": "Impossible de modifier la récompense",
+      "windowRequired": "Entrez le nombre de jets à prendre en compte.",
+      "windowRange": "Entrez une valeur entre {min} et {max}.",
+      "resultRequired": "Entrez un résultat de dé à ajouter.",
+      "resultRange": "Les résultats doivent être entre {min} et {max}.",
+      "duplicateResult": "Ce résultat est déjà inclus.",
+      "maxResults": "Vous ne pouvez suivre que {count} résultats par récompense.",
+      "notationFormat": "La notation doit ressembler à d20 ou d100.",
+      "maxNotations": "Vous ne pouvez filtrer que jusqu’à {count} notations de dés.",
+      "notationLength": "Les filtres de notation sont trop longs ({count} caractères max au total).",
+      "enableBeforeManage": "Activez les récompenses avant de gérer les entrées.",
+      "nameRequired": "Le nom de la récompense est requis.",
+      "descriptionLength": "La description doit contenir {count} caractères ou moins.",
+      "atLeastOneResult": "Ajoutez au moins un résultat de dé."
+    }
+  },
+  "criticals": {
+    "title": "Règles critiques",
+    "description": "Mettez en évidence les messages de dés lorsque les totaux dépassent ou passent sous des seuils importants. Si plusieurs règles correspondent, la dernière de la liste gagne.",
+    "creatorOnly": "Seul le créateur de la salle peut gérer les règles critiques.",
+    "number": "Nombre",
+    "numberPlaceholder": "ex. 20",
+    "comparison": "Comparaison",
+    "colorSource": "Source de couleur",
+    "presetColor": "Couleur prédéfinie",
+    "customColor": "Couleur personnalisée",
+    "preview": "Aperçu",
+    "addRule": "Ajouter une règle",
+    "savedRules": "Règles enregistrées",
+    "ruleDescription": "Met en évidence le message de dés complet quand le résultat est {operator} {threshold}.",
+    "empty": "Aucune règle critique. Ajoutez-en une ci-dessus pour colorer les messages de dés.",
+    "operators": {
+      "moreThan": "Plus que",
+      "lessThan": "Moins que"
+    },
+    "colorModes": {
+      "preset": "Couleurs prédéfinies",
+      "custom": "Sélecteur de couleur"
+    },
+    "colors": {
+      "crimson": "Cramoisi",
+      "amber": "Ambre",
+      "gold": "Or",
+      "emerald": "Émeraude",
+      "teal": "Sarcelle",
+      "sky": "Ciel",
+      "indigo": "Indigo",
+      "rose": "Rose"
+    },
+    "feedback": {
+      "saved": "Règles critiques enregistrées."
+    },
+    "errors": {
+      "signIn": "Connectez-vous pour gérer les règles critiques.",
+      "save": "Impossible d’enregistrer les règles critiques.",
+      "maxRules": "Vous ne pouvez enregistrer que {count} règles critiques.",
+      "numberRequired": "Un nombre est requis.",
+      "wholeNumber": "Le nombre doit être entier.",
+      "duplicate": "Une règle avec cette comparaison et ce nombre existe déjà."
     }
   }
 }

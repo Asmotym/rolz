@@ -5,7 +5,7 @@
         v-bind="props"
         variant="text"
         class="language-switcher mr-2"
-        :title="currentLanguageName"
+      :title="t('language.current', { language: currentLanguageName })"
       >
         <v-icon icon="mdi-translate" class="mr-2" />
         <span class="fallback-text">{{ currentLanguageCode }}</span>
@@ -38,7 +38,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { setLocale, getAvailableLocales, type LocaleKey } from 'modules/language-switcher/plugins/i18n.plugin'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const availableLocales = getAvailableLocales()
 const currentLocale = computed(() => locale.value as LocaleKey)
@@ -49,7 +49,7 @@ async function changeLanguage(langCode: LocaleKey) {
   try {
     await setLocale(langCode)
   } catch (error) {
-    console.error('Failed to change language:', error)
+    console.error(t('language.changeError'), error)
   }
 }
 </script>

@@ -5,14 +5,14 @@
         <div>
           <div class="text-h6">{{ room.name }}</div>
           <div class="text-medium-emphasis d-flex align-center gap-2">
-            <small>Invite code: {{ displayedInviteCode }}</small>
+            <small>{{ t('chat.inviteCode', { code: displayedInviteCode }) }}</small>
             <v-btn
               variant="text"
               size="x-small"
               :icon="showInviteCode ? 'mdi-eye-off' : 'mdi-eye'"
               :disabled="!room?.inviteCode"
-              :title="showInviteCode ? 'Hide invite code' : 'Show invite code'"
-              :aria-label="showInviteCode ? 'Hide invite code' : 'Show invite code'"
+              :title="showInviteCode ? t('chat.hideInviteCode') : t('chat.showInviteCode')"
+              :aria-label="showInviteCode ? t('chat.hideInviteCode') : t('chat.showInviteCode')"
               @click="toggleInviteVisibility"
             />
           </div>
@@ -23,14 +23,14 @@
             icon="mdi-cog"
             variant="text"
             :disabled="!room || !currentUser"
-            :title="'Room settings'"
+            :title="t('chat.roomSettings')"
             @click="openSettingsPanel"
           />
           <v-btn
             icon="mdi-content-copy"
             variant="text"
             :disabled="!inviteLink"
-            :title="'Copy invite link'"
+            :title="t('chat.copyInviteLink')"
             @click="copyInviteLink"
           />
         </div>
@@ -64,7 +64,7 @@
               <v-text-field
                 ref="messageInput"
                 v-model="messageText"
-                label="Send a message or roll a dice (e.g. d100, 2d100, +2d100, ...)"
+                :label="t('chat.messageInput')"
                 variant="outlined"
                 density="comfortable"
                 @keyup.enter="sendMessage"
@@ -81,10 +81,10 @@
                 </template>
               </v-text-field>
               <div class="text-caption text-medium-emphasis d-flex flex-column">
-                <span>You can prepend a dice roll with a "+"" or "-"", while "+" will count the roll as an advantage</span>
-                <span>Examples:</span>
-                <span class="ml-4">- "+2d100" will count the roll as an advantage and keep the best roll</span>
-                <span class="ml-4">- "-2d100" will count the roll as a disadvantage and keep the worst roll</span>
+                <span>{{ t('chat.dicePrefixHelp') }}</span>
+                <span>{{ t('chat.examples') }}</span>
+                <span class="ml-4">{{ t('chat.advantageExample') }}</span>
+                <span class="ml-4">{{ t('chat.disadvantageExample') }}</span>
               </div>
             </div>
           </div>
@@ -110,8 +110,8 @@
                 color="primary"
                 class="mb-2"
               >
-                <v-tab value="dices">Dices</v-tab>
-                <v-tab value="rollAwards">Roll Awards</v-tab>
+                <v-tab value="dices">{{ t('roomSettings.tabs.dices') }}</v-tab>
+                <v-tab value="rollAwards">{{ t('roomSettings.tabs.rollAwards') }}</v-tab>
               </v-tabs>
 
               <v-window v-model="diceSidebarTab" class="dice-section-content">
@@ -135,9 +135,9 @@
     <template v-else>
       <v-card-text class="text-center py-12">
         <v-icon size="48" color="primary" class="mb-4">mdi-dice-5</v-icon>
-        <div class="text-h6 mb-2">Select or create a room</div>
+        <div class="text-h6 mb-2">{{ t('chat.emptyTitle') }}</div>
         <p class="text-body-2 text-medium-emphasis">
-          Pick a room from the list on the left or create a new one to start chatting and rolling dice.
+          {{ t('chat.emptyDescription') }}
         </p>
       </v-card-text>
     </template>
@@ -153,6 +153,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, useRoomDiceManager } from 'core/composables/useRoomDiceManager';
@@ -187,6 +188,8 @@ const props = defineProps<{
   historyLoading: boolean;
   canLoadOlder: boolean;
 }>();
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   (event: 'send-message', message: string): void;
@@ -392,7 +395,7 @@ async function copyInviteLink() {
   try {
     await navigator.clipboard.writeText(inviteLink.value);
   } catch (error) {
-    console.error('Unable to copy invite link', error);
+    console.error(t('chat.copyInviteLinkError'), error);
   }
 }
 

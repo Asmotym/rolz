@@ -1,18 +1,18 @@
 <template>
   <section class="roll-awards-panel">
     <div class="roll-awards-panel__header">
-      <h3 class="text-subtitle-1">🏆 Roll Awards</h3>
+      <h3 class="text-subtitle-1">🏆 {{ t('rollAwards.title') }}</h3>
       <v-btn
         variant="text"
         size="small"
         :disabled="!canOpenSettings"
         @click="handleManageClick"
       >
-        Manage
+        {{ t('common.manage') }}
       </v-btn>
     </div>
     <p class="text-caption text-medium-emphasis mb-3">
-      These awards automatically go to the players who match their tracked dice results the most.
+      {{ t('rollAwards.panel.description') }}
     </p>
 
     <v-alert
@@ -21,10 +21,10 @@
       variant="tonal"
       density="comfortable"
     >
-      Roll Awards are disabled for this room.
+      {{ t('rollAwards.panel.disabled') }}
       <template #append>
         <v-btn variant="text" size="small" :disabled="!canOpenSettings" @click="handleManageClick">
-          Settings
+          {{ t('navigation.settings') }}
         </v-btn>
       </template>
     </v-alert>
@@ -45,7 +45,7 @@
       >
         {{ awardsUiError }}
         <template #append>
-          <v-btn variant="text" size="small" @click="retryAwardsDataLoad">Retry</v-btn>
+          <v-btn variant="text" size="small" @click="retryAwardsDataLoad">{{ t('common.retry') }}</v-btn>
         </template>
       </v-alert>
       <template v-else>
@@ -53,10 +53,10 @@
           v-if="rollAwardsManager.rollAwardsWindowSize.value"
           class="text-caption text-medium-emphasis mb-2"
         >
-          Considering the last {{ rollAwardsManager.rollAwardsWindowSize.value }} dice rolls.
+          {{ t('rollAwards.panel.window', { count: rollAwardsManager.rollAwardsWindowSize.value }) }}
         </div>
         <div v-if="rollAwardsManager.awards.value.length === 0" class="text-caption text-medium-emphasis">
-          No awards defined yet. Use the Manage button to create one.
+          {{ t('rollAwards.panel.empty') }}
         </div>
         <div v-else>
           <div class="d-flex justify-end mb-2">
@@ -66,11 +66,11 @@
               prepend-icon="mdi-eye-outline"
               @click="showOnlyObtainedAwards = !showOnlyObtainedAwards"
             >
-              {{ showOnlyObtainedAwards ? 'Show all awards' : 'Show obtained only' }}
+              {{ showOnlyObtainedAwards ? t('rollAwards.panel.showAll') : t('rollAwards.panel.showObtained') }}
             </v-btn>
           </div>
           <div v-if="visibleAwardSummaries.length === 0" class="text-caption text-medium-emphasis">
-            No awards have been obtained yet. Try showing all awards to see every entry.
+            {{ t('rollAwards.panel.noObtained') }}
           </div>
           <div v-else class="roll-awards-panel__list">
             <v-card
@@ -83,13 +83,13 @@
                 <div>
                   <div class="text-subtitle-2">{{ awardSummary.award.name }}</div>
                   <div class="text-caption text-medium-emphasis">
-                    Tracking:
+                    {{ t('rollAwards.panel.tracking') }}:
                     <span v-for="(result, index) in awardSummary.award.diceResults" :key="`${awardSummary.award.id}-${result}-${index}`">
                       {{ result }}<span v-if="index < awardSummary.award.diceResults.length - 1">, </span>
                     </span>
                   </div>
                   <div v-if="getAwardNotations(awardSummary.award).length" class="text-caption text-medium-emphasis">
-                    Only counting {{ formatAwardNotations(awardSummary.award) }} rolls
+                    {{ t('rollAwards.onlyCounting', { notations: formatAwardNotations(awardSummary.award) }) }}
                   </div>
                 </div>
                 <div class="text-right">
@@ -103,7 +103,7 @@
                     </span>
                   </div>
                   <div v-else class="text-caption text-medium-emphasis">
-                    No winner yet
+                    {{ t('rollAwards.panel.noWinner') }}
                   </div>
                 </div>
               </div>
@@ -111,7 +111,7 @@
                 {{ awardSummary.award.description }}
               </div>
               <div v-if="awardSummary.leaders.length" class="text-caption text-medium-emphasis">
-                {{ awardSummary.leaders.length > 1 ? 'Tied leaders' : 'Current leader' }} with {{ awardSummary.maxHits }} hit{{ awardSummary.maxHits === 1 ? '' : 's' }}.
+                {{ t(awardSummary.leaders.length > 1 ? 'rollAwards.panel.tiedLeaders' : 'rollAwards.panel.currentLeader', { count: awardSummary.maxHits }) }}
               </div>
             </v-card>
           </div>
@@ -123,6 +123,7 @@
 
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import type { RoomDetails, RoomMessage, RoomRollAward } from 'netlify/core/types/data.types';
 import { formatDisplayName } from 'core/utils/room-formatting.utils';
@@ -138,6 +139,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'manage-awards'): void;
 }>();
+
+const { t } = useI18n();
 
 const injectedRollAwardsManager = inject<RoomRollAwardsManager>(RoomRollAwardsManagerKey);
 
@@ -295,7 +298,7 @@ async function loadDiceRolls(force = false) {
     diceRollsLoadedRoomId.value = roomId;
     diceRollsWindowApplied.value = windowSize;
   } catch (error) {
-    diceRollsError.value = error instanceof Error ? error.message : 'Unable to load recent dice rolls';
+    diceRollsError.value = error instanceof Error ? error.message : t('rollAwards.errors.loadRecentDiceRolls');
   } finally {
     diceRollsLoading.value = false;
     diceReloading = false;

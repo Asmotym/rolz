@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { isNavigationFailure, useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import RoomsSidebar from './RoomsSidebar.component.vue';
 import RoomChatPanel from './RoomChatPanel.component.vue';
 import { ROOM_MESSAGES_PAGE_SIZE, useRoomsStore } from 'core/stores/rooms.store';
@@ -63,6 +64,7 @@ const roomsStore = useRoomsStore();
 const discordService = DiscordService.getInstance();
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 const currentUser = computed(() => discordService.user.value);
 const rooms = computed(() => roomsStore.rooms.filter((room) => !room.isArchived));
@@ -155,7 +157,7 @@ async function attemptInviteJoin() {
   if (!pendingInvite.value || !currentUser.value) return;
   try {
     await handleJoinRoom({ inviteCode: pendingInvite.value });
-    showFeedback('success', 'Joined room via invite link');
+    showFeedback('success', t('rooms.feedback.joinedViaInvite'));
   } catch (error) {
     console.error(error);
   } finally {
@@ -173,7 +175,7 @@ async function handleCreateRoom(payload: { name: string; password?: string | nul
     if (room) {
       navigateToRoom(room.id);
     }
-    showFeedback('success', 'Room created successfully');
+    showFeedback('success', t('rooms.feedback.created'));
   } catch (error) {
     console.error(error);
   }
@@ -189,7 +191,7 @@ async function handleJoinRoom(payload: { inviteCode: string; password?: string |
     if (room) {
       navigateToRoom(room.id);
     }
-    showFeedback('success', 'Joined room');
+    showFeedback('success', t('rooms.feedback.joined'));
     return room;
   } catch (error) {
     console.error(error);

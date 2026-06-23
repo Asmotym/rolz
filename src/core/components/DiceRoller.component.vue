@@ -9,15 +9,15 @@
           block
           @click="quickRoll('1d100')"
         >
-          Roll D100
+          {{ t('dice.roller.rollD100') }}
         </v-btn>
       </div>
 
       <div>
         <v-text-field
           v-model="rollDescription"
-          label="Description (optional)"
-          placeholder="e.g., Attack roll"
+          :label="t('dice.fields.descriptionOptional')"
+          :placeholder="t('dice.fields.descriptionPlaceholder')"
           variant="outlined"
           density="compact"
           class="mt-2"
@@ -30,6 +30,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   rollDiceNotation,
   type DiceRoll,
@@ -39,6 +40,8 @@ import {
 const emit = defineEmits<{
   (e: 'rolled', roll: DiceRoll): void;
 }>();
+
+const { t } = useI18n();
 
 // Reactive data
 const modifier = ref(0);
@@ -65,7 +68,7 @@ function quickRoll(notation: string) {
     );
     addRollToHistory(roll);
   } catch (error) {
-    console.error('Invalid dice notation:', error);
+    console.error(t('dice.errors.invalidNotationLog'), error);
   }
 }
 

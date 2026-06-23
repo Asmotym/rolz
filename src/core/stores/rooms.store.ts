@@ -2,8 +2,10 @@ import { defineStore } from 'pinia';
 import type { RoomCriticalRule, RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiceRoll } from 'core/utils/dice.utils';
 import { RoomsService } from 'core/services/rooms.service';
+import i18n from 'modules/language-switcher/plugins/i18n.plugin';
 
 export const ROOM_MESSAGES_PAGE_SIZE = 20;
+const t = i18n.global.t;
 
 interface LiveTimer {
     id: number | null;
@@ -49,7 +51,7 @@ export const useRoomsStore = defineStore('rooms', {
                 const rooms = await RoomsService.fetchUserRooms(userId);
                 this.rooms = rooms.sort(sortRoomsByActivity);
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to load rooms');
+                this.setError(error instanceof Error ? error.message : t('rooms.errors.load'));
                 throw error;
             } finally {
                 this.loadingRooms = false;
@@ -64,7 +66,7 @@ export const useRoomsStore = defineStore('rooms', {
                 await this.selectRoom(room.id, payload.userId);
                 return room;
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to create room');
+                this.setError(error instanceof Error ? error.message : t('rooms.errors.create'));
                 throw error;
             } finally {
                 this.creatingRoom = false;
@@ -79,7 +81,7 @@ export const useRoomsStore = defineStore('rooms', {
                 await this.selectRoom(room.id, payload.userId);
                 return room;
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to join room');
+                this.setError(error instanceof Error ? error.message : t('rooms.errors.join'));
                 throw error;
             } finally {
                 this.joiningRoom = false;
@@ -114,7 +116,7 @@ export const useRoomsStore = defineStore('rooms', {
                 this.lastMessageAt = this.messages.length > 0 ? this.messages[this.messages.length - 1].createdAt : null;
                 this.historyExhausted = messages.length < limit;
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to load messages');
+                this.setError(error instanceof Error ? error.message : t('rooms.errors.loadMessages'));
             }
         },
         async refreshMessages(roomId: string, userId?: string | null) {
@@ -146,7 +148,7 @@ export const useRoomsStore = defineStore('rooms', {
                 });
                 this.appendMessages([message]);
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to send message');
+                this.setError(error instanceof Error ? error.message : t('rooms.errors.sendMessage'));
                 throw error;
             } finally {
                 this.sendingMessage = false;
@@ -169,7 +171,7 @@ export const useRoomsStore = defineStore('rooms', {
                 });
                 this.appendMessages([message]);
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to send dice result');
+                this.setError(error instanceof Error ? error.message : t('rooms.errors.sendDice'));
                 throw error;
             } finally {
                 this.sendingMessage = false;
@@ -208,7 +210,7 @@ export const useRoomsStore = defineStore('rooms', {
                     this.historyExhausted = true;
                 }
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to load older messages');
+                this.setError(error instanceof Error ? error.message : t('rooms.errors.loadOlderMessages'));
             } finally {
                 this.historyLoading = false;
             }
@@ -220,7 +222,7 @@ export const useRoomsStore = defineStore('rooms', {
                 this.upsertRoom(room);
                 return room;
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to update room settings');
+                this.setError(error instanceof Error ? error.message : t('roomSettings.errors.updateSettings'));
                 throw error;
             }
         },
@@ -231,7 +233,7 @@ export const useRoomsStore = defineStore('rooms', {
                 this.upsertRoom(room);
                 return room;
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to update room criticals');
+                this.setError(error instanceof Error ? error.message : t('criticals.errors.save'));
                 throw error;
             }
         },
@@ -240,7 +242,7 @@ export const useRoomsStore = defineStore('rooms', {
             try {
                 return await RoomsService.updateNickname(payload);
             } catch (error) {
-                this.setError(error instanceof Error ? error.message : 'Unable to update nickname');
+                this.setError(error instanceof Error ? error.message : t('roomSettings.errors.updateNickname'));
                 throw error;
             }
         },

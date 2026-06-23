@@ -2,7 +2,18 @@
   "common": {
     "title": "Rolz",
     "disconnect": "Logout",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "logoAlt": "Rolz d100 icon",
+    "reportIssue": "Report bug or request feature",
+    "retry": "Retry",
+    "clear": "Clear",
+    "save": "Save",
+    "close": "Close",
+    "saveChanges": "Save Changes",
+    "manage": "Manage",
+    "someone": "Someone",
+    "unknownAdventurer": "Unknown Adventurer",
+    "unknownDate": "Unknown date"
   },
   "navigation": {
     "home": "Home",
@@ -100,6 +111,319 @@
         "deleteSuccess": "Room {name} was archived.",
         "restoreSuccess": "Room {name} is active again."
       }
+    }
+  },
+  "language": {
+    "current": "Current language: {language}",
+    "changeError": "Failed to change language:"
+  },
+  "errors": {
+    "invalidServerResponse": "Invalid server response",
+    "unknown": "Unknown error",
+    "unexpectedServer": "Unexpected server error"
+  },
+  "rooms": {
+    "sidebar": {
+      "title": "Rooms",
+      "empty": "No rooms yet. Create one to get rolling.",
+      "createTitle": "Create a room",
+      "roomName": "Room name",
+      "passwordOptional": "Password (optional)",
+      "publicRoomHint": "Leave empty for a public room",
+      "create": "Create room",
+      "joinTitle": "Join via invite",
+      "inviteCode": "Invite code",
+      "passwordIfNeeded": "Password (if needed)",
+      "join": "Join room",
+      "noActivity": "No activity yet"
+    },
+    "feedback": {
+      "joinedViaInvite": "Joined room via invite link",
+      "created": "Room created successfully",
+      "joined": "Joined room"
+    },
+    "errors": {
+      "load": "Unable to load rooms",
+      "create": "Unable to create room",
+      "join": "Unable to join room",
+      "loadMessages": "Unable to load messages",
+      "sendMessage": "Unable to send message",
+      "sendDice": "Unable to send dice result",
+      "loadOlderMessages": "Unable to load older messages"
+    }
+  },
+  "chat": {
+    "inviteCode": "Invite code: {code}",
+    "hideInviteCode": "Hide invite code",
+    "showInviteCode": "Show invite code",
+    "roomSettings": "Room settings",
+    "copyInviteLink": "Copy invite link",
+    "messageInput": "Send a message or roll a dice (e.g. d100, 2d100, +2d100, ...)",
+    "dicePrefixHelp": "You can prepend a dice roll with a \"+\" or \"-\"; \"+\" counts the roll as an advantage.",
+    "examples": "Examples:",
+    "advantageExample": "- \"+2d100\" counts the roll as an advantage and keeps the best roll",
+    "disadvantageExample": "- \"-2d100\" counts the roll as a disadvantage and keeps the worst roll",
+    "emptyTitle": "Select or create a room",
+    "emptyDescription": "Pick a room from the list on the left or create a new one to start chatting and rolling dice.",
+    "copyInviteLinkError": "Unable to copy invite link"
+  },
+  "messages": {
+    "rolled": "{name} rolled {notation}",
+    "rolledWithDescription": "{name} rolled {notation} ({description})",
+    "result": "Result",
+    "rolls": "Rolls"
+  },
+  "members": {
+    "count": "{count} member | {count} members",
+    "title": "Room members",
+    "total": "{count} total",
+    "online": "{count} online",
+    "connected": "Connected",
+    "joined": "Joined {date}",
+    "connectedNow": "Connected now",
+    "lastSeen": "Last seen {date}",
+    "empty": "No members yet. Invite a friend to get started.",
+    "loadError": "Unable to load members"
+  },
+  "dice": {
+    "roller": {
+      "rollD100": "Roll D100"
+    },
+    "actions": {
+      "add": "Add dice",
+      "addNew": "Add a new custom dice"
+    },
+    "confirmDelete": "Delete this dice?",
+    "fields": {
+      "notation": "Dice notation",
+      "notationPlaceholderAdvantage": "e.g., +2d100",
+      "notationPlaceholderDisadvantage": "e.g., -2d100",
+      "notationHint": "Use + for advantage and - for disadvantage, such as +2d100 or -2d100.",
+      "descriptionOptional": "Description (optional)",
+      "descriptionPlaceholder": "e.g., Attack roll",
+      "customDescriptionPlaceholder": "e.g., Longsword attack"
+    },
+    "category": {
+      "title": "Dice categories",
+      "label": "Category",
+      "default": "Default",
+      "other": "Other",
+      "general": "General",
+      "loading": "Loading categories...",
+      "hint": "Group similar dice together",
+      "signIn": "Sign in to manage categories for this room.",
+      "description": "Group similar dice together by creating categories you can reuse.",
+      "name": "Category name",
+      "placeholder": "e.g., Attacks",
+      "create": "Create category",
+      "display": "Category: {category}"
+    },
+    "panel": {
+      "title": "Dice Roll",
+      "signIn": "Sign in to manage and roll your custom dice for this room.",
+      "empty": "You haven't saved any dice for this room yet. Add one from Settings -> Dices."
+    },
+    "settings": {
+      "createTitle": "Create a custom dice",
+      "signInDice": "Sign in to manage your dice for this room.",
+      "createHelp": "Provide a dice notation (e.g., 1d20+3, +2d100, or -2d100) and optionally a description to remember what it is for.",
+      "myDice": "My dice",
+      "signInView": "Room dice are tied to your account access. Sign in to view them.",
+      "empty": "You haven't saved any dice for this room yet. Use the form above to add one."
+    },
+    "errors": {
+      "loadRoomDice": "Unable to load room dice",
+      "rollDice": "Unable to roll this dice.",
+      "needRoomForDice": "You need to be in a room to add dice.",
+      "notationRequired": "Dice notation is required.",
+      "invalidNotation": "Enter a valid dice notation (e.g., 1d20+3, +2d100, or -2d100).",
+      "addDice": "Unable to add dice.",
+      "updateDice": "Unable to update dice.",
+      "deleteDice": "Unable to delete dice.",
+      "needRoomForCategory": "You need to be in a room to add categories.",
+      "categoryRequired": "Category name is required.",
+      "createCategory": "Unable to create category.",
+      "invalidNotationLog": "Invalid dice notation:"
+    }
+  },
+  "roomSettings": {
+    "title": "Settings",
+    "tabs": {
+      "room": "Room",
+      "dices": "Dices",
+      "rollAwards": "Roll Awards",
+      "criticals": "Criticals"
+    },
+    "roomDetails": {
+      "title": "Room details",
+      "creatorHelp": "You can rename this room for everyone.",
+      "nonCreatorHelp": "Only the creator can rename this room.",
+      "maxRoomName": "Max 80 characters"
+    },
+    "nickname": {
+      "title": "My nickname",
+      "help": "Set a display nickname for this room only. Leave blank to use your Discord username.",
+      "label": "Nickname",
+      "maxNickname": "Max 40 characters",
+      "preview": "Preview: {name}"
+    },
+    "feedback": {
+      "saved": "Settings saved.",
+      "noChanges": "No changes to save."
+    },
+    "errors": {
+      "loadMemberSettings": "Unable to load your settings",
+      "updateSettings": "Unable to update room settings",
+      "roomNameRequired": "Room name is required.",
+      "updateRoomName": "Unable to update room name.",
+      "updateNickname": "Unable to update nickname."
+    }
+  },
+  "rollAwards": {
+    "title": "Roll Awards",
+    "onlyCounting": "Only counting {notations} rolls",
+    "onlyCountsUsing": "Only counts rolls using {notations}",
+    "countsEveryNotation": "Counts every dice notation",
+    "panel": {
+      "description": "These awards automatically go to the players who match their tracked dice results the most.",
+      "disabled": "Roll Awards are disabled for this room.",
+      "window": "Considering the last {count} dice rolls.",
+      "empty": "No awards defined yet. Use the Manage button to create one.",
+      "showAll": "Show all awards",
+      "showObtained": "Show obtained only",
+      "noObtained": "No awards have been obtained yet. Try showing all awards to see every entry.",
+      "tracking": "Tracking",
+      "noWinner": "No winner yet",
+      "currentLeader": "Current leader with {count} hit. | Current leader with {count} hits.",
+      "tiedLeaders": "Tied leaders with {count} hit. | Tied leaders with {count} hits."
+    },
+    "settings": {
+      "description": "Track iconic dice results and automatically highlight the players who roll them most often.",
+      "creatorOnly": "Only the room creator can enable and edit Roll Awards.",
+      "enable": "Enable Roll Awards for this room",
+      "countFrom": "Count results from",
+      "numberOfRolls": "Number of rolls",
+      "saveHint": "Changes apply after saving.",
+      "disabled": "Roll Awards are currently disabled. Toggle the switch above to start configuring them."
+    },
+    "window": {
+      "all": "All rolls",
+      "last": "Last {count} rolls",
+      "custom": "Custom"
+    },
+    "clipboard": {
+      "copy": "Copy awards",
+      "paste": "Paste awards",
+      "unavailable": "Clipboard is not available in this browser.",
+      "copySuccess": "Awards copied to clipboard.",
+      "copyError": "Unable to copy awards to clipboard.",
+      "readError": "Unable to read from clipboard."
+    },
+    "form": {
+      "createTitle": "Create a Roll Award",
+      "help": "Add the dice results that should count toward this award, then give it a descriptive name. Optionally filter it to a specific dice notation.",
+      "editing": "Editing existing award. Changes will update \"{name}\".",
+      "thisAward": "this award",
+      "diceResult": "Dice result",
+      "addDiceResult": "Add dice result",
+      "notationFilter": "Dice notation filter (optional)",
+      "notationPlaceholder": "d20, d100",
+      "notationHint": "Separate die sizes with commas (e.g., d20, d100). Leave blank to include all dice.",
+      "awardName": "Award name",
+      "awardNamePlaceholder": "e.g., Natural 20 Champion",
+      "descriptionPlaceholder": "What makes this award special?",
+      "ownerHelp": "Players who total the most tracked results automatically own this award.",
+      "update": "Update award",
+      "save": "Save award",
+      "cancelEdit": "Cancel edit",
+      "existing": "Existing awards",
+      "empty": "No awards created yet. Use the form above to add your first Roll Award."
+    },
+    "import": {
+      "title": "Import Roll Awards",
+      "description": "Review the awards detected from your clipboard before importing them into this room.",
+      "noneFound": "No valid awards found to import.",
+      "cleanTitle": "Remove existing awards and replace them",
+      "clean": "Clean & Import",
+      "importTitle": "Import new awards",
+      "import": "Import",
+      "noValidClipboard": "No valid awards detected in clipboard.",
+      "enableFirst": "Enable Roll Awards before importing.",
+      "creatorOnly": "Only the room creator can import awards.",
+      "noAwards": "No awards to import.",
+      "removeExistingError": "Failed to remove existing awards.",
+      "createAwardError": "Failed to create an imported award.",
+      "replaceSuccess": "Awards replaced successfully.",
+      "importSuccess": "Awards imported successfully.",
+      "importError": "Unable to import awards."
+    },
+    "errors": {
+      "load": "Unable to load Roll Awards",
+      "loadRecentDiceRolls": "Unable to load recent dice rolls",
+      "creatorSetting": "Only the room creator can change this setting.",
+      "updateSetting": "Unable to update setting",
+      "signIn": "Sign in to manage awards.",
+      "save": "Unable to save award",
+      "delete": "Unable to delete award",
+      "update": "Unable to update award",
+      "windowRequired": "Enter the number of rolls to consider.",
+      "windowRange": "Enter a value between {min} and {max}.",
+      "resultRequired": "Enter a dice result to add.",
+      "resultRange": "Dice results must be between {min} and {max}.",
+      "duplicateResult": "This result is already included.",
+      "maxResults": "You can only track up to {count} results per award.",
+      "notationFormat": "Dice notation must look like d20 or d100.",
+      "maxNotations": "You can only filter by up to {count} dice notations.",
+      "notationLength": "Dice notation filters are too long (max {count} characters combined).",
+      "enableBeforeManage": "Enable Roll Awards before managing entries.",
+      "nameRequired": "Award name is required.",
+      "descriptionLength": "Description must be {count} characters or fewer.",
+      "atLeastOneResult": "Add at least one dice result."
+    }
+  },
+  "criticals": {
+    "title": "Critical rules",
+    "description": "Highlight dice messages when totals are above or below important thresholds. If multiple rules match, the last one in the list wins.",
+    "creatorOnly": "Only the room creator can manage critical rules.",
+    "number": "Number",
+    "numberPlaceholder": "e.g., 20",
+    "comparison": "Comparison",
+    "colorSource": "Color source",
+    "presetColor": "Preset color",
+    "customColor": "Custom color",
+    "preview": "Preview",
+    "addRule": "Add rule",
+    "savedRules": "Saved rules",
+    "ruleDescription": "Highlights the full dice message when the result is {operator} {threshold}.",
+    "empty": "No critical rules yet. Add one above to color dice messages in this room.",
+    "operators": {
+      "moreThan": "More than",
+      "lessThan": "Less than"
+    },
+    "colorModes": {
+      "preset": "Preset colors",
+      "custom": "Color picker"
+    },
+    "colors": {
+      "crimson": "Crimson",
+      "amber": "Amber",
+      "gold": "Gold",
+      "emerald": "Emerald",
+      "teal": "Teal",
+      "sky": "Sky",
+      "indigo": "Indigo",
+      "rose": "Rose"
+    },
+    "feedback": {
+      "saved": "Critical rules saved."
+    },
+    "errors": {
+      "signIn": "Sign in to manage critical rules.",
+      "save": "Unable to save critical rules.",
+      "maxRules": "You can only save up to {count} critical rules.",
+      "numberRequired": "A number is required.",
+      "wholeNumber": "The number must be a whole number.",
+      "duplicate": "A rule with this comparison and number already exists."
     }
   }
 }

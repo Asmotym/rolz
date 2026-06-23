@@ -1,7 +1,9 @@
+import i18n from 'modules/language-switcher/plugins/i18n.plugin';
+
 export function formatDisplayName(
   username?: string | null,
   nickname?: string | null,
-  fallback = 'Unknown Adventurer'
+  fallback = i18n.global.t('common.unknownAdventurer')
 ) {
   const hasUsername = typeof username === 'string' && username.trim().length > 0;
   const base = hasUsername ? (username as string).trim() : fallback;
@@ -14,7 +16,7 @@ export function formatDisplayName(
 }
 
 export function formatTimestamp(value?: string | null) {
-  if (!value) return 'Unknown date';
+  if (!value) return i18n.global.t('common.unknownDate');
   try {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: 'short',

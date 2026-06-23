@@ -1,7 +1,9 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
 import type { RoomCriticalRule, RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory, RoomRollAward } from 'netlify/core/types/data.types';
+import i18n from 'modules/language-switcher/plugins/i18n.plugin';
 
 const ROOMS_ENDPOINT = getApiUrl('/rooms');
+const t = i18n.global.t;
 
 type RequestPayload = Record<string, unknown>;
 
@@ -38,11 +40,11 @@ async function request<T>(body: RequestPayload): Promise<T> {
     }
 
     if (!payload) {
-        throw new Error('Invalid server response');
+        throw new Error(t('errors.invalidServerResponse'));
     }
 
     if (!payload.success) {
-        throw new Error(payload.error || 'Unknown error');
+        throw new Error(payload.error || t('errors.unknown'));
     }
 
     return payload.data;
@@ -271,11 +273,11 @@ export class RoomsService {
         }
 
         if (!payload) {
-            throw new Error('Invalid server response');
+            throw new Error(t('errors.invalidServerResponse'));
         }
 
         if (!payload.success) {
-            throw new Error(payload.error || 'Unknown error');
+            throw new Error(payload.error || t('errors.unknown'));
         }
 
         return payload.data.diceRolls;

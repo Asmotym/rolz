@@ -2,8 +2,10 @@ import { ref, watch } from 'vue';
 import type { RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
+import i18n from 'modules/language-switcher/plugins/i18n.plugin';
 
 export const RoomRollAwardsManagerKey = Symbol('RoomRollAwardsManager');
+const t = i18n.global.t;
 
 export function useRoomRollAwardsManager(
   getRoom: () => RoomDetails | null,
@@ -45,7 +47,7 @@ export function useRoomRollAwardsManager(
       rollAwardsWindowSize.value = windowSize ?? null;
       awardsLoadedRoomId.value = room.id;
     } catch (error) {
-      awardsError.value = error instanceof Error ? error.message : 'Unable to load Roll Awards';
+      awardsError.value = error instanceof Error ? error.message : t('rollAwards.errors.load');
     } finally {
       awardsLoading.value = false;
     }
@@ -63,7 +65,7 @@ export function useRoomRollAwardsManager(
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
-      toggleError.value = 'Only the room creator can change this setting.';
+      toggleError.value = t('rollAwards.errors.creatorSetting');
       return false;
     }
     toggleLoading.value = true;
@@ -85,7 +87,7 @@ export function useRoomRollAwardsManager(
       }
       return result.enabled;
     } catch (error) {
-      toggleError.value = error instanceof Error ? error.message : 'Unable to update setting';
+      toggleError.value = error instanceof Error ? error.message : t('rollAwards.errors.updateSetting');
       return false;
     } finally {
       toggleLoading.value = false;
@@ -96,7 +98,7 @@ export function useRoomRollAwardsManager(
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
-      awardMutationError.value = 'Sign in to manage awards.';
+      awardMutationError.value = t('rollAwards.errors.signIn');
       return null;
     }
     awardMutationLoading.value = true;
@@ -113,7 +115,7 @@ export function useRoomRollAwardsManager(
       awards.value = [...awards.value, normalizeAwardNotation(created)];
       return created;
     } catch (error) {
-      awardMutationError.value = error instanceof Error ? error.message : 'Unable to save award';
+      awardMutationError.value = error instanceof Error ? error.message : t('rollAwards.errors.save');
       return null;
     } finally {
       awardMutationLoading.value = false;
@@ -124,7 +126,7 @@ export function useRoomRollAwardsManager(
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
-      awardMutationError.value = 'Sign in to manage awards.';
+      awardMutationError.value = t('rollAwards.errors.signIn');
       return false;
     }
     awardMutationLoading.value = true;
@@ -134,7 +136,7 @@ export function useRoomRollAwardsManager(
       awards.value = awards.value.filter((award) => award.id !== awardId);
       return true;
     } catch (error) {
-      awardMutationError.value = error instanceof Error ? error.message : 'Unable to delete award';
+      awardMutationError.value = error instanceof Error ? error.message : t('rollAwards.errors.delete');
       return false;
     } finally {
       awardMutationLoading.value = false;
@@ -151,7 +153,7 @@ export function useRoomRollAwardsManager(
     const room = getRoom();
     const user = getCurrentUser();
     if (!room || !user) {
-      awardMutationError.value = 'Sign in to manage awards.';
+      awardMutationError.value = t('rollAwards.errors.signIn');
       return null;
     }
     awardMutationLoading.value = true;
@@ -169,7 +171,7 @@ export function useRoomRollAwardsManager(
       awards.value = awards.value.map((award) => (award.id === awardId ? normalizeAwardNotation(updated) : award));
       return updated;
     } catch (error) {
-      awardMutationError.value = error instanceof Error ? error.message : 'Unable to update award';
+      awardMutationError.value = error instanceof Error ? error.message : t('rollAwards.errors.update');
       return null;
     } finally {
       awardMutationLoading.value = false;

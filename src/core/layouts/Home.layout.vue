@@ -12,7 +12,7 @@
         <template v-slot:prepend>
           <img
             src="/rolz-d100.svg"
-            alt="Rolz d100 icon"
+            :alt="t('common.logoAlt')"
             class="header-logo"
           />
         </template>

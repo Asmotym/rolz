@@ -3,9 +3,10 @@ import type { RoomDetails, RoomDice, RoomDiceCategory } from 'netlify/core/types
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
 import { parseDiceNotation, rollDiceNotation, type DiceRoll } from 'core/utils/dice.utils';
+import i18n from 'modules/language-switcher/plugins/i18n.plugin';
 
 export const RoomDiceManagerKey = Symbol('RoomDiceManager');
-const DICE_NOTATION_ERROR_MESSAGE = 'Enter a valid dice notation (e.g., 1d20+3, +2d100, or -2d100).';
+const t = i18n.global.t;
 
 export function useRoomDiceManager(
   getRoom: () => RoomDetails | null,
@@ -64,7 +65,7 @@ export function useRoomDiceManager(
       ensureCategorySelections();
       roomDicesLoadedKey.value = cacheKey;
     } catch (error) {
-      roomDicesError.value = error instanceof Error ? error.message : 'Unable to load room dice';
+      roomDicesError.value = error instanceof Error ? error.message : t('dice.errors.loadRoomDice');
     } finally {
       roomDicesLoading.value = false;
     }
@@ -96,7 +97,7 @@ export function useRoomDiceManager(
       const roll = rollDiceNotation(dice.notation, {}, dice.description ?? undefined);
       onRoll(roll);
     } catch (error) {
-      diceRollError.value = error instanceof Error ? error.message : 'Unable to roll this dice.';
+      diceRollError.value = error instanceof Error ? error.message : t('dice.errors.rollDice');
     }
   }
 
@@ -112,19 +113,19 @@ export function useRoomDiceManager(
     const room = getRoom();
     const currentUser = getCurrentUser();
     if (!room || !currentUser) {
-      newDiceError.value = 'You need to be in a room to add dice.';
+      newDiceError.value = t('dice.errors.needRoomForDice');
       return;
     }
     const notation = newDiceNotation.value.trim().toLowerCase();
     const description = newDiceDescription.value.trim();
     if (!notation) {
-      newDiceError.value = 'Dice notation is required.';
+      newDiceError.value = t('dice.errors.notationRequired');
       return;
     }
     try {
       parseDiceNotation(notation);
     } catch {
-      newDiceError.value = DICE_NOTATION_ERROR_MESSAGE;
+      newDiceError.value = t('dice.errors.invalidNotation');
       return;
     }
     const categoryId = getValidCategoryId(newDiceCategoryId.value);
@@ -143,7 +144,7 @@ export function useRoomDiceManager(
       roomDicesLoadedKey.value = composeDiceCacheKey(room.id, currentUser.id);
       clearNewDiceForm();
     } catch (error) {
-      diceManagementError.value = error instanceof Error ? error.message : 'Unable to add dice.';
+      diceManagementError.value = error instanceof Error ? error.message : t('dice.errors.addDice');
     } finally {
       diceMutationLoading.value = false;
     }
@@ -174,13 +175,13 @@ export function useRoomDiceManager(
     const notation = editDiceNotation.value.trim().toLowerCase();
     const description = editDiceDescription.value.trim();
     if (!notation) {
-      editDiceError.value = 'Dice notation is required.';
+      editDiceError.value = t('dice.errors.notationRequired');
       return;
     }
     try {
       parseDiceNotation(notation);
     } catch {
-      editDiceError.value = DICE_NOTATION_ERROR_MESSAGE;
+      editDiceError.value = t('dice.errors.invalidNotation');
       return;
     }
     const categoryId = getValidCategoryId(editDiceCategoryId.value);
@@ -198,7 +199,7 @@ export function useRoomDiceManager(
       customDices.value = customDices.value.map((dice) => (dice.id === updated.id ? updated : dice));
       cancelEditingDice();
     } catch (error) {
-      diceManagementError.value = error instanceof Error ? error.message : 'Unable to update dice.';
+      diceManagementError.value = error instanceof Error ? error.message : t('dice.errors.updateDice');
     } finally {
       diceMutationLoading.value = false;
     }
@@ -209,7 +210,7 @@ export function useRoomDiceManager(
     const currentUser = getCurrentUser();
     if (!room || !currentUser) return;
     if (typeof window !== 'undefined') {
-      const confirmed = window.confirm('Delete this dice?');
+      const confirmed = window.confirm(t('dice.confirmDelete'));
       if (!confirmed) {
         return;
       }
@@ -227,7 +228,7 @@ export function useRoomDiceManager(
         cancelEditingDice();
       }
     } catch (error) {
-      diceManagementError.value = error instanceof Error ? error.message : 'Unable to delete dice.';
+      diceManagementError.value = error instanceof Error ? error.message : t('dice.errors.deleteDice');
     } finally {
       diceMutationLoading.value = false;
     }
@@ -237,12 +238,12 @@ export function useRoomDiceManager(
     const room = getRoom();
     const currentUser = getCurrentUser();
     if (!room || !currentUser) {
-      newCategoryError.value = 'You need to be in a room to add categories.';
+      newCategoryError.value = t('dice.errors.needRoomForCategory');
       return;
     }
     const name = newCategoryName.value.trim();
     if (!name) {
-      newCategoryError.value = 'Category name is required.';
+      newCategoryError.value = t('dice.errors.categoryRequired');
       return;
     }
     categoryMutationLoading.value = true;
@@ -262,7 +263,7 @@ export function useRoomDiceManager(
       newCategoryName.value = '';
       ensureCategorySelections();
     } catch (error) {
-      categoryManagementError.value = error instanceof Error ? error.message : 'Unable to create category.';
+      categoryManagementError.value = error instanceof Error ? error.message : t('dice.errors.createCategory');
     } finally {
       categoryMutationLoading.value = false;
     }

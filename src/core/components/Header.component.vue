@@ -5,7 +5,7 @@
         <div class="main-title">
           <img
             src="/rolz-d100.svg"
-            alt="Rolz d100 icon"
+            :alt="t('common.logoAlt')"
             class="header-logo"
           />
           <span>{{ t('common.title') }}</span>
@@ -35,7 +35,7 @@
         :href="BUG_REPORT_LINK"
         target="_blank"
         rel="noreferrer"
-        title="Report bug or request feature"
+        :title="t('common.reportIssue')"
         variant="text"
         color="error"
         class="mr-2"
