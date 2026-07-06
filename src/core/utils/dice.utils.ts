@@ -115,52 +115,6 @@ export function rollDiceNotation(
   };
 }
 
-/**
- * Common RPG dice presets
- */
-export const COMMON_DICE = {
-  d4: '1d4',
-  d6: '1d6',
-  d8: '1d8',
-  d10: '1d10',
-  d12: '1d12',
-  d20: '1d20',
-  d100: '1d100',
-  '2d6': '2d6',
-  '3d6': '3d6',
-  '4d6': '4d6',
-  '5d6': '5d6',
-  '6d6': '6d6'
-};
-
-/**
- * Formats dice roll result for display
- * @param roll - Dice roll result
- * @returns Formatted string
- */
-export function formatDiceRoll(roll: DiceRoll): string {
-  let result = `${roll.dice}: `;
-
-  const { mode } = parseDiceNotation(roll.dice);
-  if (roll.rolls.length === 1) {
-    result += `${roll.total}`;
-  } else if (mode === 'advantage') {
-    result += `[${roll.rolls.join(', ')}] => ${Math.min(...roll.rolls)} = ${roll.total}`;
-  } else if (mode === 'disadvantage') {
-    result += `[${roll.rolls.join(', ')}] => ${Math.max(...roll.rolls)} = ${roll.total}`;
-  } else {
-    result += `[${roll.rolls.join(', ')}] = ${roll.total}`;
-  }
-  
-  if (roll.critical) {
-    result += ' 🎯 CRITICAL!';
-  } else if (roll.fumble) {
-    result += ' 💥 FUMBLE!';
-  }
-  
-  return result;
-}
-
 export interface InlineDiceCommand {
   notation: string;
   description?: string;

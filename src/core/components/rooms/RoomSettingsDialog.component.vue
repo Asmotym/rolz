@@ -29,846 +29,10 @@
         </v-tabs>
 
         <v-window v-model="settingsTab">
-          <v-window-item value="room">
-            <section class="mb-6">
-              <div class="text-subtitle-2 mb-2">{{ t('roomSettings.roomDetails.title') }}</div>
-              <p class="text-caption text-medium-emphasis mb-3">
-                {{ isRoomCreator ? t('roomSettings.roomDetails.creatorHelp') : t('roomSettings.roomDetails.nonCreatorHelp') }}
-              </p>
-              <v-text-field
-                v-model="roomNameInput"
-                :label="t('rooms.sidebar.roomName')"
-                variant="outlined"
-                density="comfortable"
-                :counter="80"
-                maxlength="80"
-                :disabled="!isRoomCreator || settingsSaving"
-                :error-messages="roomNameError ? [roomNameError] : []"
-                :hint="t('roomSettings.roomDetails.maxRoomName')"
-                persistent-hint
-              />
-            </section>
-
-            <v-divider class="my-4" />
-
-            <section>
-              <div class="text-subtitle-2 mb-2">{{ t('roomSettings.nickname.title') }}</div>
-              <p class="text-caption text-medium-emphasis mb-3">
-                {{ t('roomSettings.nickname.help') }}
-              </p>
-              <v-alert
-                v-if="memberSettingsError"
-                type="error"
-                variant="tonal"
-                density="comfortable"
-                class="mb-3"
-              >
-                {{ memberSettingsError }}
-                <v-btn
-                  variant="text"
-                  size="small"
-                  class="ml-2"
-                  @click="ensureMemberSettingsLoaded(true)"
-                >
-                  {{ t('common.retry') }}
-                </v-btn>
-              </v-alert>
-              <v-progress-linear
-                v-if="memberSettingsLoading"
-                indeterminate
-                color="primary"
-                class="mb-3"
-              />
-              <v-text-field
-                v-model="nicknameInput"
-                :label="t('roomSettings.nickname.label')"
-                variant="outlined"
-                density="comfortable"
-                :counter="40"
-                maxlength="40"
-                :disabled="memberSettingsLoading || settingsSaving"
-                :error-messages="nicknameError ? [nicknameError] : []"
-                :hint="t('roomSettings.nickname.maxNickname')"
-                persistent-hint
-              />
-              <div class="text-caption text-medium-emphasis mb-3">
-                {{ t('roomSettings.nickname.preview', { name: nicknamePreview }) }}
-              </div>
-            </section>
-          </v-window-item>
-
-          <v-window-item value="dices">
-            <v-expansion-panels v-model="dicePanelsOpen" class="mb-6" variant="accordion">
-              <v-expansion-panel value="custom" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                <v-expansion-panel-title>{{ t('dice.settings.createTitle') }}</v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <template v-if="!currentUser">
-                    <v-alert type="info" variant="tonal" density="comfortable">
-                      {{ t('dice.settings.signInDice') }}
-                    </v-alert>
-                  </template>
-                  <template v-else>
-                    <p class="text-caption text-medium-emphasis mb-3">
-                      {{ t('dice.settings.createHelp') }}
-                    </p>
-                    <v-text-field
-                      v-model="diceManager.newDiceNotation.value"
-                      :label="t('dice.fields.notation')"
-                      variant="outlined"
-                      density="comfortable"
-                      :placeholder="t('dice.fields.notationPlaceholderAdvantage')"
-                      :hint="t('dice.fields.notationHint')"
-                      persistent-hint
-                      :disabled="diceManager.diceMutationLoading.value"
-                      :error-messages="diceManager.newDiceError.value ? [diceManager.newDiceError.value] : []"
-                    />
-                    <v-text-field
-                      v-model="diceManager.newDiceDescription.value"
-                      :label="t('dice.fields.descriptionOptional')"
-                      variant="outlined"
-                      density="comfortable"
-                      :placeholder="t('dice.fields.customDescriptionPlaceholder')"
-                      :disabled="diceManager.diceMutationLoading.value"
-                      class="mt-3"
-                    />
-                    <v-select
-                      v-model="diceManager.newDiceCategoryId.value"
-                      :items="diceManager.diceCategories.value"
-                      item-title="name"
-                      item-value="id"
-                      :label="t('dice.category.label')"
-                      variant="outlined"
-                      density="comfortable"
-                      class="mt-3"
-                      :disabled="diceManager.diceMutationLoading.value || diceManager.roomDicesLoading.value"
-                      :loading="diceManager.roomDicesLoading.value"
-                      :hint="diceManager.roomDicesLoading.value ? t('dice.category.loading') : t('dice.category.hint')"
-                      persistent-hint
-                    />
-                    <v-alert
-                      v-if="diceManager.diceManagementError.value"
-                      type="error"
-                      variant="tonal"
-                      density="comfortable"
-                      class="mt-3"
-                    >
-                      {{ diceManager.diceManagementError.value }}
-                    </v-alert>
-                    <div class="d-flex flex-wrap gap-2 mt-3">
-                      <v-btn
-                        color="primary"
-                        :disabled="diceManager.diceMutationLoading.value"
-                        :loading="diceManager.diceMutationLoading.value"
-                        @click="diceManager.addCustomDice"
-                      >
-                        {{ t('dice.actions.add') }}
-                      </v-btn>
-                      <v-btn
-                        variant="text"
-                        :disabled="diceManager.diceMutationLoading.value"
-                        @click="diceManager.clearNewDiceForm"
-                      >
-                        {{ t('common.clear') }}
-                      </v-btn>
-                    </div>
-                  </template>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-
-              <v-expansion-panel value="categories" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                <v-expansion-panel-title>{{ t('dice.category.title') }}</v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <template v-if="!currentUser">
-                    <v-alert type="info" variant="tonal" density="comfortable">
-                      {{ t('dice.category.signIn') }}
-                    </v-alert>
-                  </template>
-                  <template v-else>
-                    <p class="text-caption text-medium-emphasis mb-3">
-                      {{ t('dice.category.description') }}
-                    </p>
-                    <v-text-field
-                      v-model="diceManager.newCategoryName.value"
-                      :label="t('dice.category.name')"
-                      variant="outlined"
-                      density="comfortable"
-                      :placeholder="t('dice.category.placeholder')"
-                      :disabled="diceManager.categoryMutationLoading.value"
-                      :error-messages="diceManager.newCategoryError.value ? [diceManager.newCategoryError.value] : []"
-                    />
-                    <v-alert
-                      v-if="diceManager.categoryManagementError.value"
-                      type="error"
-                      variant="tonal"
-                      density="comfortable"
-                      class="mt-2"
-                    >
-                      {{ diceManager.categoryManagementError.value }}
-                    </v-alert>
-                    <div class="d-flex flex-wrap gap-2 mt-3">
-                      <v-btn
-                        color="primary"
-                        :disabled="diceManager.categoryMutationLoading.value"
-                        :loading="diceManager.categoryMutationLoading.value"
-                        @click="diceManager.addDiceCategory"
-                      >
-                        {{ t('dice.category.create') }}
-                      </v-btn>
-                      <v-btn
-                        variant="text"
-                        :disabled="diceManager.categoryMutationLoading.value"
-                        @click="diceManager.newCategoryName.value = ''"
-                      >
-                        {{ t('common.clear') }}
-                      </v-btn>
-                    </div>
-                  </template>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-
-            <section>
-              <div class="text-subtitle-2 mb-2">{{ t('dice.settings.myDice') }}</div>
-              <template v-if="!currentUser">
-                <p class="text-caption text-medium-emphasis">
-                  {{ t('dice.settings.signInView') }}
-                </p>
-              </template>
-              <template v-else>
-                <v-progress-linear
-                  v-if="diceManager.roomDicesLoading.value"
-                  indeterminate
-                  color="primary"
-                  class="mb-3"
-                />
-                <v-alert
-                  v-else-if="diceManager.roomDicesError.value"
-                  type="error"
-                  variant="tonal"
-                  density="comfortable"
-                  class="mb-3"
-                >
-                  {{ diceManager.roomDicesError.value }}
-                  <template #append>
-                    <v-btn variant="text" size="small" @click="diceManager.ensureRoomDicesLoaded(true)">{{ t('common.retry') }}</v-btn>
-                  </template>
-                </v-alert>
-                <template v-else-if="diceManager.customDices.value.length === 0">
-                  <p class="text-caption text-medium-emphasis">
-                    {{ t('dice.settings.empty') }}
-                  </p>
-                </template>
-                <template v-else>
-                  <div class="custom-dice-list">
-                    <v-card
-                      v-for="dice in diceManager.customDices.value"
-                      :key="dice.id"
-                      variant="tonal"
-                      class="custom-dice-card mb-3"
-                    >
-                      <div v-if="diceManager.editingDiceId.value !== dice.id" class="custom-dice-card__content">
-                        <div>
-                          <div class="text-subtitle-2">{{ dice.notation }}</div>
-                          <div v-if="dice.description" class="text-body-2 text-medium-emphasis">
-                            {{ dice.description }}
-                          </div>
-                          <div class="text-caption text-medium-emphasis mt-1">
-                            {{ t('dice.category.display', { category: dice.categoryName ?? t('dice.category.general') }) }}
-                          </div>
-                        </div>
-                        <div class="custom-dice-card__actions">
-                          <v-btn
-                            icon="mdi-pencil"
-                            variant="text"
-                            size="small"
-                            :disabled="diceManager.diceMutationLoading.value"
-                            @click="diceManager.startEditingDice(dice)"
-                          />
-                          <v-btn
-                            icon="mdi-delete"
-                            variant="text"
-                            size="small"
-                            color="error"
-                            :disabled="diceManager.diceMutationLoading.value"
-                            @click="diceManager.deleteCustomDice(dice.id)"
-                          />
-                        </div>
-                      </div>
-                      <div v-else>
-                        <v-text-field
-                          v-model="diceManager.editDiceNotation.value"
-                          :label="t('dice.fields.notation')"
-                          variant="outlined"
-                          density="comfortable"
-                          :placeholder="t('dice.fields.notationPlaceholderDisadvantage')"
-                          :hint="t('dice.fields.notationHint')"
-                          persistent-hint
-                          :disabled="diceManager.diceMutationLoading.value"
-                          :error-messages="diceManager.editDiceError.value ? [diceManager.editDiceError.value] : []"
-                        />
-                        <v-text-field
-                          v-model="diceManager.editDiceDescription.value"
-                          :label="t('dice.fields.descriptionOptional')"
-                          variant="outlined"
-                          density="comfortable"
-                          class="mt-3"
-                          :disabled="diceManager.diceMutationLoading.value"
-                        />
-                        <v-select
-                          v-model="diceManager.editDiceCategoryId.value"
-                          :items="diceManager.diceCategories.value"
-                          item-title="name"
-                          item-value="id"
-                          :label="t('dice.category.label')"
-                          variant="outlined"
-                          density="comfortable"
-                          class="mt-3"
-                          :disabled="diceManager.diceMutationLoading.value || diceManager.roomDicesLoading.value"
-                        />
-                        <div class="d-flex justify-end gap-2 mt-3">
-                          <v-btn
-                            variant="text"
-                            :disabled="diceManager.diceMutationLoading.value"
-                            @click="diceManager.cancelEditingDice"
-                          >
-                            {{ t('common.cancel') }}
-                          </v-btn>
-                          <v-btn
-                            color="primary"
-                            :disabled="diceManager.diceMutationLoading.value"
-                            :loading="diceManager.diceMutationLoading.value"
-                            @click="diceManager.saveEditingDice"
-                          >
-                            {{ t('common.save') }}
-                          </v-btn>
-                        </div>
-                      </div>
-                    </v-card>
-                  </div>
-                </template>
-              </template>
-            </section>
-          </v-window-item>
-
-          <v-window-item value="rollAwards">
-            <section class="mb-6">
-              <div class="text-subtitle-2 mb-2">{{ t('rollAwards.title') }}</div>
-              <p class="text-caption text-medium-emphasis mb-3">
-                {{ t('rollAwards.settings.description') }}
-              </p>
-              <v-alert
-                v-if="!isRoomCreator"
-                type="info"
-                variant="tonal"
-                density="comfortable"
-                class="mb-3"
-              >
-                {{ t('rollAwards.settings.creatorOnly') }}
-              </v-alert>
-              <v-switch
-                :model-value="rollAwardsEnabled"
-                :disabled="!canManageRollAwards || rollAwardsManager.toggleLoading.value"
-                inset
-                density="comfortable"
-                color="primary"
-                class="mb-2"
-                @update:model-value="handleRollAwardsToggle"
-              >
-                <template #label>
-                  <span>{{ t('rollAwards.settings.enable') }}</span>
-                </template>
-              </v-switch>
-              <v-select
-                v-if="rollAwardsEnabled"
-                v-model="rollAwardsWindowSelection"
-                :items="ROLL_AWARD_WINDOW_OPTIONS"
-                item-title="title"
-                item-value="value"
-                :label="t('rollAwards.settings.countFrom')"
-                variant="outlined"
-                density="comfortable"
-                class="mb-3"
-                :disabled="!canManageRollAwards || rollAwardsManager.toggleLoading.value"
-              />
-              <v-text-field
-                v-if="rollAwardsEnabled && rollAwardsWindowSelection === 'custom'"
-                v-model="customRollAwardsWindow"
-                type="number"
-                :label="t('rollAwards.settings.numberOfRolls')"
-                variant="outlined"
-                density="comfortable"
-                :min="CUSTOM_ROLL_WINDOW_MIN"
-                :max="CUSTOM_ROLL_WINDOW_MAX"
-                class="mb-3"
-                :disabled="!canManageRollAwards || rollAwardsManager.toggleLoading.value"
-                :error-messages="customRollAwardsWindowError ? [customRollAwardsWindowError] : []"
-              />
-              <div
-                v-if="rollAwardsEnabled"
-                class="d-flex flex-wrap align-center gap-2 mb-4"
-              >
-                <v-btn
-                  color="primary"
-                  size="small"
-                  :disabled="
-                    !canManageRollAwards ||
-                    rollAwardsWindowSaving ||
-                    !rollAwardsWindowDirty ||
-                    Boolean(customRollAwardsWindowError) ||
-                    (rollAwardsWindowSelection === 'custom' && !customRollAwardsWindow.trim())
-                  "
-                  :loading="rollAwardsWindowSaving"
-                  @click="saveRollAwardsWindowSetting"
-                >
-                  {{ t('common.saveChanges') }}
-                </v-btn>
-                <span class="text-caption text-medium-emphasis ml-4">
-                  {{ t('rollAwards.settings.saveHint') }}
-                </span>
-              </div>
-              <v-alert
-                v-if="rollAwardsManager.toggleError.value"
-                type="error"
-                density="comfortable"
-                variant="tonal"
-                class="mb-4"
-              >
-                {{ rollAwardsManager.toggleError.value }}
-              </v-alert>
-            </section>
-
-            <template v-if="rollAwardsEnabled">
-              <div class="d-flex flex-wrap gap-2 align-center mb-4">
-                <v-btn
-                  variant="tonal"
-                  color="primary"
-                  size="small"
-                  prepend-icon="mdi-content-copy"
-                  :disabled="
-                    !canManageRollAwards ||
-                    rollAwardsManager.awardsLoading.value ||
-                    rollAwardsManager.awardMutationLoading.value ||
-                    clipboardLoading
-                  "
-                  :loading="clipboardLoading && clipboardAction === 'copy'"
-                  @click="copyRollAwardsToClipboard"
-                  class="mr-2"
-                >
-                  {{ t('rollAwards.clipboard.copy') }}
-                </v-btn>
-                <v-btn
-                  variant="tonal"
-                  color="primary"
-                  size="small"
-                  prepend-icon="mdi-content-paste"
-                  :disabled="
-                    !canManageRollAwards ||
-                    rollAwardsManager.awardsLoading.value ||
-                    rollAwardsManager.awardMutationLoading.value ||
-                    clipboardLoading
-                  "
-                  :loading="clipboardLoading && clipboardAction === 'paste'"
-                  @click="handlePasteRollAwards"
-                >
-                  {{ t('rollAwards.clipboard.paste') }}
-                </v-btn>
-              </div>
-              <v-alert
-                v-if="rollAwardsClipboardFeedback"
-                :type="rollAwardsClipboardFeedback.type"
-                density="comfortable"
-                variant="tonal"
-                class="mb-4"
-              >
-                {{ rollAwardsClipboardFeedback.message }}
-              </v-alert>
-              <v-alert
-                v-if="rollAwardsImportError"
-                type="error"
-                density="comfortable"
-                variant="tonal"
-                class="mb-4"
-              >
-                {{ rollAwardsImportError }}
-              </v-alert>
-              <v-progress-linear
-                v-if="rollAwardsManager.awardsLoading.value"
-                indeterminate
-                color="primary"
-                class="mb-4"
-              />
-              <v-alert
-                v-else-if="rollAwardsManager.awardsError.value"
-                type="error"
-                variant="tonal"
-                density="comfortable"
-                class="mb-4"
-              >
-                {{ rollAwardsManager.awardsError.value }}
-                <template #append>
-                  <v-btn variant="text" size="small" @click="rollAwardsManager.ensureAwardsLoaded(true)">{{ t('common.retry') }}</v-btn>
-                </template>
-              </v-alert>
-              <template v-else>
-                <v-expansion-panels v-model="rollAwardsPanelsOpen" variant="accordion">
-                  <v-expansion-panel value="create" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                    <v-expansion-panel-title>{{ t('rollAwards.form.createTitle') }}</v-expansion-panel-title>
-                    <v-expansion-panel-text>
-                      <div class="text-caption text-medium-emphasis mb-3">
-                        {{ t('rollAwards.form.help') }}
-                      </div>
-                      <div class="d-flex flex-column gap-3">
-                        <v-alert
-                          v-if="isEditingRollAward"
-                          type="info"
-                          density="comfortable"
-                          variant="tonal"
-                          class="mb-2"
-                        >
-                          {{ t('rollAwards.form.editing', { name: newRollAwardName || t('rollAwards.form.thisAward') }) }}
-                        </v-alert>
-                        <div class="roll-award-number-row mb-4">
-                          <v-number-input
-                            ref="addRollAwardNumberInput"
-                            :label="t('rollAwards.form.diceResult')"
-                            variant="outlined"
-                            density="comfortable"
-                            control-variant="stacked"
-                            :model-value="newRollAwardNumber"
-                            :min="ROLL_AWARD_RESULT_MIN"
-                            :max="ROLL_AWARD_RESULT_MAX"
-                            :step="1"
-                            :hide-details="true"
-                            :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                            class="roll-award-number-input"
-                            @keyup="updateNewRollAwardNumber"
-                            @keyup.enter.prevent="addRollAwardNumber"
-                          />
-                          <v-btn
-                            color="primary"
-                            icon="mdi-plus"
-                            class="roll-award-number-btn"
-                            :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                            :aria-label="t('rollAwards.form.addDiceResult')"
-                            @click="addRollAwardNumber"
-                          />
-                        </div>
-                        <div
-                          v-if="newRollAwardNumbers.length > 0"
-                          class="d-flex flex-wrap gap-2 mb-4"
-                        >
-                          <v-chip
-                            v-for="value in newRollAwardNumbers"
-                            :key="value"
-                            closable
-                            color="primary"
-                            variant="tonal"
-                            class="mb-2 mr-2"
-                            @click:close="removeRollAwardNumber(value)"
-                          >
-                            {{ value }}
-                          </v-chip>
-                        </div>
-                        <v-text-field
-                          v-model="newRollAwardDiceNotation"
-                          :label="t('rollAwards.form.notationFilter')"
-                          variant="outlined"
-                          density="comfortable"
-                          :placeholder="t('rollAwards.form.notationPlaceholder')"
-                          :hint="t('rollAwards.form.notationHint')"
-                          persistent-hint
-                          :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                        />
-                        <v-text-field
-                          v-model="newRollAwardName"
-                          :label="t('rollAwards.form.awardName')"
-                          variant="outlined"
-                          density="comfortable"
-                          :placeholder="t('rollAwards.form.awardNamePlaceholder')"
-                          :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                        />
-                        <v-textarea
-                          v-model="newRollAwardDescription"
-                          :label="t('dice.fields.descriptionOptional')"
-                          variant="outlined"
-                          density="comfortable"
-                          :placeholder="t('rollAwards.form.descriptionPlaceholder')"
-                          :counter="ROLL_AWARD_DESCRIPTION_MAX_LENGTH"
-                          :maxlength="ROLL_AWARD_DESCRIPTION_MAX_LENGTH"
-                          auto-grow
-                          :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                        />
-                        <div class="text-caption text-medium-emphasis mb-2">
-                          {{ t('rollAwards.form.ownerHelp') }}
-                        </div>
-                        <v-alert
-                          v-if="newRollAwardError"
-                          type="error"
-                          density="comfortable"
-                          variant="tonal"
-                          class="mb-4"
-                        >
-                          {{ newRollAwardError }}
-                        </v-alert>
-                        <v-alert
-                          v-else-if="rollAwardsManager.awardMutationError.value"
-                          type="error"
-                          density="comfortable"
-                          variant="tonal"
-                        >
-                          {{ rollAwardsManager.awardMutationError.value }}
-                        </v-alert>
-                        <div class="d-flex flex-wrap gap-2">
-                          <v-btn
-                            color="primary"
-                            :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                            :loading="rollAwardsManager.awardMutationLoading.value"
-                            @click="handleSaveRollAward"
-                          >
-                            {{ isEditingRollAward ? t('rollAwards.form.update') : t('rollAwards.form.save') }}
-                          </v-btn>
-                          <v-btn
-                            variant="text"
-                            :disabled="rollAwardsManager.awardMutationLoading.value"
-                            @click="clearRollAwardForm"
-                          >
-                            {{ isEditingRollAward ? t('rollAwards.form.cancelEdit') : t('common.clear') }}
-                          </v-btn>
-                        </div>
-                      </div>
-                    </v-expansion-panel-text>
-                  </v-expansion-panel>
-                  <v-expansion-panel value="list" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
-                    <v-expansion-panel-title>
-                      <span>{{ t('rollAwards.form.existing') }}</span>
-                      <v-chip class="ml-2">{{ rollAwardsManager.awards.value.length }}</v-chip>
-                    </v-expansion-panel-title>
-                    <v-expansion-panel-text>
-                      <template v-if="rollAwardsManager.awards.value.length > 0">
-                        <v-list density="comfortable">
-                          <v-list-item
-                            v-for="award in rollAwardsManager.awards.value"
-                            :key="award.id"
-                            class="roll-awards-list-item"
-                          >
-                            <v-list-item-title class="d-flex justify-space-between">
-                              <span class="d-flex align-center">{{ award.name }}</span>
-                              <div class="d-flex align-center">
-                                <v-btn
-                                  icon="mdi-pencil"
-                                  variant="text"
-                                  color="primary"
-                                  size="small"
-                                  class="mr-1"
-                                  :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                                  @click="startEditingRollAward(award)"
-                                />
-                                <v-btn
-                                  icon="mdi-delete"
-                                  variant="text"
-                                  color="error"
-                                  size="small"
-                                  :disabled="!canManageRollAwards || rollAwardsManager.awardMutationLoading.value"
-                                  @click="rollAwardsManager.deleteAward(award.id)"
-                                />
-                              </div>
-                            </v-list-item-title>
-                            <div v-if="award.description" class="text-body-2 text-medium-emphasis mb-1">
-                              {{ award.description }}
-                            </div>
-                            <div class="d-flex flex-wrap gap-2 mb-2">
-                              <v-chip
-                                v-for="value in award.diceResults"
-                                :key="`${award.id}-${value}`"
-                                size="small"
-                                variant="tonal"
-                                color="secondary"
-                                class="mr-2 mt-2"
-                              >
-                                {{ value }}
-                              </v-chip>
-                            </div>
-                            <div class="text-caption text-medium-emphasis mb-1">
-                              <span v-if="getAwardNotations(award).length">{{ t('rollAwards.onlyCountsUsing', { notations: formatAwardNotations(award) }) }}</span>
-                              <span v-else>{{ t('rollAwards.countsEveryNotation') }}</span>
-                            </div>
-                          </v-list-item>
-                        </v-list>
-                      </template>
-                      <p v-else class="text-caption text-medium-emphasis">
-                        {{ t('rollAwards.form.empty') }}
-                      </p>
-                    </v-expansion-panel-text>
-                  </v-expansion-panel>
-                </v-expansion-panels>
-              </template>
-            </template>
-            <v-alert
-              v-else
-              type="info"
-              variant="tonal"
-              density="comfortable"
-            >
-              {{ t('rollAwards.settings.disabled') }}
-            </v-alert>
-          </v-window-item>
-
-          <v-window-item value="criticals">
-            <section class="mb-6">
-              <div class="text-subtitle-2 mb-2">{{ t('criticals.title') }}</div>
-              <p class="text-caption text-medium-emphasis mb-3">
-                {{ t('criticals.description') }}
-              </p>
-              <v-alert
-                v-if="!canManageCriticals"
-                type="info"
-                variant="tonal"
-                density="comfortable"
-                class="mb-3"
-              >
-                {{ t('criticals.creatorOnly') }}
-              </v-alert>
-              <div class="critical-rule-form">
-                <div class="critical-rule-form__row">
-                  <v-text-field
-                    v-model="newCriticalThreshold"
-                    type="number"
-                    :label="t('criticals.number')"
-                    variant="outlined"
-                    density="comfortable"
-                    :placeholder="t('criticals.numberPlaceholder')"
-                    :disabled="!canManageCriticals || criticalsSaving"
-                  />
-                        <v-select
-                          v-model="newCriticalOperator"
-                          :items="CRITICAL_OPERATOR_OPTIONS"
-                          item-title="title"
-                          item-value="value"
-                          :label="t('criticals.comparison')"
-                          variant="outlined"
-                          density="comfortable"
-                          :disabled="!canManageCriticals || criticalsSaving"
-                        />
-                      </div>
-                <v-select
-                  v-model="newCriticalColorMode"
-                  :items="CRITICAL_COLOR_MODE_OPTIONS"
-                  item-title="title"
-                  item-value="value"
-                  :label="t('criticals.colorSource')"
-                  variant="outlined"
-                  density="comfortable"
-                  class="mb-3"
-                  :disabled="!canManageCriticals || criticalsSaving"
-                />
-
-                <v-select
-                  v-if="newCriticalColorMode === 'preset'"
-                  v-model="newCriticalPresetColor"
-                  :items="CRITICAL_PRESET_COLORS"
-                  item-title="title"
-                  item-value="value"
-                  :label="t('criticals.presetColor')"
-                  variant="outlined"
-                  density="comfortable"
-                  class="mb-3"
-                  :disabled="!canManageCriticals || criticalsSaving"
-                />
-
-                <div v-else class="mb-3">
-                  <div class="text-caption text-medium-emphasis mb-2">{{ t('criticals.customColor') }}</div>
-                  <input
-                    v-model="newCriticalCustomColor"
-                    type="color"
-                    class="critical-color-input"
-                    :disabled="!canManageCriticals || criticalsSaving"
-                  >
-                </div>
-
-                <div class="d-flex align-center flex-wrap gap-2 mb-4">
-                  <span class="text-caption text-medium-emphasis">{{ t('criticals.preview') }}</span>
-                  <v-chip
-                    size="small"
-                    variant="flat"
-                    :style="getCriticalColorChipStyle(selectedCriticalColor)"
-                  >
-                    {{ selectedCriticalColor.toUpperCase() }}
-                  </v-chip>
-                </div>
-
-                <v-alert
-                  v-if="criticalsError"
-                  type="error"
-                  density="comfortable"
-                  variant="tonal"
-                  class="mb-4"
-                >
-                  {{ criticalsError }}
-                </v-alert>
-
-                <div class="d-flex flex-wrap gap-2">
-                  <v-btn
-                    color="primary"
-                    :disabled="!canManageCriticals || criticalsSaving"
-                    :loading="criticalsSaving"
-                    @click="addCriticalRule"
-                  >
-                    {{ t('criticals.addRule') }}
-                  </v-btn>
-                  <v-btn
-                    variant="text"
-                    :disabled="criticalsSaving"
-                    @click="resetCriticalForm"
-                  >
-                    {{ t('common.clear') }}
-                  </v-btn>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <div class="d-flex align-center justify-space-between mb-2">
-                <div class="text-subtitle-2">{{ t('criticals.savedRules') }}</div>
-                <v-chip size="small">{{ roomCriticals.length }}/{{ ROOM_CRITICALS_MAX_ITEMS }}</v-chip>
-              </div>
-              <template v-if="roomCriticals.length > 0">
-                <v-list density="comfortable">
-                  <v-list-item
-                    v-for="(critical, index) in roomCriticals"
-                    :key="`${critical.operator}-${critical.threshold}-${critical.color}-${index}`"
-                    class="critical-rule-item"
-                  >
-                    <v-list-item-title class="d-flex justify-space-between align-center flex-wrap gap-2">
-                      <span>{{ formatCriticalRule(critical) }}</span>
-                      <div class="d-flex align-center gap-2">
-                        <v-chip
-                          size="small"
-                          variant="flat"
-                          :style="getCriticalColorChipStyle(critical.color)"
-                        >
-                          {{ critical.color.toUpperCase() }}
-                        </v-chip>
-                        <v-btn
-                          icon="mdi-delete"
-                          variant="text"
-                          color="error"
-                          size="small"
-                          :disabled="!canManageCriticals || criticalsSaving"
-                          @click="removeCriticalRule(index)"
-                        />
-                      </div>
-                    </v-list-item-title>
-                    <div class="text-caption text-medium-emphasis">
-                      {{ t('criticals.ruleDescription', { operator: getCriticalOperatorText(critical.operator), threshold: critical.threshold }) }}
-                    </div>
-                  </v-list-item>
-                </v-list>
-              </template>
-              <p v-else class="text-caption text-medium-emphasis">
-                {{ t('criticals.empty') }}
-              </p>
-            </section>
-          </v-window-item>
+          <RoomSettingsRoomTab :context="settingsContext" />
+          <RoomSettingsDiceTab :context="settingsContext" />
+          <RoomSettingsRollAwardsTab :context="settingsContext" />
+          <RoomSettingsCriticalsTab :context="settingsContext" />
         </v-window>
       </v-card-text>
       <v-card-actions>
@@ -960,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onUnmounted, ref, watch, useTemplateRef } from 'vue';
+import { computed, inject, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { RoomCriticalRule, RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
@@ -968,6 +132,10 @@ import { RoomsService } from 'core/services/rooms.service';
 import { useRoomsStore } from 'core/stores/rooms.store';
 import { RoomDiceManagerKey, type RoomDiceManager } from 'core/composables/useRoomDiceManager';
 import { RoomRollAwardsManagerKey, type RoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
+import RoomSettingsRoomTab from './settings/RoomSettingsRoomTab.component.vue';
+import RoomSettingsDiceTab from './settings/RoomSettingsDiceTab.component.vue';
+import RoomSettingsRollAwardsTab from './settings/RoomSettingsRollAwardsTab.component.vue';
+import RoomSettingsCriticalsTab from './settings/RoomSettingsCriticalsTab.component.vue';
 
 type SettingsTab = 'room' | 'dices' | 'criticals' | 'rollAwards';
 
@@ -1022,7 +190,6 @@ const newRollAwardDescription = ref('');
 const newRollAwardDiceNotation = ref('');
 const newRollAwardError = ref<string | null>(null);
 const editingRollAwardId = ref<string | null>(null);
-const addRollAwardNumberInput = useTemplateRef('addRollAwardNumberInput');
 const customRollAwardsWindow = ref('');
 const customRollAwardsWindowError = ref<string | null>(null);
 const rollAwardsWindowSelection = ref<'all' | '10' | '50' | '100' | 'custom'>('all');
@@ -1550,7 +717,7 @@ async function saveRollAwardsWindowSetting() {
 
 function addRollAwardNumber() {
   newRollAwardError.value = null;
-  const value = Number.parseInt(addRollAwardNumberInput.value?.value || '1');
+  const value = Number.parseInt(String(newRollAwardNumber.value || '1'));
   if (value === null || Number.isNaN(value)) {
     newRollAwardError.value = t('rollAwards.errors.resultRequired');
     return;
@@ -1569,11 +736,6 @@ function addRollAwardNumber() {
   }
   newRollAwardNumbers.value = [...newRollAwardNumbers.value, value];
   newRollAwardNumber.value = 1;
-}
-
-function updateNewRollAwardNumber() {
-  const value: number = Number.parseInt(addRollAwardNumberInput.value?.value || '1');
-  newRollAwardNumber.value = value;
 }
 
 function removeRollAwardNumber(value: number) {
@@ -1883,6 +1045,83 @@ async function handleSaveRollAward() {
     }
   }
 }
+
+const settingsContext = {
+  get currentUser() {
+    return props.currentUser;
+  },
+  t,
+  diceManager,
+  rollAwardsManager,
+  dicePanelsOpen,
+  roomNameInput,
+  roomNameError,
+  nicknameInput,
+  nicknameError,
+  memberSettingsLoading,
+  memberSettingsError,
+  settingsSaving,
+  roomCriticals,
+  newCriticalThreshold,
+  newCriticalOperator,
+  newCriticalColorMode,
+  newCriticalPresetColor,
+  newCriticalCustomColor,
+  criticalsSaving,
+  criticalsError,
+  rollAwardsPanelsOpen,
+  newRollAwardNumber,
+  newRollAwardNumbers,
+  newRollAwardName,
+  newRollAwardDescription,
+  newRollAwardDiceNotation,
+  newRollAwardError,
+  customRollAwardsWindow,
+  customRollAwardsWindowError,
+  rollAwardsWindowSelection,
+  ROLL_AWARD_RESULT_MIN,
+  ROLL_AWARD_RESULT_MAX,
+  ROLL_AWARD_MAX_RESULTS,
+  ROLL_AWARD_DESCRIPTION_MAX_LENGTH,
+  ROOM_CRITICALS_MAX_ITEMS,
+  CRITICAL_OPERATOR_OPTIONS,
+  CRITICAL_COLOR_MODE_OPTIONS,
+  CRITICAL_PRESET_COLORS,
+  ROLL_AWARD_WINDOW_OPTIONS,
+  CUSTOM_ROLL_WINDOW_MIN,
+  CUSTOM_ROLL_WINDOW_MAX,
+  isRoomCreator,
+  rollAwardsEnabled,
+  canManageRollAwards,
+  canManageCriticals,
+  selectedCriticalColor,
+  rollAwardsWindowSaving,
+  rollAwardsWindowDirty,
+  isEditingRollAward,
+  clipboardLoading,
+  clipboardAction,
+  rollAwardsClipboardFeedback,
+  rollAwardsImportError,
+  nicknamePreview,
+  ensureMemberSettingsLoaded,
+  resetCriticalForm,
+  getCriticalOperatorText,
+  formatCriticalRule,
+  getCriticalColorChipStyle,
+  addCriticalRule,
+  removeCriticalRule,
+  handleRollAwardsToggle,
+  saveRollAwardsWindowSetting,
+  addRollAwardNumber,
+  removeRollAwardNumber,
+  getAwardNotations,
+  formatAwardNotations,
+  copyRollAwardsToClipboard,
+  handlePasteRollAwards,
+  startEditingRollAward,
+  clearRollAwardForm,
+  handleSaveRollAward,
+};
 
 onUnmounted(() => {
   clearSettingsFeedback();

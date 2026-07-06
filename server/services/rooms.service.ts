@@ -3,15 +3,12 @@ import {
     listRooms,
     listUserRooms,
     getRoomByInviteCode,
-    getRoomById,
-    touchRoom,
     updateRoomName,
     setRoomArchived,
     updateRollAwardsSettings,
     updateRoomCriticals as updateRoomCriticalsRecord
 } from '../core/database/tables/rooms.table';
-import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname, removeMember, touchMember } from '../core/database/tables/room-members.table';
-import { insertMessage, listMessages, listDiceMessages } from '../core/database/tables/room-messages.table';
+import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname, removeMember } from '../core/database/tables/room-members.table';
 import { deleteRoomDice, getRoomDice, insertRoomDice, listRoomDices, updateRoomDice as updateRoomDiceRecord } from '../core/database/tables/room-dices.table';
 import {
     assignCategoryToUncategorizedDice,
@@ -29,46 +26,33 @@ import {
 } from '../core/database/tables/room-roll-awards.table';
 import { getUser } from '../core/database/tables/users.table';
 import { NotFoundError } from '../core/errors/http-errors';
-import type {
-    DatabaseRoom,
-    DatabaseRoomDice,
-    DatabaseRoomDiceCategory,
-    DatabaseRoomMemberWithUser,
-    DatabaseRoomMessage,
-    DatabaseRoomRollAward
-} from '../core/types/database.types';
+import type { DatabaseRoomDiceCategory } from '../core/types/database.types';
 import type { RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
-
-const ROOM_NAME_MAX_LENGTH = 80;
-const NICKNAME_MAX_LENGTH = 40;
-const DICE_NOTATION_MAX_LENGTH = 64;
-const DICE_DESCRIPTION_MAX_LENGTH = 255;
-const DICE_CATEGORY_NAME_MAX_LENGTH = 80;
-const DICE_NOTATION_REGEX = /^([+-])?(\d+)?d(\d+)([+-]\d+)?$/i;
-const ONLINE_MEMBER_WINDOW_MS = 1000 * 60 * 2;
-const DEFAULT_DICE_CATEGORY_NAME = 'General';
-const ROLL_AWARD_NAME_MAX_LENGTH = 120;
-const ROLL_AWARD_DESCRIPTION_MAX_LENGTH = 255;
-const ROLL_AWARD_MAX_RESULTS = 20;
-const ROLL_AWARD_MAX_DICE_NOTATIONS = 10;
-const ROLL_AWARD_RESULT_MIN = 1;
-const ROLL_AWARD_RESULT_MAX = 1000;
-const ROLL_AWARD_WINDOW_OPTIONS = [10, 50, 100];
-const ROLL_AWARD_DICE_NOTATION_REGEX = /^d([1-9]\d*)$/i;
-const ROOM_CRITICALS_MAX_ITEMS = 20;
-const ROOM_CRITICAL_HEX_COLOR_REGEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
-const ROOM_CRITICAL_INT_MIN = -2147483648;
-const ROOM_CRITICAL_INT_MAX = 2147483647;
-
-async function requireRoom(roomId: string): Promise<DatabaseRoom> {
-    const room = await getRoomById(roomId);
-    if (!room) {
-        throw new NotFoundError('Room not found');
-    }
-    return room;
-}
+import { handleListMessages, handleSendMessage, listRoomDiceRolls as listRoomDiceRollsForRoom } from './rooms/room-messages.service';
+import { DEFAULT_DICE_CATEGORY_NAME, NICKNAME_MAX_LENGTH, ROOM_NAME_MAX_LENGTH } from './rooms/rooms.constants';
+import {
+    normalizeDiceCategoryName,
+    normalizeDiceDescription,
+    normalizeDiceNotation,
+    normalizeRollAwardDescription,
+    normalizeRollAwardDiceNotations,
+    normalizeRollAwardName,
+    normalizeRollAwardResults,
+    normalizeRollAwardWindowSize,
+    normalizeRoomCriticals,
+    serializeRollAwardDiceNotations
+} from './rooms/rooms.normalizers';
+import {
+    isDefaultCategoryFlag,
+    mapMemberRecord,
+    mapRollAwardRecord,
+    mapRoomDiceCategoryRecord,
+    mapRoomDiceRecord,
+    mapRoomToSummary
+} from './rooms/rooms.mappers';
+import { requireRoom } from './rooms/rooms.shared';
 
 export type RoomsAction =
     | { action: 'list' }
@@ -327,28 +311,6 @@ async function handleUnarchiveRoom(payload: { roomId: string; userId: string }):
 
     const memberCount = await countMembers(payload.roomId);
     return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
-}
-
-async function handleListMessages(payload: {
-    roomId: string;
-    userId?: string;
-    limit?: number;
-    since?: string;
-    before?: string;
-}): Promise<RoomMessage[]> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    await requireRoom(payload.roomId);
-
-    if (payload.userId) {
-        await touchMember(payload.roomId, payload.userId);
-    }
-
-    const rows = await listMessages(payload.roomId, {
-        limit: payload.limit,
-        since: payload.since,
-        before: payload.before
-    });
-    return rows.map(mapMessageRecord);
 }
 
 async function handleListMembers(payload: { roomId: string }): Promise<RoomMemberDetails[]> {
@@ -626,61 +588,8 @@ async function handleDeleteRollAward(payload: { roomId: string; userId: string; 
     return payload.awardId;
 }
 
-const DEFAULT_DICE_LIMIT = 50;
-const MAX_DICE_LIMIT = 200;
-
-function sanitizeDiceLimit(limit?: number): number {
-    const parsed = Number(limit);
-    if (!Number.isFinite(parsed)) return DEFAULT_DICE_LIMIT;
-    return Math.min(Math.max(Math.floor(parsed), 1), MAX_DICE_LIMIT);
-}
-
 export async function listRoomDiceRolls(payload: { roomId: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    await requireRoom(payload.roomId);
-
-    const limit = sanitizeDiceLimit(payload.limit);
-    const rows = await listDiceMessages(payload.roomId, { limit, since: payload.since });
-    return rows.map(mapMessageRecord);
-}
-
-async function handleSendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } }): Promise<RoomMessage> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
-    if (payload.type === 'text' && !payload.content?.trim()) {
-        throw new Error('Message content missing');
-    }
-    if (payload.type === 'dice' && !payload.dice) {
-        throw new Error('Dice payload missing');
-    }
-
-    await requireRoom(payload.roomId);
-
-    const author = await getUser(payload.userId);
-    if (!author) throw new Error('Unknown user');
-
-    await upsertMember(payload.roomId, payload.userId);
-
-    const trimmedContent = payload.content?.trim();
-    const diceNotation = payload.dice?.notation?.trim();
-    const diceTotal = payload.dice ? Number(payload.dice.total) : undefined;
-    const diceRolls = payload.dice ? payload.dice.rolls.map((roll) => Number(roll)) : undefined;
-
-    const saved = await insertMessage({
-        room_id: payload.roomId,
-        user_id: payload.userId,
-        content: payload.type === 'text'
-            ? trimmedContent ?? ''
-            : trimmedContent ?? null,
-        type: payload.type,
-        dice_notation: diceNotation,
-        dice_total: diceTotal,
-        dice_rolls: diceRolls
-    });
-
-    await touchRoom(payload.roomId);
-
-    return mapMessageRecord(saved);
+    return listRoomDiceRollsForRoom(payload);
 }
 
 async function generateUniqueInviteCode(): Promise<string> {
@@ -704,191 +613,6 @@ async function ensureRoomMembership(roomId: string, userId: string) {
     }
 
     return { room, member };
-}
-
-function normalizeDiceNotation(value: string): string {
-    const trimmed = value?.trim().toLowerCase();
-    if (!trimmed) {
-        throw new Error('Dice notation is required');
-    }
-    if (trimmed.length > DICE_NOTATION_MAX_LENGTH) {
-        throw new Error(`Dice notation is too long (max ${DICE_NOTATION_MAX_LENGTH} characters)`);
-    }
-    if (!DICE_NOTATION_REGEX.test(trimmed)) {
-        throw new Error('Invalid dice notation');
-    }
-    const match = trimmed.match(DICE_NOTATION_REGEX);
-    const count = Number.parseInt(match?.[2] ?? '1', 10);
-    if ((match?.[1] === '+' || match?.[1] === '-') && count <= 1) {
-        throw new Error('Advantage and disadvantage require rolling more than one die');
-    }
-    return trimmed;
-}
-
-function normalizeDiceDescription(value?: string | null): string | null {
-    const trimmed = value?.trim() ?? '';
-    if (!trimmed) return null;
-    if (trimmed.length > DICE_DESCRIPTION_MAX_LENGTH) {
-        throw new Error(`Description is too long (max ${DICE_DESCRIPTION_MAX_LENGTH} characters)`);
-    }
-    return trimmed;
-}
-
-function normalizeDiceCategoryName(value: string): string {
-    const trimmed = value?.trim() ?? '';
-    if (!trimmed) {
-        throw new Error('Category name is required');
-    }
-    if (trimmed.length > DICE_CATEGORY_NAME_MAX_LENGTH) {
-        throw new Error(`Category name is too long (max ${DICE_CATEGORY_NAME_MAX_LENGTH} characters)`);
-    }
-    return trimmed;
-}
-
-function normalizeRollAwardName(value: string): string {
-    const trimmed = value?.trim() ?? '';
-    if (!trimmed) {
-        throw new Error('Award name is required');
-    }
-    if (trimmed.length > ROLL_AWARD_NAME_MAX_LENGTH) {
-        throw new Error(`Award name is too long (max ${ROLL_AWARD_NAME_MAX_LENGTH} characters)`);
-    }
-    return trimmed;
-}
-
-function normalizeRollAwardDescription(value?: string | null): string | null {
-    const trimmed = value?.trim() ?? '';
-    if (!trimmed) return null;
-    if (trimmed.length > ROLL_AWARD_DESCRIPTION_MAX_LENGTH) {
-        throw new Error(`Description is too long (max ${ROLL_AWARD_DESCRIPTION_MAX_LENGTH} characters)`);
-    }
-    return trimmed;
-}
-
-function normalizeRollAwardDiceNotations(value?: string | string[] | null): string[] {
-    const source = Array.isArray(value) ? value : typeof value === 'string' ? value.split(/[,\s]+/) : [];
-    const cleaned = source.map((entry) => entry.trim()).filter(Boolean);
-    if (!cleaned.length) {
-        return [];
-    }
-    const normalized = new Set<string>();
-    for (const entry of cleaned) {
-        if (entry.length > DICE_NOTATION_MAX_LENGTH) {
-            throw new Error(`Dice notation filter is too long (max ${DICE_NOTATION_MAX_LENGTH} characters)`);
-        }
-        const match = entry.match(ROLL_AWARD_DICE_NOTATION_REGEX);
-        if (!match) {
-            throw new Error('Dice notation filter must look like d20 or d100');
-        }
-        normalized.add(`d${match[1]}`.toLowerCase());
-        if (normalized.size > ROLL_AWARD_MAX_DICE_NOTATIONS) {
-            throw new Error(`You can only specify up to ${ROLL_AWARD_MAX_DICE_NOTATIONS} dice notations.`);
-        }
-    }
-    return Array.from(normalized);
-}
-
-function serializeRollAwardDiceNotations(notations: string[]): string | null {
-    if (!notations.length) {
-        return null;
-    }
-    const serialized = notations.join(',');
-    if (serialized.length > DICE_NOTATION_MAX_LENGTH) {
-        throw new Error(`Dice notation filter is too long (max ${DICE_NOTATION_MAX_LENGTH} characters combined).`);
-    }
-    return serialized;
-}
-
-function normalizeRollAwardResults(values: number[]): number[] {
-    if (!Array.isArray(values) || values.length === 0) {
-        throw new Error('Add at least one dice result');
-    }
-    if (values.length > ROLL_AWARD_MAX_RESULTS) {
-        throw new Error(`Awards can only track up to ${ROLL_AWARD_MAX_RESULTS} results`);
-    }
-    const sanitized = values
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value))
-        .map((value) => Math.floor(value));
-    const filtered = sanitized.filter((value) => value >= ROLL_AWARD_RESULT_MIN && value <= ROLL_AWARD_RESULT_MAX);
-    if (!filtered.length) {
-        throw new Error(`Dice results must be between ${ROLL_AWARD_RESULT_MIN} and ${ROLL_AWARD_RESULT_MAX}`);
-    }
-    return Array.from(new Set(filtered));
-}
-
-function normalizeRollAwardWindowSize(value?: number | null): number | null {
-    if (value === null || value === undefined) {
-        return null;
-    }
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-        return null;
-    }
-    const normalized = Math.floor(parsed);
-    return ROLL_AWARD_WINDOW_OPTIONS.includes(normalized) ? normalized : null;
-}
-
-function normalizeRoomCriticals(values: RoomCriticalRule[]): RoomCriticalRule[] {
-    if (!Array.isArray(values)) {
-        throw new Error('Criticals must be provided as a list.');
-    }
-    if (values.length > ROOM_CRITICALS_MAX_ITEMS) {
-        throw new Error(`You can only save up to ${ROOM_CRITICALS_MAX_ITEMS} critical rules.`);
-    }
-
-    const normalized: RoomCriticalRule[] = [];
-    const seen = new Set<string>();
-
-    for (const value of values) {
-        if (!value || typeof value !== 'object') {
-            throw new Error('Each critical rule must be a valid object.');
-        }
-        const threshold = normalizeRoomCriticalThreshold(value.threshold);
-        const operator = normalizeRoomCriticalOperator(value.operator);
-        const color = normalizeRoomCriticalColor(value.color);
-        const dedupeKey = `${operator}:${threshold}`;
-        if (seen.has(dedupeKey)) {
-            throw new Error('Critical rules must use unique threshold and comparison pairs.');
-        }
-        seen.add(dedupeKey);
-        normalized.push({ threshold, operator, color });
-    }
-
-    return normalized;
-}
-
-function normalizeRoomCriticalThreshold(value: number): number {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
-        throw new Error('Critical thresholds must be whole numbers.');
-    }
-    if (parsed < ROOM_CRITICAL_INT_MIN || parsed > ROOM_CRITICAL_INT_MAX) {
-        throw new Error('Critical thresholds are out of range.');
-    }
-    return parsed;
-}
-
-function normalizeRoomCriticalOperator(value: string): RoomCriticalRule['operator'] {
-    if (
-        value === 'moreThan' ||
-        value === 'lessThan'
-    ) {
-        return value;
-    }
-    throw new Error('Critical comparison must be one of "moreThan" or "lessThan".');
-}
-
-function normalizeRoomCriticalColor(value: string): string {
-    const trimmed = value?.trim() ?? '';
-    if (!ROOM_CRITICAL_HEX_COLOR_REGEX.test(trimmed)) {
-        throw new Error('Critical colors must be valid hex colors.');
-    }
-    const normalized = trimmed.toLowerCase();
-    if (normalized.length === 4) {
-        return `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`;
-    }
-    return normalized;
 }
 
 async function ensureDiceCategoriesForUser(roomId: string, userId: string): Promise<DatabaseRoomDiceCategory[]> {
@@ -927,221 +651,4 @@ function selectDiceCategory(categories: DatabaseRoomDiceCategory[], categoryId?:
         return match;
     }
     return categories.find((category) => isDefaultCategoryFlag(category.is_default)) ?? categories[0];
-}
-
-function mapRoomDiceCategoryRecord(record: DatabaseRoomDiceCategory): RoomDiceCategory {
-    const sortOrderValue = record.sort_order ?? undefined;
-    const sortOrder = typeof sortOrderValue === 'string' ? Number(sortOrderValue) : sortOrderValue;
-    return {
-        id: record.id,
-        roomId: record.room_id,
-        name: record.name,
-        sortOrder: Number.isFinite(sortOrder) ? Number(sortOrder) : undefined,
-        isDefault: isDefaultCategoryFlag(record.is_default),
-        createdBy: record.created_by ?? undefined,
-        createdAt: record.created_at ?? undefined,
-        updatedAt: record.updated_at ?? undefined
-    };
-}
-
-function parseStoredDiceNotations(value?: string | null): string[] {
-    if (!value) return [];
-    try {
-        const parsed = JSON.parse(value);
-        if (Array.isArray(parsed)) {
-            return normalizeRollAwardDiceNotations(parsed);
-        }
-    } catch {
-        // ignore parse errors for legacy string values
-    }
-    try {
-        return normalizeRollAwardDiceNotations(value);
-    } catch {
-        return [];
-    }
-}
-
-function mapRollAwardRecord(record: DatabaseRoomRollAward): RoomRollAward {
-    const normalizedNotations = parseStoredDiceNotations(record.dice_notation ?? null);
-    return {
-        id: record.id,
-        roomId: record.room_id,
-        name: record.name,
-        description: record.description ?? undefined,
-        diceResults: parseStoredDiceResults(record.dice_results),
-        diceNotation: normalizedNotations[0],
-        diceNotations: normalizedNotations.length ? normalizedNotations : undefined,
-        createdBy: record.created_by ?? undefined,
-        createdAt: record.created_at ?? undefined,
-        updatedAt: record.updated_at ?? undefined
-    };
-}
-
-function isDefaultCategoryFlag(value?: number | boolean | string | null): boolean {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'number') return value === 1;
-    if (typeof value === 'string') return value === '1';
-    return false;
-}
-
-function mapRoomToSummary(room: DatabaseRoom, options?: { currentUserId?: string }): RoomDetails {
-    const lastActivity = room.last_activity ?? room.updated_at ?? room.created_at ?? null;
-    const archivedAt = room.archived_at ?? null;
-    const currentUserId = options?.currentUserId;
-    const isCreator = currentUserId && room.created_by
-        ? room.created_by === currentUserId
-        : undefined;
-    return {
-        id: room.id,
-        name: room.name,
-        inviteCode: room.invite_code,
-        isProtected: Boolean(room.password_hash),
-        memberCount: room.member_count ?? 0,
-        lastActivity,
-        archivedAt,
-        isArchived: Boolean(archivedAt),
-        isCreator,
-        createdBy: room.created_by,
-        createdAt: room.created_at ?? undefined,
-        rollAwardsEnabled: Boolean(room.roll_awards_enabled),
-        rollAwardsWindow: normalizeRollAwardWindowSize(room.roll_awards_window),
-        criticals: parseStoredRoomCriticals(room.room_criticals)
-    };
-}
-
-function parseStoredRoomCriticals(value?: string | RoomCriticalRule[] | null): RoomCriticalRule[] {
-    if (!value) return [];
-
-    let parsed: unknown;
-    if (Array.isArray(value)) {
-        parsed = value;
-    } else {
-        try {
-            parsed = JSON.parse(value);
-        } catch {
-            return [];
-        }
-    }
-
-    if (!Array.isArray(parsed)) {
-        return [];
-    }
-
-    const normalized: RoomCriticalRule[] = [];
-    const seen = new Set<string>();
-
-    for (const entry of parsed) {
-        try {
-            if (!entry || typeof entry !== 'object') {
-                continue;
-            }
-            const threshold = normalizeRoomCriticalThreshold((entry as RoomCriticalRule).threshold);
-            const operator = normalizeRoomCriticalOperator((entry as RoomCriticalRule).operator);
-            const color = normalizeRoomCriticalColor((entry as RoomCriticalRule).color);
-            const dedupeKey = `${operator}:${threshold}`;
-            if (seen.has(dedupeKey)) {
-                continue;
-            }
-            seen.add(dedupeKey);
-            normalized.push({ threshold, operator, color });
-            if (normalized.length >= ROOM_CRITICALS_MAX_ITEMS) {
-                break;
-            }
-        } catch {
-            continue;
-        }
-    }
-
-    return normalized;
-}
-
-function mapRoomDiceRecord(record: DatabaseRoomDice, categories?: Map<string, RoomDiceCategory>): RoomDice {
-    const categoryId = record.category_id ?? undefined;
-    const category = categoryId && categories ? categories.get(categoryId) : undefined;
-    return {
-        id: record.id,
-        roomId: record.room_id,
-        notation: record.notation,
-        description: record.description ?? undefined,
-        categoryId,
-        categoryName: category?.name,
-        createdBy: record.created_by ?? undefined,
-        createdAt: record.created_at ?? undefined,
-        updatedAt: record.updated_at ?? undefined,
-    };
-}
-
-function parseStoredDiceResults(value?: string | number[] | null): number[] {
-    if (Array.isArray(value)) {
-        return value
-            .map((entry) => Number(entry))
-            .filter((entry) => Number.isFinite(entry))
-            .map((entry) => Math.floor(entry));
-    }
-    if (typeof value === 'string') {
-        try {
-            const parsed = JSON.parse(value);
-            if (Array.isArray(parsed)) {
-                return parsed
-                    .map((entry) => Number(entry))
-                    .filter((entry) => Number.isFinite(entry))
-                    .map((entry) => Math.floor(entry));
-            }
-        } catch {
-            return [];
-        }
-    }
-    return [];
-}
-
-function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
-    let diceRolls: number[] | undefined;
-    if (Array.isArray(record.dice_rolls)) {
-        diceRolls = record.dice_rolls as number[];
-    } else if (typeof record.dice_rolls === 'string') {
-        try {
-            const parsed = JSON.parse(record.dice_rolls);
-            diceRolls = Array.isArray(parsed) ? parsed.map((value) => Number(value)) : undefined;
-        } catch {
-            diceRolls = undefined;
-        }
-    }
-
-    const diceTotal = record.dice_total !== null && record.dice_total !== undefined
-        ? Number(record.dice_total)
-        : undefined;
-
-    return {
-        id: record.id,
-        roomId: record.room_id,
-        userId: record.user_id,
-        username: record.username ?? undefined,
-        avatar: record.avatar ?? undefined,
-        content: record.content ?? undefined,
-        type: record.type,
-        diceNotation: record.dice_notation ?? undefined,
-        diceTotal,
-        diceRolls,
-        createdAt: record.created_at,
-        nickname: record.member_nickname ?? undefined
-    };
-}
-
-function calculateIsOnline(lastSeen?: string | null): boolean {
-    if (!lastSeen) return false;
-    const timestamp = new Date(lastSeen).getTime();
-    if (Number.isNaN(timestamp)) return false;
-    return Date.now() - timestamp <= ONLINE_MEMBER_WINDOW_MS;
-}
-
-function mapMemberRecord(record: DatabaseRoomMemberWithUser): RoomMemberDetails {
-    return {
-        userId: record.user_id,
-        username: record.username ?? undefined,
-        avatar: record.avatar ?? undefined,
-        joinedAt: record.joined_at ?? undefined,
-        lastSeen: record.last_seen ?? undefined,
-        nickname: record.nickname ?? undefined,
-        isOnline: calculateIsOnline(record.last_seen ?? undefined)
-    };
 }
