@@ -1,0 +1,390 @@
+openapi: 3.1.0
+info:
+  title: Rolz API
+  version: 1.0.0
+  description: Public read API for Rolz rooms, members, and dice roll history.
+servers:
+  - url: https://rolz.asmotym.fr/api
+    description: Production API
+security:
+  - ApiKeyAuth: []
+tags:
+  - name: Rooms
+    description: Rooms linked to the authenticated API key owner.
+  - name: Dice rolls
+    description: Dice roll history for a room.
+paths:
+  /rooms:
+    get:
+      tags:
+        - Rooms
+      summary: List rooms for the API key owner
+      description: Returns active and archived rooms linked to the user identified by the API key.
+      operationId: listRooms
+      responses:
+        "200":
+          description: Rooms returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRoomsResponse"
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      rooms:
+                        - id: room_123
+                          name: Weekly Campaign
+                          inviteCode: ABCD12
+                          isProtected: true
+                          memberCount: 5
+                          lastActivity: "2024-05-07T18:30:00.000Z"
+                          archivedAt: null
+                          isArchived: false
+                          isCreator: true
+                          createdBy: "123456789"
+                          createdAt: "2024-05-01T08:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /rooms/{roomId}/members:
+    get:
+      tags:
+        - Rooms
+      summary: List room members
+      description: Returns the member roster for a room the API key owner belongs to.
+      operationId: listRoomMembers
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Members returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRoomMembersResponse"
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      roomId: room_123
+                      members:
+                        - userId: "123456789"
+                          username: KeeperOfDice
+                          nickname: Keeper
+                          avatar: https://cdn.discordapp.com/avatars/123456789/avatar.png
+                          joinedAt: "2024-05-06T12:00:00.000Z"
+                          lastSeen: "2024-05-07T18:30:00.000Z"
+                          isOnline: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /rooms/{roomId}/dice-rolls:
+    get:
+      tags:
+        - Dice rolls
+      summary: List dice rolls for a room
+      description: Returns dice messages for the selected room. Use limit and since to page or sync recent history.
+      operationId: listRoomDiceRolls
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+        - name: limit
+          in: query
+          required: false
+          description: Optional maximum number of dice rolls to return. Defaults to 50 and is capped at 200.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: since
+          in: query
+          required: false
+          description: Optional ISO 8601 timestamp. When set, only dice rolls created after this moment are returned.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Dice rolls returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListDiceRollsResponse"
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      roomId: room_123
+                      diceRolls:
+                        - id: msg_01
+                          roomId: room_123
+                          userId: "123456789"
+                          username: KeeperOfDice
+                          nickname: Keeper
+                          type: dice
+                          diceNotation: 2d6+1
+                          diceTotal: 9
+                          diceRolls:
+                            - 4
+                            - 4
+                          createdAt: "2024-05-06T12:42:31.000Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Generate this key from Settings > API in Rolz.
+  parameters:
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      description: Identifier of the room to inspect.
+      schema:
+        type: string
+        example: room_123
+  responses:
+    BadRequest:
+      description: The request is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: The API key is missing.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The API key is invalid or does not grant access to the requested resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: The database or API service is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string
+          example: Invalid API key
+    ListRoomsResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - rooms
+              properties:
+                rooms:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Room"
+    ListRoomMembersResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - roomId
+                - members
+              properties:
+                roomId:
+                  type: string
+                members:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/RoomMember"
+    ListDiceRollsResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - roomId
+                - diceRolls
+              properties:
+                roomId:
+                  type: string
+                diceRolls:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/DiceRoll"
+    Room:
+      type: object
+      required:
+        - id
+        - name
+        - inviteCode
+        - isProtected
+        - memberCount
+        - archivedAt
+        - isArchived
+        - isCreator
+        - createdBy
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        inviteCode:
+          type: string
+        isProtected:
+          type: boolean
+        memberCount:
+          type: integer
+        lastActivity:
+          type:
+            - string
+            - "null"
+          format: date-time
+        archivedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        isArchived:
+          type: boolean
+        isCreator:
+          type: boolean
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    RoomMember:
+      type: object
+      required:
+        - userId
+        - username
+        - nickname
+        - avatar
+        - joinedAt
+        - lastSeen
+        - isOnline
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        nickname:
+          type:
+            - string
+            - "null"
+        avatar:
+          type:
+            - string
+            - "null"
+        joinedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        lastSeen:
+          type:
+            - string
+            - "null"
+          format: date-time
+        isOnline:
+          type: boolean
+    DiceRoll:
+      type: object
+      required:
+        - id
+        - roomId
+        - userId
+        - username
+        - type
+        - diceNotation
+        - diceTotal
+        - diceRolls
+        - createdAt
+      properties:
+        id:
+          type: string
+        roomId:
+          type: string
+        userId:
+          type: string
+        username:
+          type: string
+        nickname:
+          type:
+            - string
+            - "null"
+        type:
+          type: string
+          const: dice
+        diceNotation:
+          type: string
+        diceTotal:
+          type: integer
+        diceRolls:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+          format: date-time

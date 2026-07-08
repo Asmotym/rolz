@@ -21,6 +21,7 @@ Fill in the `.env` file with:
 - `BACKEND_PORT` – Port for the API server (default `4000`)  
 - `FRONTEND_URL` – Comma-separated origins that should be allowed to call the API  
 - `VITE_BACKEND_URL` – Base URL the Vue app uses when talking to the API
+- `VITE_API_DOCS_URL` – URL opened from Settings → API for the API documentation portal (default dev value: `http://localhost:8081`)
 
 ## Development
 
@@ -55,6 +56,8 @@ Environment variables such as `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, 
 ### Live reload inside Docker
 
 `docker compose up --build` now gives you a full dev stack without rebuilding the image for every edit. The compose file bind-mounts the source tree and sets `ROLZ_DEV_MODE=true` so the entrypoint runs `npm run server:dev` and `npm run dev -- --host 0.0.0.0`. Any change under `server/`, `src/`, or the Vite/TypeScript configs is picked up instantly. If you want the previous production-style behavior, set `ROLZ_DEV_MODE=false` (or unset it) before starting Compose.
+
+The API documentation portal is exposed locally at `http://localhost:8081` by default. Override `API_DOCS_PORT` to publish Swagger UI on another local port, and set `VITE_API_DOCS_URL` to the URL the frontend should open from Settings → API.
 
 ### Make targets
 

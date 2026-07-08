@@ -8,12 +8,14 @@ ENV_FILE ?= .env
 export FRONTEND_PORT ?= 5173
 export BACKEND_PORT ?= 4000
 export MYSQL_PORT ?= 3306
+export API_DOCS_PORT ?= 8081
 export MYSQL_USER ?= rolz
 export MYSQL_PASSWORD ?= rolz
 export MYSQL_DATABASE ?= rolz
 export MYSQL_ROOT_PASSWORD ?= root
 export FRONTEND_URL ?= http://localhost:5173
 export VITE_BACKEND_URL ?= http://localhost:4000
+export VITE_API_DOCS_URL ?= http://localhost:$(API_DOCS_PORT)
 export DATABASE_URL ?= mysql://rolz:rolz@mysql:3306/rolz
 export DATABASE_SSL ?= false
 WATCH_DATABASE_URL ?= mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@127.0.0.1:$(MYSQL_PORT)/$(MYSQL_DATABASE)
@@ -59,9 +61,9 @@ db-update:
 
 .PHONY: watch
 watch:
-	@echo "Starting frontend and backend watch servers..."
-	@echo "Starting MySQL container..."
-	@$(COMPOSE_CMD) up -d mysql
+	@echo "Starting frontend, backend, and API documentation watch services..."
+	@echo "Starting MySQL and API documentation containers..."
+	@$(COMPOSE_CMD) up -d mysql api-docs
 	@echo "Waiting for MySQL to be ready..."
 	@$(COMPOSE_CMD) exec -T mysql sh -c 'until mysqladmin ping -h "$${MYSQL_HOST:-127.0.0.1}" -u root -p"$${MYSQL_ROOT_PASSWORD}" --silent; do sleep 1; done'
 	@echo "Executing database bootstrap script..."

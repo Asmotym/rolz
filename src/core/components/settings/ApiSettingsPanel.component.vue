@@ -3,9 +3,6 @@
     <v-alert type="info" variant="tonal" class="mb-4">
       {{ t('settings.api.description') }}
     </v-alert>
-    <v-alert type="warning" variant="tonal" class="mb-6">
-      {{ t('settings.api.enforcement') }}
-    </v-alert>
 
     <v-alert
       v-if="feedback && feedback.type === 'error'"
@@ -95,208 +92,46 @@
 
       <v-divider class="my-6" />
 
-      <section class="api-doc">
-        <h3 class="text-h6 mb-2">{{ t('settings.api.doc.title') }}</h3>
-        <p class="text-body-2 text-medium-emphasis mb-4">
-          {{ t('settings.api.doc.description') }}
-        </p>
+      <section class="api-launcher">
+        <div class="launcher-header">
+          <div>
+            <h3 class="text-h6 mb-1">{{ t('settings.api.docs.title') }}</h3>
+            <p class="text-body-2 text-medium-emphasis mb-0">
+              {{ t('settings.api.docs.description') }}
+            </p>
+          </div>
+          <v-btn
+            color="primary"
+            variant="flat"
+            prepend-icon="mdi-open-in-new"
+            :href="docsUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ t('settings.api.docs.open') }}
+          </v-btn>
+        </div>
 
-        <v-expansion-panels variant="accordion">
-          <v-expansion-panel>
-            <v-expansion-panel-title>
-              <div class="d-flex flex-column">
-                <span class="text-subtitle-1 font-weight-medium">
-                  GET /api/rooms/:roomId/dice-rolls
-                </span>
-                <span class="text-body-2 text-medium-emphasis">
-                  {{ t('settings.api.doc.endpointHelp') }}
-                </span>
-              </div>
-            </v-expansion-panel-title>
-            <v-expansion-panel-text>
-              <div class="doc-grid mb-4">
-                <v-card variant="outlined">
-                  <v-card-title class="text-subtitle-1">
-                    {{ t('settings.api.doc.authTitle') }}
-                  </v-card-title>
-                  <v-card-text>
-                    <p class="text-body-2 mb-2">
-                      {{ t('settings.api.doc.authDescription') }}
-                    </p>
-                    <code class="api-inline-code">
-                      X-API-Key: &lt;{{ t('settings.api.doc.apiKeyPlaceholder') }}&gt;
-                    </code>
-                  </v-card-text>
-                </v-card>
+        <div class="docs-grid mt-5">
+          <div class="docs-panel">
+            <div class="text-subtitle-2 mb-2">{{ t('settings.api.docs.baseUrl') }}</div>
+            <code class="api-inline-code">{{ apiBaseUrl }}</code>
+          </div>
 
-                <v-card variant="outlined">
-                  <v-card-title class="text-subtitle-1">
-                    {{ t('settings.api.doc.pathTitle') }}
-                  </v-card-title>
-                  <v-card-text>
-                    <dl class="doc-list">
-                      <template v-for="param in diceRollsPathParams" :key="param.label">
-                        <dt>{{ param.label }}</dt>
-                        <dd>{{ param.description }}</dd>
-                      </template>
-                    </dl>
-                  </v-card-text>
-                </v-card>
-              </div>
+          <div class="docs-panel">
+            <div class="text-subtitle-2 mb-2">{{ t('settings.api.docs.headers') }}</div>
+            <pre class="api-code-block">{{ headersExample }}</pre>
+          </div>
 
-              <v-card variant="outlined" class="mb-4">
-                <v-card-title class="text-subtitle-1">
-                  {{ t('settings.api.doc.queryTitle') }}
-                </v-card-title>
-                <v-card-text>
-                  <dl class="doc-list">
-                    <template v-for="param in diceRollsQueryParams" :key="param.label">
-                      <dt>{{ param.label }}</dt>
-                      <dd>{{ param.description }}</dd>
-                    </template>
-                  </dl>
-                </v-card-text>
-              </v-card>
-
-              <v-card variant="outlined" class="mb-4">
-                <v-card-title class="text-subtitle-1">
-                  {{ t('settings.api.doc.exampleTitle') }}
-                </v-card-title>
-                <v-card-text>
-                  <pre class="api-code-block">{{ diceRollsCurlExample }}</pre>
-                </v-card-text>
-              </v-card>
-
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1">
-                  {{ t('settings.api.doc.responseTitle') }}
-                </v-card-title>
-                <v-card-text>
-                  <p class="text-body-2 mb-3">
-                    {{ t('settings.api.doc.responseDescription') }}
-                  </p>
-                  <pre class="api-code-block">{{ diceRollsResponseExample }}</pre>
-                </v-card-text>
-              </v-card>
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-
-          <v-expansion-panel>
-            <v-expansion-panel-title>
-              <div class="d-flex flex-column">
-                <span class="text-subtitle-1 font-weight-medium">
-                  GET /api/rooms
-                </span>
-                <span class="text-body-2 text-medium-emphasis">
-                  {{ t('settings.api.doc.roomsDescription') }}
-                </span>
-              </div>
-            </v-expansion-panel-title>
-            <v-expansion-panel-text>
-              <v-card variant="outlined" class="mb-4">
-                <v-card-text>
-                  <div class="text-body-2">
-                    {{ t('settings.api.doc.roomsEndpointHelp') }}
-                  </div>
-                </v-card-text>
-              </v-card>
-
-              <v-card variant="outlined" class="mb-4">
-                <v-card-title class="text-subtitle-1">
-                  {{ t('settings.api.doc.roomsExampleTitle') }}
-                </v-card-title>
-                <v-card-text>
-                  <pre class="api-code-block">{{ roomsListCurlExample }}</pre>
-                </v-card-text>
-              </v-card>
-
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1">
-                  {{ t('settings.api.doc.roomsResponseTitle') }}
-                </v-card-title>
-                <v-card-text>
-                  <p class="text-body-2 mb-3">
-                    {{ t('settings.api.doc.roomsResponseDescription') }}
-                  </p>
-                  <pre class="api-code-block">{{ roomsListResponseExample }}</pre>
-                </v-card-text>
-              </v-card>
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-
-          <v-expansion-panel>
-            <v-expansion-panel-title>
-              <div class="d-flex flex-column">
-                <span class="text-subtitle-1 font-weight-medium">
-                  GET /api/rooms/:roomId/members
-                </span>
-                <span class="text-body-2 text-medium-emphasis">
-                  {{ t('settings.api.doc.membersDescription') }}
-                </span>
-              </div>
-            </v-expansion-panel-title>
-            <v-expansion-panel-text>
-              <v-card variant="outlined" class="mb-4">
-                <v-card-text>
-                  <div class="text-body-2">
-                    {{ t('settings.api.doc.membersEndpointHelp') }}
-                  </div>
-                </v-card-text>
-              </v-card>
-
-              <div class="doc-grid mb-4">
-                <v-card variant="outlined">
-                  <v-card-title class="text-subtitle-1">
-                    {{ t('settings.api.doc.authTitle') }}
-                  </v-card-title>
-                  <v-card-text>
-                    <p class="text-body-2 mb-2">
-                      {{ t('settings.api.doc.authDescription') }}
-                    </p>
-                    <code class="api-inline-code">
-                      X-API-Key: &lt;{{ t('settings.api.doc.apiKeyPlaceholder') }}&gt;
-                    </code>
-                  </v-card-text>
-                </v-card>
-
-                <v-card variant="outlined">
-                  <v-card-title class="text-subtitle-1">
-                    {{ t('settings.api.doc.pathTitle') }}
-                  </v-card-title>
-                  <v-card-text>
-                    <dl class="doc-list">
-                      <template v-for="param in diceRollsPathParams" :key="'members-' + param.label">
-                        <dt>{{ param.label }}</dt>
-                        <dd>{{ param.description }}</dd>
-                      </template>
-                    </dl>
-                  </v-card-text>
-                </v-card>
-              </div>
-
-              <v-card variant="outlined" class="mb-4">
-                <v-card-title class="text-subtitle-1">
-                  {{ t('settings.api.doc.membersExampleTitle') }}
-                </v-card-title>
-                <v-card-text>
-                  <pre class="api-code-block">{{ roomMembersCurlExample }}</pre>
-                </v-card-text>
-              </v-card>
-
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1">
-                  {{ t('settings.api.doc.membersResponseTitle') }}
-                </v-card-title>
-                <v-card-text>
-                  <p class="text-body-2 mb-3">
-                    {{ t('settings.api.doc.membersResponseDescription') }}
-                  </p>
-                  <pre class="api-code-block">{{ roomMembersResponseExample }}</pre>
-                </v-card-text>
-              </v-card>
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-        </v-expansion-panels>
+          <div class="docs-panel getting-started">
+            <div class="text-subtitle-2 mb-3">{{ t('settings.api.docs.gettingStarted') }}</div>
+            <ol class="setup-list">
+              <li>{{ t('settings.api.docs.stepGenerate') }}</li>
+              <li>{{ t('settings.api.docs.stepCopy') }}</li>
+              <li>{{ t('settings.api.docs.stepOpenDocs') }}</li>
+            </ol>
+          </div>
+        </div>
       </section>
     </div>
   </section>
@@ -323,91 +158,10 @@ const generating = ref(false);
 const revoking = ref(false);
 const copying = ref(false);
 const feedback = ref<FeedbackState>(null);
-const roomMembersResponseExample = `{
-  "success": true,
-  "data": {
-    "roomId": "room_123",
-    "members": [
-      {
-        "userId": "123456789",
-        "username": "KeeperOfDice",
-        "nickname": "Keeper",
-        "avatar": "https://cdn.discordapp.com/avatars/123456789/avatar.png",
-        "joinedAt": "2024-05-06T12:00:00.000Z",
-        "lastSeen": "2024-05-07T18:30:00.000Z",
-        "isOnline": true
-      }
-    ]
-  }
-}`;
-const roomMembersCurlExample = `curl \\
-  -H "Accept: application/json" \\
-  -H "X-API-Key: <your-api-key>" \\
-  "https://rolz.asmotym.fr/api/rooms/room_123/members"`;
-const roomsListResponseExample = `{
-  "success": true,
-  "data": {
-    "rooms": [
-      {
-        "id": "room_123",
-        "name": "Weekly Campaign",
-        "inviteCode": "ABCD12",
-        "isProtected": true,
-        "memberCount": 5,
-        "lastActivity": "2024-05-07T18:30:00.000Z",
-        "archivedAt": null,
-        "isArchived": false,
-        "isCreator": true,
-        "createdBy": "123456789",
-        "createdAt": "2024-05-01T08:00:00.000Z"
-      }
-    ]
-  }
-}`;
-const roomsListCurlExample = `curl \\
-  -H "Accept: application/json" \\
-  -H "X-API-Key: <your-api-key>" \\
-  "https://rolz.asmotym.fr/api/rooms"`;
-const diceRollsResponseExample = `{
-  "success": true,
-  "data": {
-    "roomId": "room_123",
-    "diceRolls": [
-      {
-        "id": "msg_01",
-        "roomId": "room_123",
-        "userId": "123456789",
-        "username": "KeeperOfDice",
-        "nickname": "Keeper",
-        "type": "dice",
-        "diceNotation": "2d6+1",
-        "diceTotal": 9,
-        "diceRolls": [4, 4],
-        "createdAt": "2024-05-06T12:42:31.000Z"
-      }
-    ]
-  }
-}`;
-const diceRollsCurlExample = `curl \\
-  -H "Accept: application/json" \\
-  -H "X-API-Key: <your-api-key>" \\
-  "https://rolz.asmotym.fr/api/rooms/room_123/dice-rolls?limit=25&since=2024-05-01T00:00:00Z"`;
-const diceRollsPathParams = computed(() => [
-  {
-    label: t('settings.api.doc.pathRoomId'),
-    description: t('settings.api.doc.pathRoomIdDescription'),
-  },
-]);
-const diceRollsQueryParams = computed(() => [
-  {
-    label: t('settings.api.doc.queryLimit'),
-    description: t('settings.api.doc.queryLimitDescription'),
-  },
-  {
-    label: t('settings.api.doc.querySince'),
-    description: t('settings.api.doc.querySinceDescription'),
-  },
-]);
+const docsUrl = import.meta.env.VITE_API_DOCS_URL || 'https://api.rolz.asmotym.fr';
+const apiBaseUrl = 'https://rolz.asmotym.fr/api';
+const headersExample = `Accept: application/json
+X-API-Key: <your-api-key>`;
 
 function setKeyData(data: UserApiKeyData) {
   apiKey.value = data.apiKey;
@@ -550,20 +304,6 @@ watch(
   gap: 12px;
 }
 
-.api-doc .doc-list {
-  margin: 0;
-  padding: 0;
-}
-
-.api-doc .doc-list dt {
-  font-weight: 600;
-}
-
-.api-doc .doc-list dd {
-  margin: 0 0 12px;
-  color: rgba(var(--v-theme-on-surface), 0.8);
-}
-
 .api-code-block {
   display: block;
   width: 100%;
@@ -574,6 +314,7 @@ watch(
   font-size: 0.85rem;
   line-height: 1.4;
   overflow-x: auto;
+  white-space: pre-wrap;
 }
 
 .api-inline-code {
@@ -585,9 +326,42 @@ watch(
   font-size: 0.85rem;
 }
 
-.doc-grid {
+.launcher-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.docs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
+}
+
+.docs-panel {
+  padding: 16px;
+  border: 1px solid rgba(var(--v-theme-outline), 0.28);
+  border-radius: 8px;
+}
+
+.getting-started {
+  grid-column: 1 / -1;
+}
+
+.setup-list {
+  margin: 0;
+  padding-left: 20px;
+  color: rgba(var(--v-theme-on-surface), 0.82);
+}
+
+.setup-list li + li {
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .launcher-header {
+    flex-direction: column;
+  }
 }
 </style>
