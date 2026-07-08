@@ -85,12 +85,12 @@ services:
     container_name: rolz-api-docs
     environment:
       SWAGGER_JSON: /openapi/rolz-api.yaml
-      VIRTUAL_HOST: api.rolz.asmotym.fr
-      VIRTUAL_PORT: 8080
-      LETSENCRYPT_HOST: api.rolz.asmotym.fr
+      VIRTUAL_HOST: docs.rolz.asmotym.fr
+      VIRTUAL_PORT: 6000
+      LETSENCRYPT_HOST: docs.rolz.asmotym.fr
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
     ports:
-      - "${API_DOCS_PORT:-8081}:8080"
+      - "${API_DOCS_PORT:-6000}:6000"
     volumes:
       - ./docs/openapi.yaml:/openapi/rolz-api.yaml:ro
     restart: unless-stopped
