@@ -8,7 +8,7 @@ ENV_FILE ?= .env
 export FRONTEND_PORT ?= 5173
 export BACKEND_PORT ?= 4000
 export MYSQL_PORT ?= 3306
-export API_DOCS_PORT ?= 8081
+export API_DOCS_PORT ?= 6000
 export MYSQL_USER ?= rolz
 export MYSQL_PASSWORD ?= rolz
 export MYSQL_DATABASE ?= rolz
@@ -32,6 +32,15 @@ run: up
 
 up:
 	$(COMPOSE_CMD) up -d --build $(SERVICES)
+
+up-api-docs:
+	$(COMPOSE_CMD) up -d --build api-docs
+
+up-phpmyadmin:
+	$(COMPOSE_CMD) up -d --build phpmyadmin
+
+up-rolz:
+	$(COMPOSE_CMD) up -d --build rolz
 
 stop:
 	-$(COMPOSE_CMD) stop $(SERVICE)
