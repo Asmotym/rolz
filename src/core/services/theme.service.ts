@@ -1,7 +1,6 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
 import { isAppTheme, normalizeTheme, type AppTheme } from 'netlify/core/types/theme.types';
-
-const THEME_STORAGE_KEY = 'rolz_theme';
+import { appStorage } from 'core/services/app-storage.service';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -20,7 +19,7 @@ type ThemeTarget = {
 export function getStoredTheme(): AppTheme | null {
   if (typeof window === 'undefined') return null;
 
-  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  const storedTheme = appStorage.getTheme();
   return isAppTheme(storedTheme) ? storedTheme : null;
 }
 
@@ -38,7 +37,7 @@ export function getInitialTheme(): AppTheme {
 
 export function saveTheme(theme: AppTheme): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  appStorage.setTheme(theme);
 }
 
 export function applyTheme(themeTarget: ThemeTarget, theme: AppTheme): void {

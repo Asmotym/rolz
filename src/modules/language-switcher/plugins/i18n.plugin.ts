@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n'
+import { appStorage } from 'core/services/app-storage.service'
 
 // Import language files
 import en from '../locales/en.json'
@@ -16,9 +17,9 @@ export const availableLocales = {
 
 export type LocaleKey = keyof typeof availableLocales
 
-// Get user's preferred locale from localStorage or browser
+// Get user's preferred locale from storage or browser
 function getDefaultLocale(): LocaleKey {
-  const savedLocale = localStorage.getItem('locale') as LocaleKey
+  const savedLocale = appStorage.getLocale() as LocaleKey | null
   if (savedLocale && availableLocales[savedLocale]) {
     return savedLocale
   }
@@ -57,7 +58,7 @@ export function setLocale(locale: LocaleKey): void {
   }
   
   i18n.global.locale.value = locale
-  localStorage.setItem('locale', locale)
+  appStorage.setLocale(locale)
   document.documentElement.lang = locale
   
   console.info(`Locale changed to ${locale}`)

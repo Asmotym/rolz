@@ -181,6 +181,7 @@ import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, useRoomDiceManager } from 'core/composables/useRoomDiceManager';
 import { RoomRollAwardsManagerKey, useRoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
+import { appStorage } from 'core/services/app-storage.service';
 import { type DiceRoll } from 'core/utils/dice.utils';
 import { ROOM_MESSAGES_PAGE_SIZE, useRoomsStore } from 'core/stores/rooms.store';
 import RoomMembersMenu from './RoomMembersMenu.component.vue';
@@ -189,7 +190,6 @@ import RoomDicePanel from './RoomDicePanel.component.vue';
 import RoomRollAwardsPanel from './RoomRollAwardsPanel.component.vue';
 import RoomSettingsDialog from './RoomSettingsDialog.component.vue';
 
-const RESIZE_STORAGE_KEY = 'rolz-room-chat-width';
 const DEFAULT_CHAT_PERCENT = 65;
 const MIN_CHAT_WIDTH = 320;
 const MIN_DICE_WIDTH = 280;
@@ -366,8 +366,8 @@ watch(
 
 function loadInitialWidth() {
   if (!isBrowser) return DEFAULT_CHAT_PERCENT;
-  const value = Number(localStorage.getItem(RESIZE_STORAGE_KEY));
-  if (Number.isFinite(value) && value >= 30 && value <= 80) {
+  const value = appStorage.getChatWidthPercent();
+  if (value !== null && Number.isFinite(value) && value >= 30 && value <= 80) {
     return value;
   }
   return DEFAULT_CHAT_PERCENT;
@@ -465,7 +465,7 @@ function openRollAwardsSettings() {
 
 function persistChatWidth(value: number) {
   if (!isBrowser) return;
-  localStorage.setItem(RESIZE_STORAGE_KEY, String(value));
+  appStorage.setChatWidthPercent(value);
 }
 
 function createQueuedAsyncTask(task: () => Promise<void>) {

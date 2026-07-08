@@ -3,6 +3,7 @@ import { getApiUrl, getRedirectUri } from "modules/discord-auth/utils/urls.utils
 import { ref, type Ref } from 'vue';
 import { fetchUserTheme, getInitialTheme } from 'core/services/theme.service';
 import type { AppTheme } from 'netlify/core/types/theme.types';
+import { appStorage } from 'core/services/app-storage.service';
 
 export class DiscordService {
     private static readonly DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
@@ -122,7 +123,7 @@ export class DiscordService {
     }
 
     protected storeUser(user: DiscordUser) {
-        localStorage.setItem('discord_user', JSON.stringify(user));
+        appStorage.setDiscordUser(user);
         this.user.value = user;
     }
 
@@ -133,29 +134,28 @@ export class DiscordService {
     }
 
     protected storeAuth(auth: DiscordAuth) {
-        localStorage.setItem('discord_auth', JSON.stringify(auth));
+        appStorage.setDiscordAuth(auth);
     }
 
     protected storeOauthState(state: string) {
-        localStorage.setItem('discord_oauth_state', state);
+        appStorage.setDiscordOauthState(state);
     }
 
     protected removeUser() {
-        localStorage.removeItem('discord_user');
+        appStorage.removeDiscordUser();
         this.user.value = null;
     }
 
     protected removeAuth() {
-        localStorage.removeItem('discord_auth');
+        appStorage.removeDiscordAuth();
     }
 
     protected removeOauthState() {
-        localStorage.removeItem('discord_oauth_state');
+        appStorage.removeDiscordOauthState();
     }
 
     public getUser(): DiscordUser | null {
-        const user = localStorage.getItem('discord_user');
-        return user ? JSON.parse(user) : null;
+        return appStorage.getDiscordUser();
     }
 
     public isLoggedIn(): boolean {
@@ -163,11 +163,10 @@ export class DiscordService {
     }
 
     public getAuth(): DiscordAuth | null {
-        const auth = localStorage.getItem('discord_auth');
-        return auth ? JSON.parse(auth) : null;
+        return appStorage.getDiscordAuth();
     }
 
     public getOauthState(): string | null {
-        return localStorage.getItem('discord_oauth_state');
+        return appStorage.getDiscordOauthState();
     }
 }
