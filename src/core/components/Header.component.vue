@@ -29,6 +29,7 @@
     </v-container>
 
     <template #append>
+      <ThemeSwitcher />
       <LanguageSwitcher />
       <v-btn
         icon
@@ -52,6 +53,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { HomeRoutes } from 'core/routes';
 import { useRoomsStore } from 'core/stores/rooms.store';
+import ThemeSwitcher from 'core/components/ThemeSwitcher.vue';
 import LanguageSwitcher from 'modules/language-switcher/components/LanguageSwitcher.vue';
 import DiscordAuth from 'modules/discord-auth/components/DiscordAuth.vue';
 

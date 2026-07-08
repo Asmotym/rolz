@@ -114,6 +114,14 @@
     "current": "Aktuelle Sprache: {language}",
     "changeError": "Sprache konnte nicht geändert werden:"
   },
+  "theme": {
+    "dark": "Dunkel",
+    "light": "Hell",
+    "current": "Aktuelles Theme: {theme}",
+    "switchToDark": "Zum dunklen Theme wechseln",
+    "switchToLight": "Zum hellen Theme wechseln",
+    "saveError": "Theme-Einstellung konnte nicht gespeichert werden."
+  },
   "discord": {
     "login_text": "Mit Discord anmelden"
   },

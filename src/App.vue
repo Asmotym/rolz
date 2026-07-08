@@ -9,4 +9,8 @@
 </template>
 
 <script setup lang="ts">
+import { useAppTheme } from 'core/composables/useAppTheme';
+
+const { initializeThemeSync } = useAppTheme();
+initializeThemeSync();
 </script>

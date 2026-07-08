@@ -68,7 +68,7 @@
         </div>
 
       <v-expansion-panels v-if="context.bonusPointsEnabled.value" v-model="context.bonusPointsPanelsOpen.value" variant="accordion">
-        <v-expansion-panel value="create" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
+        <v-expansion-panel value="create" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
           <v-expansion-panel-title>
             {{ context.editingBonusRuleId.value ? context.t('bonusPoints.form.editTitle') : context.t('bonusPoints.form.createTitle') }}
           </v-expansion-panel-title>
@@ -162,7 +162,7 @@
           </v-expansion-panel-text>
         </v-expansion-panel>
 
-        <v-expansion-panel value="list" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
+        <v-expansion-panel value="list" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
           <v-expansion-panel-title>
             <div class="d-flex align-center justify-space-between w-100 pr-4">
               <span>{{ context.t('bonusPoints.form.savedRules') }}</span>
@@ -222,9 +222,13 @@
 </template>
 
 <script setup lang="ts">
+import { useExpansionPanelTheme } from 'core/composables/useExpansionPanelTheme';
+
 defineProps<{
   context: any;
 }>();
+
+const { expansionPanelColor, expansionPanelBgColor } = useExpansionPanelTheme();
 </script>
 
 <style scoped>

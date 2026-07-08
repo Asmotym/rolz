@@ -2,6 +2,7 @@ import type { DiscordAuth } from "../types/discord.types";
 import { DiscordClient } from "./client";
 import { getUser, insertUser, updateUser } from "../database/tables/users.table";
 import { createLogger } from "../utils/logger";
+import { normalizeTheme, type AppTheme } from "../types/theme.types";
 
 const logger = createLogger('DiscordHandler');
 const discordClient = new DiscordClient();
@@ -10,6 +11,7 @@ export type DiscordQueryType = 'user';
 
 export type DiscordQueryPayload = DiscordAuth & {
     queryType?: DiscordQueryType;
+    theme?: AppTheme;
 };
 
 export async function handleDiscordQuery(payload: DiscordQueryPayload) {
@@ -37,18 +39,20 @@ async function handleUserQuery(auth: DiscordAuth) {
     const existingUser = await getUser(discordUser.id);
     if (existingUser === undefined) {
         logger.info('User not found in database, creating new user');
+        const theme = normalizeTheme((auth as DiscordQueryPayload).theme);
         await insertUser({
             discord_user_id: discordUser.id,
             username: discordUser.username,
             avatar: discordUser.avatar,
+            theme,
         });
+        return { ...discordUser, theme };
     } else {
         logger.info('User found in database, updating user info');
         await updateUser(discordUser.id, {
             username: discordUser.username,
             avatar: discordUser.avatar,
         });
+        return { ...discordUser, theme: normalizeTheme(existingUser.theme) };
     }
-
-    return discordUser;
 }

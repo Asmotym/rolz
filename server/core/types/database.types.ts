@@ -1,7 +1,10 @@
+import type { AppTheme } from './theme.types';
+
 export interface DatabaseUser {
     discord_user_id?: string;
     username: string;
     avatar: string;
+    theme?: AppTheme;
     rights_update?: boolean;
     rights_testing_ground?: boolean;
 }

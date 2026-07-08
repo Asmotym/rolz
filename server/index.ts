@@ -12,6 +12,9 @@ import * as Sentry from '@sentry/node'
 import { DatabaseUnavailableError } from './core/database/errors';
 import { HttpError } from './core/errors/http-errors';
 import { ensureDatabaseSetup } from './core/database/schema';
+import { getUser } from './core/database/tables/users.table';
+import { updateUserTheme } from './core/database/tables/users.table';
+import { isAppTheme } from './core/types/theme.types';
 
 const logger = createLogger('Server');
 const app = express();
@@ -109,6 +112,60 @@ app.delete('/api/users/:userId/api-key', async (req, res) => {
         res.json({ success: true, data: { apiKey: null } });
     } catch (error) {
         respondWithServiceError(res, error, 'Failed to revoke API key');
+    }
+});
+
+app.get('/api/users/:userId/preferences', async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User id is required' });
+    }
+
+    if (!ensureSameUser(res, userId)) {
+        return;
+    }
+
+    try {
+        const user = await getUser(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        res.json({ success: true, data: { theme: user.theme ?? 'dark' } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to fetch user preferences');
+    }
+});
+
+app.patch('/api/users/:userId/preferences', async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) {
+        return res.status(400).json({ success: false, error: 'User id is required' });
+    }
+
+    if (!ensureSameUser(res, userId)) {
+        return;
+    }
+
+    if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ success: false, error: 'Request body is required' });
+    }
+
+    const theme = (req.body as { theme?: unknown }).theme;
+    if (!isAppTheme(theme)) {
+        return res.status(400).json({ success: false, error: 'Invalid theme preference' });
+    }
+
+    try {
+        const user = await getUser(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const savedTheme = await updateUserTheme(userId, theme);
+        res.json({ success: true, data: { theme: savedTheme } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to update user preferences');
     }
 });
 

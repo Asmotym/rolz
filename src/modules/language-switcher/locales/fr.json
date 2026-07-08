@@ -114,6 +114,14 @@
     "current": "Langue actuelle : {language}",
     "changeError": "Échec du changement de langue :"
   },
+  "theme": {
+    "dark": "Sombre",
+    "light": "Clair",
+    "current": "Thème actuel : {theme}",
+    "switchToDark": "Passer au thème sombre",
+    "switchToLight": "Passer au thème clair",
+    "saveError": "Impossible d’enregistrer la préférence de thème."
+  },
   "discord": {
     "login_text": "Connexion avec Discord"
   },

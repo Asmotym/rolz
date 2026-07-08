@@ -9,6 +9,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import i18n from 'modules/language-switcher/plugins/i18n.plugin'
 import store from 'core/plugins/store.plugin'
+import { getInitialTheme } from 'core/services/theme.service'
 
 const vutify = createVuetify({
     components,
@@ -17,7 +18,7 @@ const vutify = createVuetify({
         defaultSet: 'mdi',
     },
     theme: {
-        defaultTheme: 'dark',
+        defaultTheme: getInitialTheme(),
     }
 })
 

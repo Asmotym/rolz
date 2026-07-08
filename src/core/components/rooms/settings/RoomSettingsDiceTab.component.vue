@@ -1,7 +1,7 @@
 <template>
   <v-window-item value="dices">
     <v-expansion-panels v-model="context.dicePanelsOpen.value" class="mb-6" variant="accordion">
-      <v-expansion-panel value="custom" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
+      <v-expansion-panel value="custom" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
         <v-expansion-panel-title>{{ context.t('dice.settings.createTitle') }}</v-expansion-panel-title>
         <v-expansion-panel-text>
           <template v-if="!context.currentUser">
@@ -77,7 +77,7 @@
         </v-expansion-panel-text>
       </v-expansion-panel>
 
-      <v-expansion-panel value="categories" color="blue-grey-darken-4" bg-color="blue-grey-darken-3">
+      <v-expansion-panel value="categories" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
         <v-expansion-panel-title>{{ context.t('dice.category.title') }}</v-expansion-panel-title>
         <v-expansion-panel-text>
           <template v-if="!context.currentUser">
@@ -254,9 +254,13 @@
 </template>
 
 <script setup lang="ts">
+import { useExpansionPanelTheme } from 'core/composables/useExpansionPanelTheme';
+
 defineProps<{
   context: any;
 }>();
+
+const { expansionPanelColor, expansionPanelBgColor } = useExpansionPanelTheme();
 </script>
 
 <style scoped>

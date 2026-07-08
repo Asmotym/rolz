@@ -117,6 +117,14 @@
     "current": "Current language: {language}",
     "changeError": "Failed to change language:"
   },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light",
+    "current": "Current theme: {theme}",
+    "switchToDark": "Switch to dark theme",
+    "switchToLight": "Switch to light theme",
+    "saveError": "Unable to save theme preference."
+  },
   "errors": {
     "invalidServerResponse": "Invalid server response",
     "unknown": "Unknown error",

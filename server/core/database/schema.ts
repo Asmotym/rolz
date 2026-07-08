@@ -52,6 +52,7 @@ async function createTables(): Promise<void> {
             discord_user_id VARCHAR(64) PRIMARY KEY,
             username VARCHAR(191) NOT NULL,
             avatar TEXT NOT NULL,
+            theme VARCHAR(16) NOT NULL DEFAULT 'dark',
             rights_update TINYINT(1) DEFAULT 0,
             rights_testing_ground TINYINT(1) DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -248,6 +249,16 @@ async function ensureIndexesCreated(): Promise<void> {
     
 async function ensureAllColumnsCreated(): Promise<void> {
     logger.info('Ensuring all columns are created...');
+
+    // users table
+    if (!(await columnExists('users', 'theme'))) {
+        logger.info('Creating missing "theme" column in "users" table...');
+
+        await query(`
+            ALTER TABLE users
+            ADD COLUMN theme VARCHAR(16) NOT NULL DEFAULT 'dark' AFTER avatar
+        `);
+    }
 
     // room tables
     if (!(await columnExists('rooms', 'archived_at'))) {

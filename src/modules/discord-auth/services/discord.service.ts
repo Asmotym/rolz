@@ -1,6 +1,8 @@
 import type { DiscordAuth, DiscordUser } from "netlify/core/types/discord.types";
 import { getApiUrl, getRedirectUri } from "modules/discord-auth/utils/urls.utils";
 import { ref, type Ref } from 'vue';
+import { fetchUserTheme, getInitialTheme } from 'core/services/theme.service';
+import type { AppTheme } from 'netlify/core/types/theme.types';
 
 export class DiscordService {
     private static readonly DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
@@ -19,6 +21,12 @@ export class DiscordService {
         const savedUser = this.getUser();
         if (savedUser !== null) {
             this.storeUser(savedUser);
+            try {
+                const theme = await fetchUserTheme(savedUser.id);
+                this.updateStoredUserTheme(theme);
+            } catch (error) {
+                console.error('[DiscordAuth] Failed to refresh user preferences', error);
+            }
         } else {
             const auth = this.getAuth();
             if (auth && auth.accessToken) {
@@ -93,7 +101,7 @@ export class DiscordService {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ ...auth, queryType: 'user' }),
+            body: JSON.stringify({ ...auth, queryType: 'user', theme: getInitialTheme() }),
         });
         const data = await userInfo.json();
         if (!data || !data.success) {
@@ -116,6 +124,12 @@ export class DiscordService {
     protected storeUser(user: DiscordUser) {
         localStorage.setItem('discord_user', JSON.stringify(user));
         this.user.value = user;
+    }
+
+    public updateStoredUserTheme(theme: AppTheme) {
+        const user = this.user.value;
+        if (!user) return;
+        this.storeUser({ ...user, theme });
     }
 
     protected storeAuth(auth: DiscordAuth) {
