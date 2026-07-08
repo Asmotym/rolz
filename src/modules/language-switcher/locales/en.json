@@ -252,7 +252,8 @@
       "room": "Room",
       "dices": "Dices",
       "rollAwards": "Roll Awards",
-      "criticals": "Criticals"
+      "criticals": "Criticals",
+      "bonusPoints": "Bonus Points"
     },
     "roomDetails": {
       "title": "Room details",
@@ -424,6 +425,54 @@
       "numberRequired": "A number is required.",
       "wholeNumber": "The number must be a whole number.",
       "duplicate": "A rule with this comparison and number already exists."
+    }
+  },
+  "bonusPoints": {
+    "title": "Bonus Points",
+    "description": "Create rules that award shared room points when users roll matching dice results.",
+    "creatorOnly": "Only the room creator can manage Bonus Points.",
+    "enable": "Enable Bonus Points for this room",
+    "disabled": "Bonus Points are currently disabled. Enable them above to award and spend points.",
+    "maxPoints": "Maximum points per user",
+    "useOnRoll": "Use point",
+    "memberPoints": "{current}/{max} bonus points",
+    "pointUsedChip": "{count} point used | {count} points used",
+    "pointUsedDetails": "Base {base}, adjustment {adjustment}",
+    "ruleBetween": "between {min} and {max}",
+    "ruleSimple": {
+      "moreThan": "more than {threshold}",
+      "lessThan": "less than {threshold}"
+    },
+    "operators": {
+      "moreThan": "More than",
+      "lessThan": "Less than",
+      "between": "Between"
+    },
+    "form": {
+      "createTitle": "Create a Bonus Point rule",
+      "editTitle": "Edit Bonus Point rule",
+      "name": "Name",
+      "diceNotation": "Dice notation",
+      "comparison": "Comparison",
+      "number": "Number",
+      "minNumber": "Minimum number",
+      "maxNumber": "Maximum number",
+      "adjustmentSign": "Point effect",
+      "adjustmentAmount": "Amount",
+      "add": "Add rule",
+      "update": "Update rule",
+      "savedRules": "Saved rules",
+      "empty": "No Bonus Point rules yet. Add one above to start awarding points."
+    },
+    "feedback": {
+      "settingsSaved": "Bonus Point settings saved.",
+      "ruleSaved": "Bonus Point rule saved.",
+      "ruleDeleted": "Bonus Point rule deleted."
+    },
+    "errors": {
+      "saveSettings": "Unable to save Bonus Point settings.",
+      "saveRule": "Unable to save Bonus Point rule.",
+      "deleteRule": "Unable to delete Bonus Point rule."
     }
   }
 }

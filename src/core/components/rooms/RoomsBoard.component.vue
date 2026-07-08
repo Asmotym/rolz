@@ -40,6 +40,7 @@
               :current-user="currentUser"
               @send-message="handleSendMessage"
               @send-dice="handleDiceRoll"
+              @use-bonus-point="handleUseBonusPointOnRoll"
               @load-older="handleLoadOlderMessages"
               @trim-history="handleTrimMessages"
             />
@@ -57,6 +58,7 @@ import RoomChatPanel from './RoomChatPanel.component.vue';
 import { ROOM_MESSAGES_PAGE_SIZE, useRoomsStore } from 'core/stores/rooms.store';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import type { DiceRoll } from 'core/utils/dice.utils';
+import type { RoomMessage } from 'netlify/core/types/data.types';
 import { parseInlineDiceCommand, rollDiceNotation } from 'core/utils/dice.utils';
 import { HomeRoutes } from 'core/routes';
 
@@ -237,6 +239,19 @@ async function handleDiceRoll(roll: DiceRoll) {
       roomId: roomsStore.selectedRoomId,
       userId: currentUser.value.id,
       roll,
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function handleUseBonusPointOnRoll(message: RoomMessage) {
+  if (!currentUser.value || !roomsStore.selectedRoomId) return;
+  try {
+    await roomsStore.useBonusPointOnRoll({
+      roomId: roomsStore.selectedRoomId,
+      userId: currentUser.value.id,
+      messageId: message.id,
     });
   } catch (error) {
     console.error(error);

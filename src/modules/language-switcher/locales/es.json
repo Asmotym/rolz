@@ -252,7 +252,8 @@
       "room": "Sala",
       "dices": "Dados",
       "rollAwards": "Premios",
-      "criticals": "Críticos"
+      "criticals": "Críticos",
+      "bonusPoints": "Puntos de bonificación"
     },
     "roomDetails": {
       "title": "Detalles de la sala",
@@ -424,6 +425,54 @@
       "numberRequired": "Se requiere un número.",
       "wholeNumber": "El número debe ser entero.",
       "duplicate": "Ya existe una regla con esta comparación y número."
+    }
+  },
+  "bonusPoints": {
+    "title": "Puntos de bonificación",
+    "description": "Crea reglas que conceden puntos compartidos de la sala cuando los usuarios obtienen resultados de dados coincidentes.",
+    "creatorOnly": "Solo el creador de la sala puede gestionar los puntos de bonificación.",
+    "enable": "Activar puntos de bonificación en esta sala",
+    "disabled": "Los puntos de bonificación están desactivados. Actívalos arriba para conceder y usar puntos.",
+    "maxPoints": "Puntos máximos por usuario",
+    "useOnRoll": "Usar punto",
+    "memberPoints": "{current}/{max} puntos de bonificación",
+    "pointUsedChip": "{count} punto usado | {count} puntos usados",
+    "pointUsedDetails": "Base {base}, ajuste {adjustment}",
+    "ruleBetween": "entre {min} y {max}",
+    "ruleSimple": {
+      "moreThan": "más que {threshold}",
+      "lessThan": "menos que {threshold}"
+    },
+    "operators": {
+      "moreThan": "Más que",
+      "lessThan": "Menos que",
+      "between": "Entre"
+    },
+    "form": {
+      "createTitle": "Crear regla de puntos de bonificación",
+      "editTitle": "Editar regla de puntos de bonificación",
+      "name": "Nombre",
+      "diceNotation": "Notación de dado",
+      "comparison": "Comparación",
+      "number": "Número",
+      "minNumber": "Número mínimo",
+      "maxNumber": "Número máximo",
+      "adjustmentSign": "Efecto del punto",
+      "adjustmentAmount": "Cantidad",
+      "add": "Añadir regla",
+      "update": "Actualizar regla",
+      "savedRules": "Reglas guardadas",
+      "empty": "Aún no hay reglas de puntos de bonificación. Añade una arriba para empezar a conceder puntos."
+    },
+    "feedback": {
+      "settingsSaved": "Configuración de puntos de bonificación guardada.",
+      "ruleSaved": "Regla de puntos de bonificación guardada.",
+      "ruleDeleted": "Regla de puntos de bonificación eliminada."
+    },
+    "errors": {
+      "saveSettings": "No se pudo guardar la configuración de puntos de bonificación.",
+      "saveRule": "No se pudo guardar la regla de puntos de bonificación.",
+      "deleteRule": "No se pudo eliminar la regla de puntos de bonificación."
     }
   }
 }

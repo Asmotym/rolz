@@ -252,7 +252,8 @@
       "room": "Raum",
       "dices": "Würfel",
       "rollAwards": "Auszeichnungen",
-      "criticals": "Kritische Regeln"
+      "criticals": "Kritische Regeln",
+      "bonusPoints": "Bonuspunkte"
     },
     "roomDetails": {
       "title": "Raumdetails",
@@ -424,6 +425,54 @@
       "numberRequired": "Eine Zahl ist erforderlich.",
       "wholeNumber": "Die Zahl muss ganzzahlig sein.",
       "duplicate": "Eine Regel mit diesem Vergleich und dieser Zahl existiert bereits."
+    }
+  },
+  "bonusPoints": {
+    "title": "Bonuspunkte",
+    "description": "Erstelle Regeln, die gemeinsame Raumpunkte vergeben, wenn Spieler passende Würfelergebnisse erzielen.",
+    "creatorOnly": "Nur der Raumersteller kann Bonuspunkte verwalten.",
+    "enable": "Bonuspunkte für diesen Raum aktivieren",
+    "disabled": "Bonuspunkte sind derzeit deaktiviert. Aktiviere sie oben, um Punkte zu vergeben und zu verwenden.",
+    "maxPoints": "Maximale Punkte pro Benutzer",
+    "useOnRoll": "Punkt verwenden",
+    "memberPoints": "{current}/{max} Bonuspunkte",
+    "pointUsedChip": "{count} Punkt verwendet | {count} Punkte verwendet",
+    "pointUsedDetails": "Basis {base}, Anpassung {adjustment}",
+    "ruleBetween": "zwischen {min} und {max}",
+    "ruleSimple": {
+      "moreThan": "mehr als {threshold}",
+      "lessThan": "weniger als {threshold}"
+    },
+    "operators": {
+      "moreThan": "Mehr als",
+      "lessThan": "Weniger als",
+      "between": "Zwischen"
+    },
+    "form": {
+      "createTitle": "Bonuspunkte-Regel erstellen",
+      "editTitle": "Bonuspunkte-Regel bearbeiten",
+      "name": "Name",
+      "diceNotation": "Würfelnotation",
+      "comparison": "Vergleich",
+      "number": "Zahl",
+      "minNumber": "Mindestzahl",
+      "maxNumber": "Höchstzahl",
+      "adjustmentSign": "Punkteffekt",
+      "adjustmentAmount": "Betrag",
+      "add": "Regel hinzufügen",
+      "update": "Regel aktualisieren",
+      "savedRules": "Gespeicherte Regeln",
+      "empty": "Noch keine Bonuspunkte-Regeln. Füge oben eine hinzu, um Punkte zu vergeben."
+    },
+    "feedback": {
+      "settingsSaved": "Bonuspunkte-Einstellungen gespeichert.",
+      "ruleSaved": "Bonuspunkte-Regel gespeichert.",
+      "ruleDeleted": "Bonuspunkte-Regel gelöscht."
+    },
+    "errors": {
+      "saveSettings": "Bonuspunkte-Einstellungen konnten nicht gespeichert werden.",
+      "saveRule": "Bonuspunkte-Regel konnte nicht gespeichert werden.",
+      "deleteRule": "Bonuspunkte-Regel konnte nicht gelöscht werden."
     }
   }
 }

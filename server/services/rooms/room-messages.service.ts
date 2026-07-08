@@ -1,9 +1,14 @@
 import { upsertMember, touchMember } from '../../core/database/tables/room-members.table';
+import {
+    getRoomBonusPointBalance,
+    listRoomBonusPointRules,
+    setRoomBonusPointBalance
+} from '../../core/database/tables/room-bonus-points.table';
 import { insertMessage, listDiceMessages, listMessages } from '../../core/database/tables/room-messages.table';
 import { touchRoom } from '../../core/database/tables/rooms.table';
 import { getUser } from '../../core/database/tables/users.table';
-import type { RoomMessage } from '../../core/types/data.types';
-import { mapMessageRecord } from './rooms.mappers';
+import type { RoomBonusPointRule, RoomMessage } from '../../core/types/data.types';
+import { mapBonusPointRuleRecord, mapMessageRecord } from './rooms.mappers';
 import { sanitizeDiceLimit } from './rooms.normalizers';
 import { requireRoom } from './rooms.shared';
 
@@ -48,7 +53,7 @@ export async function handleSendMessage(payload: { roomId: string; userId: strin
         throw new Error('Dice payload missing');
     }
 
-    await requireRoom(payload.roomId);
+    const room = await requireRoom(payload.roomId);
 
     const author = await getUser(payload.userId);
     if (!author) throw new Error('Unknown user');
@@ -59,6 +64,17 @@ export async function handleSendMessage(payload: { roomId: string; userId: strin
     const diceNotation = payload.dice?.notation?.trim();
     const diceTotal = payload.dice ? Number(payload.dice.total) : undefined;
     const diceRolls = payload.dice ? payload.dice.rolls.map((roll) => Number(roll)) : undefined;
+    if (payload.type === 'dice' && payload.dice) {
+        if (room.bonus_points_enabled) {
+            await awardBonusPointsForRoll({
+                roomId: payload.roomId,
+                userId: payload.userId,
+                roomMax: Number(room.bonus_points_max ?? 0),
+                notation: diceNotation ?? '',
+                rolls: diceRolls ?? []
+            });
+        }
+    }
 
     const saved = await insertMessage({
         room_id: payload.roomId,
@@ -75,4 +91,66 @@ export async function handleSendMessage(payload: { roomId: string; userId: strin
     await touchRoom(payload.roomId);
 
     return mapMessageRecord(saved);
+}
+
+async function awardBonusPointsForRoll(payload: {
+    roomId: string;
+    userId: string;
+    roomMax: number;
+    notation: string;
+    rolls: number[];
+}): Promise<void> {
+    const rules = (await listRoomBonusPointRules(payload.roomId)).map(mapBonusPointRuleRecord);
+    const maxPoints = Math.max(0, Math.floor(payload.roomMax));
+    if (maxPoints <= 0 || !rules.length) {
+        return;
+    }
+    const currentBalance = await getRoomBonusPointBalance(payload.roomId, payload.userId);
+    const earned = countMatchingBonusRules(rules, payload.notation, payload.rolls);
+    const nextBalance = Math.min(maxPoints, currentBalance + earned);
+
+    if (nextBalance !== currentBalance) {
+        await setRoomBonusPointBalance(payload.roomId, payload.userId, nextBalance);
+    }
+}
+
+function countMatchingBonusRules(rules: RoomBonusPointRule[], notation: string, rolls: number[]): number {
+    const faceNotation = getDiceFaceNotation(notation);
+    const selectedRoll = getSelectedRawRoll(notation, rolls);
+    if (!faceNotation || !Number.isFinite(selectedRoll)) {
+        return 0;
+    }
+    return rules.filter((rule) => (
+        rule.diceNotation === faceNotation &&
+        matchesBonusCondition(Number(selectedRoll), rule)
+    )).length;
+}
+
+function getDiceFaceNotation(notation: string): string | null {
+    const match = notation.trim().toLowerCase().match(/^[+-]?(?:\d+)?d([1-9]\d*)(?:[+-]\d+)?$/);
+    return match ? `d${match[1]}` : null;
+}
+
+function getSelectedRawRoll(notation: string, rolls: number[]): number {
+    const match = notation.trim().toLowerCase().match(/^([+-])?(?:\d+)?d[1-9]\d*(?:[+-]\d+)?$/);
+    if (!rolls.length) {
+        return Number.NaN;
+    }
+    if (match?.[1] === '+') {
+        return Math.min(...rolls);
+    }
+    if (match?.[1] === '-') {
+        return Math.max(...rolls);
+    }
+    return rolls[0];
+}
+
+function matchesBonusCondition(value: number, rule: RoomBonusPointRule): boolean {
+    if (rule.condition.operator === 'moreThan') {
+        return value > rule.condition.threshold;
+    }
+    if (rule.condition.operator === 'lessThan') {
+        return value < rule.condition.threshold;
+    }
+    return value >= rule.condition.threshold && value <= Number(rule.condition.thresholdMax);
 }

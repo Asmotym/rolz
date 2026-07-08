@@ -147,6 +147,33 @@ export async function updateRoomCriticals(roomId: string, criticals: string | nu
     return getRoomById(roomId);
 }
 
+export async function updateBonusPointsSettings(
+    roomId: string,
+    settings: { enabled?: boolean; maxPointsPerUser?: number }
+): Promise<DatabaseRoom | undefined> {
+    await ensureBonusPointsColumns();
+    const updates: string[] = [];
+    const params: number[] = [];
+
+    if (typeof settings.enabled !== 'undefined') {
+        updates.push('bonus_points_enabled = ?');
+        params.push(settings.enabled ? 1 : 0);
+    }
+
+    if (typeof settings.maxPointsPerUser !== 'undefined') {
+        updates.push('bonus_points_max = ?');
+        params.push(settings.maxPointsPerUser);
+    }
+
+    if (!updates.length) {
+        return getRoomById(roomId);
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    await execute(`UPDATE rooms SET ${updates.join(', ')} WHERE id = ?`, [...params, roomId]);
+    return getRoomById(roomId);
+}
+
 let rollAwardsColumnsChecked = false;
 async function ensureRollAwardsColumns() {
     if (rollAwardsColumnsChecked) return;
@@ -169,6 +196,20 @@ async function ensureRoomCriticalsColumn() {
         await execute('ALTER TABLE rooms ADD COLUMN room_criticals JSON NULL');
     }
     roomCriticalsColumnChecked = true;
+}
+
+let bonusPointsColumnsChecked = false;
+async function ensureBonusPointsColumns() {
+    if (bonusPointsColumnsChecked) return;
+    const hasMaxColumn = await columnExists('rooms', 'bonus_points_max');
+    if (!hasMaxColumn) {
+        await execute('ALTER TABLE rooms ADD COLUMN bonus_points_max INT DEFAULT 0');
+    }
+    const hasEnabledColumn = await columnExists('rooms', 'bonus_points_enabled');
+    if (!hasEnabledColumn) {
+        await execute('ALTER TABLE rooms ADD COLUMN bonus_points_enabled TINYINT(1) DEFAULT 0');
+    }
+    bonusPointsColumnsChecked = true;
 }
 
 async function columnExists(table: string, column: string): Promise<boolean> {

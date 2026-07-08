@@ -26,6 +26,7 @@
           <v-tab value="dices">{{ t('roomSettings.tabs.dices') }}</v-tab>
           <v-tab value="rollAwards">{{ t('roomSettings.tabs.rollAwards') }}</v-tab>
           <v-tab value="criticals">{{ t('roomSettings.tabs.criticals') }}</v-tab>
+          <v-tab value="bonusPoints">{{ t('roomSettings.tabs.bonusPoints') }}</v-tab>
         </v-tabs>
 
         <v-window v-model="settingsTab">
@@ -33,6 +34,7 @@
           <RoomSettingsDiceTab :context="settingsContext" />
           <RoomSettingsRollAwardsTab :context="settingsContext" />
           <RoomSettingsCriticalsTab :context="settingsContext" />
+          <RoomSettingsBonusPointsTab :context="settingsContext" />
         </v-window>
       </v-card-text>
       <v-card-actions>
@@ -126,7 +128,7 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { RoomCriticalRule, RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
+import type { RoomBonusPointRule, RoomCriticalRule, RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
 import { useRoomsStore } from 'core/stores/rooms.store';
@@ -136,8 +138,9 @@ import RoomSettingsRoomTab from './settings/RoomSettingsRoomTab.component.vue';
 import RoomSettingsDiceTab from './settings/RoomSettingsDiceTab.component.vue';
 import RoomSettingsRollAwardsTab from './settings/RoomSettingsRollAwardsTab.component.vue';
 import RoomSettingsCriticalsTab from './settings/RoomSettingsCriticalsTab.component.vue';
+import RoomSettingsBonusPointsTab from './settings/RoomSettingsBonusPointsTab.component.vue';
 
-type SettingsTab = 'room' | 'dices' | 'criticals' | 'rollAwards';
+type SettingsTab = 'room' | 'dices' | 'criticals' | 'rollAwards' | 'bonusPoints';
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -182,6 +185,19 @@ const newCriticalPresetColor = ref('#d32f2f');
 const newCriticalCustomColor = ref('#fdd835');
 const criticalsSaving = ref(false);
 const criticalsError = ref<string | null>(null);
+const bonusPointsEnabled = ref(false);
+const bonusPointsMaxInput = ref<number>(0);
+const bonusPointsSaving = ref(false);
+const bonusPointsError = ref<string | null>(null);
+const newBonusRuleName = ref('');
+const newBonusRuleDiceNotation = ref('d100');
+const newBonusRuleOperator = ref<RoomBonusPointRule['condition']['operator']>('moreThan');
+const newBonusRuleThreshold = ref<number>(90);
+const newBonusRuleThresholdMax = ref<number>(100);
+const newBonusRuleAdjustmentSign = ref<RoomBonusPointRule['spendAdjustment']['sign']>('+');
+const newBonusRuleAdjustmentAmount = ref<number>(1);
+const editingBonusRuleId = ref<string | null>(null);
+const bonusPointsPanelsOpen = ref<(string | number)[]>(['create']);
 const rollAwardsPanelsOpen = ref<(string | number)[]>(['create']);
 const newRollAwardNumber = ref<number>(1);
 const newRollAwardNumbers = ref<number[]>([]);
@@ -219,6 +235,15 @@ const CRITICAL_PRESET_COLORS = computed(() => [
   { title: t('criticals.colors.indigo'), value: '#3949ab' },
   { title: t('criticals.colors.rose'), value: '#c2185b' },
 ] as const);
+const BONUS_POINT_OPERATOR_OPTIONS = computed(() => [
+  { title: t('bonusPoints.operators.moreThan'), value: 'moreThan' },
+  { title: t('bonusPoints.operators.lessThan'), value: 'lessThan' },
+  { title: t('bonusPoints.operators.between'), value: 'between' },
+] as const);
+const BONUS_POINT_SIGN_OPTIONS = computed(() => [
+  { title: '+', value: '+' },
+  { title: '-', value: '-' },
+] as const);
 const ROLL_AWARD_WINDOW_OPTIONS = computed(() => [
   { title: t('rollAwards.window.all'), value: 'all' },
   { title: t('rollAwards.window.last', { count: 10 }), value: '10' },
@@ -245,6 +270,7 @@ type ImportableRollAward = {
 const rollAwardsEnabled = computed(() => rollAwardsManager.awardsEnabled.value);
 const canManageRollAwards = computed(() => isRoomCreator.value);
 const canManageCriticals = computed(() => isRoomCreator.value);
+const canManageBonusPoints = computed(() => isRoomCreator.value);
 const selectedCriticalColor = computed(() => (
   newCriticalColorMode.value === 'custom'
     ? newCriticalCustomColor.value
@@ -379,6 +405,10 @@ watch(open, async (dialogOpen) => {
     if (settingsTab.value === 'rollAwards') {
       await rollAwardsManager.ensureAwardsLoaded();
     }
+    if (settingsTab.value === 'bonusPoints' && props.room) {
+      await roomsStore.loadBonusPoints(props.room.id, true);
+      syncBonusPointsForm();
+    }
   } else {
     clearSettingsFeedback();
     closeRollAwardsImportDialog();
@@ -395,12 +425,18 @@ watch(
     if (settingsTab.value === 'rollAwards') {
       void rollAwardsManager.ensureAwardsLoaded();
     }
+    if (settingsTab.value === 'bonusPoints' && props.room) {
+      void roomsStore.loadBonusPoints(props.room.id, true).then(syncBonusPointsForm);
+    }
   }
 );
 
 watch(settingsTab, (tab) => {
   if (tab === 'rollAwards') {
     void rollAwardsManager.ensureAwardsLoaded();
+  }
+  if (tab === 'bonusPoints' && props.room) {
+    void roomsStore.loadBonusPoints(props.room.id, true).then(syncBonusPointsForm);
   }
 });
 
@@ -458,6 +494,12 @@ function resetSettingsState() {
   resetCriticalForm();
   criticalsSaving.value = false;
   criticalsError.value = null;
+  resetBonusPointRuleForm();
+  bonusPointsEnabled.value = props.room?.bonusPointSettings?.enabled ?? false;
+  bonusPointsMaxInput.value = props.room?.bonusPointSettings?.maxPointsPerUser ?? 0;
+  bonusPointsSaving.value = false;
+  bonusPointsError.value = null;
+  bonusPointsPanelsOpen.value = ['create'];
   clearRollAwardForm();
   rollAwardsPanelsOpen.value = ['create'];
   customRollAwardsWindow.value = '';
@@ -505,6 +547,171 @@ function resetCriticalForm() {
   newCriticalPresetColor.value = CRITICAL_PRESET_COLORS.value[0]?.value ?? '#d32f2f';
   newCriticalCustomColor.value = '#fdd835';
   criticalsError.value = null;
+}
+
+function syncBonusPointsForm() {
+  bonusPointsEnabled.value = roomsStore.bonusPointSettings?.enabled ?? props.room?.bonusPointSettings?.enabled ?? false;
+  bonusPointsMaxInput.value = roomsStore.bonusPointSettings?.maxPointsPerUser ?? props.room?.bonusPointSettings?.maxPointsPerUser ?? 0;
+}
+
+function resetBonusPointRuleForm() {
+  newBonusRuleName.value = '';
+  newBonusRuleDiceNotation.value = 'd100';
+  newBonusRuleOperator.value = 'moreThan';
+  newBonusRuleThreshold.value = 90;
+  newBonusRuleThresholdMax.value = 100;
+  newBonusRuleAdjustmentSign.value = '+';
+  newBonusRuleAdjustmentAmount.value = 1;
+  editingBonusRuleId.value = null;
+  bonusPointsPanelsOpen.value = ['create'];
+  bonusPointsError.value = null;
+}
+
+function startEditingBonusPointRule(rule: RoomBonusPointRule) {
+  editingBonusRuleId.value = rule.id;
+  newBonusRuleName.value = rule.name;
+  newBonusRuleDiceNotation.value = rule.diceNotation;
+  newBonusRuleOperator.value = rule.condition.operator;
+  newBonusRuleThreshold.value = rule.condition.threshold;
+  newBonusRuleThresholdMax.value = rule.condition.thresholdMax ?? rule.condition.threshold;
+  newBonusRuleAdjustmentSign.value = rule.spendAdjustment.sign;
+  newBonusRuleAdjustmentAmount.value = rule.spendAdjustment.amount;
+  bonusPointsPanelsOpen.value = ['create'];
+  bonusPointsError.value = null;
+}
+
+function formatBonusPointRule(rule: RoomBonusPointRule) {
+  const operator = rule.condition.operator === 'between'
+    ? t('bonusPoints.ruleBetween', { min: rule.condition.threshold, max: rule.condition.thresholdMax })
+    : t(`bonusPoints.ruleSimple.${rule.condition.operator}`, { threshold: rule.condition.threshold });
+  return `${rule.name}: ${rule.diceNotation} ${operator}`;
+}
+
+function formatBonusPointAdjustment(rule: RoomBonusPointRule) {
+  return `${rule.spendAdjustment.sign}${rule.spendAdjustment.amount}`;
+}
+
+function buildBonusPointRulePayload() {
+  return {
+    name: newBonusRuleName.value,
+    diceNotation: newBonusRuleDiceNotation.value,
+    condition: {
+      operator: newBonusRuleOperator.value,
+      threshold: Number(newBonusRuleThreshold.value),
+      thresholdMax: newBonusRuleOperator.value === 'between' ? Number(newBonusRuleThresholdMax.value) : null,
+    },
+    spendAdjustment: {
+      sign: newBonusRuleAdjustmentSign.value,
+      amount: Number(newBonusRuleAdjustmentAmount.value),
+    },
+  };
+}
+
+async function saveBonusPointSettings() {
+  if (!props.room || !props.currentUser) return;
+  if (!canManageBonusPoints.value) {
+    bonusPointsError.value = t('bonusPoints.creatorOnly');
+    return;
+  }
+  bonusPointsSaving.value = true;
+  bonusPointsError.value = null;
+  try {
+    await roomsStore.updateBonusPointSettings({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      enabled: bonusPointsEnabled.value,
+      maxPointsPerUser: Number(bonusPointsMaxInput.value),
+    });
+    syncBonusPointsForm();
+    showSettingsFeedback('success', t('bonusPoints.feedback.settingsSaved'));
+  } catch (error) {
+    bonusPointsError.value = error instanceof Error ? error.message : t('bonusPoints.errors.saveSettings');
+  } finally {
+    bonusPointsSaving.value = false;
+  }
+}
+
+async function handleBonusPointsToggle(value: boolean | null) {
+  if (!props.room || !props.currentUser) return;
+  if (!canManageBonusPoints.value) {
+    bonusPointsError.value = t('bonusPoints.creatorOnly');
+    return;
+  }
+  const nextValue = Boolean(value);
+  bonusPointsEnabled.value = nextValue;
+  bonusPointsSaving.value = true;
+  bonusPointsError.value = null;
+  try {
+    await roomsStore.updateBonusPointSettings({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      enabled: nextValue,
+    });
+    syncBonusPointsForm();
+    showSettingsFeedback('success', t('bonusPoints.feedback.settingsSaved'));
+  } catch (error) {
+    bonusPointsError.value = error instanceof Error ? error.message : t('bonusPoints.errors.saveSettings');
+    syncBonusPointsForm();
+  } finally {
+    bonusPointsSaving.value = false;
+  }
+}
+
+async function saveBonusPointRule() {
+  if (!props.room || !props.currentUser) return;
+  if (!canManageBonusPoints.value) {
+    bonusPointsError.value = t('bonusPoints.creatorOnly');
+    return;
+  }
+  bonusPointsSaving.value = true;
+  bonusPointsError.value = null;
+  try {
+    const basePayload = {
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      ...buildBonusPointRulePayload(),
+    };
+    if (editingBonusRuleId.value) {
+      await roomsStore.updateBonusPointRule({
+        ...basePayload,
+        ruleId: editingBonusRuleId.value,
+      });
+    } else {
+      await roomsStore.createBonusPointRule(basePayload);
+    }
+    resetBonusPointRuleForm();
+    bonusPointsPanelsOpen.value = ['list'];
+    showSettingsFeedback('success', t('bonusPoints.feedback.ruleSaved'));
+  } catch (error) {
+    bonusPointsError.value = error instanceof Error ? error.message : t('bonusPoints.errors.saveRule');
+  } finally {
+    bonusPointsSaving.value = false;
+  }
+}
+
+async function removeBonusPointRule(ruleId: string) {
+  if (!props.room || !props.currentUser) return;
+  if (!canManageBonusPoints.value) {
+    bonusPointsError.value = t('bonusPoints.creatorOnly');
+    return;
+  }
+  bonusPointsSaving.value = true;
+  bonusPointsError.value = null;
+  try {
+    await roomsStore.deleteBonusPointRule({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      ruleId,
+    });
+    if (editingBonusRuleId.value === ruleId) {
+      resetBonusPointRuleForm();
+    }
+    showSettingsFeedback('success', t('bonusPoints.feedback.ruleDeleted'));
+  } catch (error) {
+    bonusPointsError.value = error instanceof Error ? error.message : t('bonusPoints.errors.deleteRule');
+  } finally {
+    bonusPointsSaving.value = false;
+  }
 }
 
 function getCriticalOperatorText(operator: RoomCriticalRule['operator']) {
@@ -1051,6 +1258,7 @@ const settingsContext = {
     return props.currentUser;
   },
   t,
+  $roomsStore: roomsStore,
   diceManager,
   rollAwardsManager,
   dicePanelsOpen,
@@ -1069,6 +1277,19 @@ const settingsContext = {
   newCriticalCustomColor,
   criticalsSaving,
   criticalsError,
+  bonusPointsEnabled,
+  bonusPointsMaxInput,
+  bonusPointsSaving,
+  bonusPointsError,
+  bonusPointsPanelsOpen,
+  newBonusRuleName,
+  newBonusRuleDiceNotation,
+  newBonusRuleOperator,
+  newBonusRuleThreshold,
+  newBonusRuleThresholdMax,
+  newBonusRuleAdjustmentSign,
+  newBonusRuleAdjustmentAmount,
+  editingBonusRuleId,
   rollAwardsPanelsOpen,
   newRollAwardNumber,
   newRollAwardNumbers,
@@ -1087,6 +1308,8 @@ const settingsContext = {
   CRITICAL_OPERATOR_OPTIONS,
   CRITICAL_COLOR_MODE_OPTIONS,
   CRITICAL_PRESET_COLORS,
+  BONUS_POINT_OPERATOR_OPTIONS,
+  BONUS_POINT_SIGN_OPTIONS,
   ROLL_AWARD_WINDOW_OPTIONS,
   CUSTOM_ROLL_WINDOW_MIN,
   CUSTOM_ROLL_WINDOW_MAX,
@@ -1094,6 +1317,7 @@ const settingsContext = {
   rollAwardsEnabled,
   canManageRollAwards,
   canManageCriticals,
+  canManageBonusPoints,
   selectedCriticalColor,
   rollAwardsWindowSaving,
   rollAwardsWindowDirty,
@@ -1105,6 +1329,14 @@ const settingsContext = {
   nicknamePreview,
   ensureMemberSettingsLoaded,
   resetCriticalForm,
+  resetBonusPointRuleForm,
+  startEditingBonusPointRule,
+  formatBonusPointRule,
+  formatBonusPointAdjustment,
+  saveBonusPointSettings,
+  handleBonusPointsToggle,
+  saveBonusPointRule,
+  removeBonusPointRule,
   getCriticalOperatorText,
   formatCriticalRule,
   getCriticalColorChipStyle,

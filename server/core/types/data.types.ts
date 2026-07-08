@@ -6,6 +6,47 @@ export interface RoomCriticalRule {
     color: string;
 }
 
+export type RoomBonusPointConditionOperator = 'moreThan' | 'lessThan' | 'between';
+export type RoomBonusPointAdjustmentSign = '+' | '-';
+
+export interface RoomBonusPointCondition {
+    operator: RoomBonusPointConditionOperator;
+    threshold: number;
+    thresholdMax?: number | null;
+}
+
+export interface RoomBonusPointSpendAdjustment {
+    sign: RoomBonusPointAdjustmentSign;
+    amount: number;
+}
+
+export interface RoomBonusPointSettings {
+    roomId: string;
+    enabled: boolean;
+    maxPointsPerUser: number;
+}
+
+export interface RoomBonusPointRule {
+    id: string;
+    roomId: string;
+    name: string;
+    diceNotation: string;
+    condition: RoomBonusPointCondition;
+    spendAdjustment: RoomBonusPointSpendAdjustment;
+    createdBy?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface RoomBonusPointBalance {
+    roomId: string;
+    userId: string;
+    points: number;
+    username?: string;
+    nickname?: string;
+    avatar?: string;
+}
+
 export interface RoomSummary {
     id: string;
     name: string;
@@ -24,6 +65,7 @@ export interface RoomDetails extends RoomSummary {
     rollAwardsEnabled?: boolean;
     rollAwardsWindow?: number | null;
     criticals?: RoomCriticalRule[];
+    bonusPointSettings?: RoomBonusPointSettings;
 }
 
 export interface RoomMemberDetails {
@@ -50,6 +92,11 @@ export interface RoomMessage {
     diceNotation?: string | null;
     diceTotal?: number | null;
     diceRolls?: number[] | null;
+    pointUsed?: boolean;
+    diceBaseTotal?: number | null;
+    bonusPointAdjustment?: number | null;
+    bonusPointsUsed?: number;
+    bonusPointRuleUsed?: { id: string; name: string } | null;
     createdAt: string;
 }
 

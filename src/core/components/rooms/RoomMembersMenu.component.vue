@@ -11,7 +11,7 @@
         v-bind="menuActivatorProps"
         variant="tonal"
         color="secondary"
-        class="members-chip mr-2"
+        class="members-chip"
         :append-icon="menuOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
         @click="handleMembersChipClick"
       >
@@ -92,6 +92,8 @@
               <span class="dot-separator" aria-hidden="true">•</span>
               <span v-if="member.isOnline">{{ t('members.connectedNow') }}</span>
               <span v-else>{{ t('members.lastSeen', { date: formatTimestamp(member.lastSeen) }) }}</span>
+              <span class="dot-separator" aria-hidden="true">•</span>
+              <span>{{ t('bonusPoints.memberPoints', { current: getMemberBonusPoints(member.userId), max: maxBonusPoints }) }}</span>
             </v-list-item-subtitle>
           </v-list-item>
         </v-list>
@@ -107,12 +109,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { RoomDetails, RoomMemberDetails } from 'netlify/core/types/data.types';
+import type { RoomBonusPointBalance, RoomDetails, RoomMemberDetails } from 'netlify/core/types/data.types';
 import { RoomsService } from 'core/services/rooms.service';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
 
 const props = defineProps<{
   room: RoomDetails;
+  bonusPointBalances?: RoomBonusPointBalance[];
+  maxBonusPoints?: number;
 }>();
 
 const { t } = useI18n();
@@ -125,6 +129,7 @@ const membersLoadedRoomId = ref<string | null>(null);
 
 const onlineMembers = computed(() => members.value.filter((member) => member.isOnline));
 const membersCount = computed(() => props.room.memberCount ?? members.value.length ?? 0);
+const maxBonusPoints = computed(() => props.maxBonusPoints ?? props.room.bonusPointSettings?.maxPointsPerUser ?? 0);
 
 watch(
   () => props.room.id,
@@ -183,6 +188,10 @@ function resetMembersState() {
   membersError.value = null;
   membersLoadedRoomId.value = null;
   membersLoading.value = false;
+}
+
+function getMemberBonusPoints(userId: string): number {
+  return props.bonusPointBalances?.find((balance) => balance.userId === userId)?.points ?? 0;
 }
 </script>
 

@@ -17,8 +17,26 @@
             />
           </div>
         </div>
-        <div class="d-flex align-center gap-2">
-          <RoomMembersMenu :room="room" />
+        <div class="d-flex align-center ga-2">
+          <v-tooltip v-if="bonusPointsEnabled" location="bottom">
+            <template #activator="{ props: tooltipProps }">
+              <v-chip
+                v-bind="tooltipProps"
+                variant="tonal"
+                color="primary"
+                class="bonus-points-chip"
+                prepend-icon="mdi-star-four-points"
+              >
+                {{ currentUserBonusPoints }}/{{ maxBonusPoints }}
+              </v-chip>
+            </template>
+            <span>{{ t('bonusPoints.memberPoints', { current: currentUserBonusPoints, max: maxBonusPoints }) }}</span>
+          </v-tooltip>
+          <RoomMembersMenu
+            :room="room"
+            :bonus-point-balances="roomsStore.bonusPointBalances"
+            :max-bonus-points="maxBonusPoints"
+          />
           <v-btn
             icon="mdi-cog"
             variant="text"
@@ -57,6 +75,11 @@
                 :messages="messages"
                 :current-user-id="currentUser?.id ?? null"
                 :room-criticals="room?.criticals ?? []"
+                :can-use-bonus-point="canUseBonusPoints"
+                :bonus-point-adjustment="bonusPointAdjustment"
+                :bonus-point-rule-notations="bonusPointRuleNotations"
+                :bonus-point-action-loading-id="roomsStore.bonusPointRollUpdatingId"
+                @use-bonus-point="useBonusPointOnRoll"
               />
             </v-infinite-scroll>
 
@@ -159,7 +182,7 @@ import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, useRoomDiceManager } from 'core/composables/useRoomDiceManager';
 import { RoomRollAwardsManagerKey, useRoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
 import { type DiceRoll } from 'core/utils/dice.utils';
-import { ROOM_MESSAGES_PAGE_SIZE } from 'core/stores/rooms.store';
+import { ROOM_MESSAGES_PAGE_SIZE, useRoomsStore } from 'core/stores/rooms.store';
 import RoomMembersMenu from './RoomMembersMenu.component.vue';
 import RoomMessagesList from './RoomMessagesList.component.vue';
 import RoomDicePanel from './RoomDicePanel.component.vue';
@@ -172,7 +195,7 @@ const MIN_CHAT_WIDTH = 320;
 const MIN_DICE_WIDTH = 280;
 const DESKTOP_BREAKPOINT = 960;
 const nonPassiveTouchOptions: AddEventListenerOptions = { passive: false };
-type SettingsTab = 'room' | 'dices' | 'rollAwards' | 'criticals';
+type SettingsTab = 'room' | 'dices' | 'rollAwards' | 'criticals' | 'bonusPoints';
 const BOTTOM_SCROLL_THRESHOLD = 120;
 type InfiniteScrollSide = 'start' | 'end' | 'both';
 type InfiniteScrollStatus = 'ok' | 'empty' | 'loading' | 'error';
@@ -190,10 +213,12 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const roomsStore = useRoomsStore();
 
 const emit = defineEmits<{
   (event: 'send-message', message: string): void;
   (event: 'send-dice', roll: DiceRoll): void;
+  (event: 'use-bonus-point', message: RoomMessage): void;
   (event: 'load-older'): void;
   (event: 'trim-history'): void;
 }>();
@@ -231,6 +256,21 @@ const maskedInviteCode = computed(() => {
 const displayedInviteCode = computed(() => {
   if (!props.room) return '';
   return showInviteCode.value ? props.room.inviteCode : maskedInviteCode.value;
+});
+
+const maxBonusPoints = computed(() => roomsStore.bonusPointSettings?.maxPointsPerUser ?? props.room?.bonusPointSettings?.maxPointsPerUser ?? 0);
+const currentUserBonusPoints = computed(() => {
+  if (!props.currentUser) return 0;
+  return roomsStore.bonusPointBalances.find((balance) => balance.userId === props.currentUser?.id)?.points ?? 0;
+});
+const bonusPointsEnabled = computed(() => Boolean(roomsStore.bonusPointSettings?.enabled ?? props.room?.bonusPointSettings?.enabled));
+const canUseBonusPoints = computed(() => bonusPointsEnabled.value && currentUserBonusPoints.value > 0 && roomsStore.bonusPointRules.length > 0);
+const bonusPointRuleNotations = computed(() => roomsStore.bonusPointRules.map((rule) => rule.diceNotation));
+const bonusPointAdjustment = computed(() => {
+  const rule = roomsStore.bonusPointRules[0];
+  if (!rule) return null;
+  const amount = Math.abs(Number(rule.spendAdjustment.amount));
+  return rule.spendAdjustment.sign === '-' ? -amount : amount;
 });
 
 const chatLayoutStyles = computed(() => ({
@@ -279,6 +319,7 @@ function resetRoomState() {
     settingsDialog.value = false;
     return;
   }
+  void roomsStore.loadBonusPoints(props.room.id, true);
   focusMessageInput();
 }
 
@@ -388,6 +429,10 @@ function sendMessage() {
   emit('send-message', messageText.value);
   messageText.value = '';
   focusMessageInput();
+}
+
+function useBonusPointOnRoll(message: RoomMessage) {
+  emit('use-bonus-point', message);
 }
 
 async function copyInviteLink() {

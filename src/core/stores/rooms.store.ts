@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import type { RoomCriticalRule, RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiceRoll } from 'core/utils/dice.utils';
 import { RoomsService } from 'core/services/rooms.service';
 import i18n from 'modules/language-switcher/plugins/i18n.plugin';
@@ -21,6 +21,12 @@ export const useRoomsStore = defineStore('rooms', {
         selectedRoomId: null as string | null,
         selectedRoomUserId: null as string | null,
         messages: [] as RoomMessage[],
+        bonusPointSettings: null as RoomBonusPointSettings | null,
+        bonusPointRules: [] as RoomBonusPointRule[],
+        bonusPointBalances: [] as RoomBonusPointBalance[],
+        bonusPointsLoading: false,
+        bonusPointsError: null as string | null,
+        bonusPointRollUpdatingId: null as string | null,
         loadingRooms: false,
         creatingRoom: false,
         joiningRoom: false,
@@ -96,6 +102,10 @@ export const useRoomsStore = defineStore('rooms', {
             this.selectedRoomId = roomId;
             this.selectedRoomUserId = normalizedUserId;
             this.messages = [];
+            this.bonusPointSettings = null;
+            this.bonusPointRules = [];
+            this.bonusPointBalances = [];
+            this.bonusPointsError = null;
             this.lastMessageAt = null;
             this.historyExhausted = false;
             this.historyLoading = false;
@@ -170,6 +180,7 @@ export const useRoomsStore = defineStore('rooms', {
                     content: payload.roll.description,
                 });
                 this.appendMessages([message]);
+                await this.loadBonusPoints(payload.roomId, true);
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : t('rooms.errors.sendDice'));
                 throw error;
@@ -235,6 +246,60 @@ export const useRoomsStore = defineStore('rooms', {
             } catch (error) {
                 this.setError(error instanceof Error ? error.message : t('criticals.errors.save'));
                 throw error;
+            }
+        },
+        async loadBonusPoints(roomId: string, force = false) {
+            if (!force && this.bonusPointSettings?.roomId === roomId) return;
+            this.bonusPointsLoading = true;
+            this.bonusPointsError = null;
+            try {
+                const data = await RoomsService.fetchBonusPoints(roomId);
+                this.bonusPointSettings = data.settings;
+                this.bonusPointRules = data.rules;
+                this.bonusPointBalances = data.balances;
+            } catch (error) {
+                this.bonusPointsError = error instanceof Error ? error.message : 'Unable to load bonus points';
+            } finally {
+                this.bonusPointsLoading = false;
+            }
+        },
+        async updateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number }) {
+            const settings = await RoomsService.updateBonusPointSettings(payload);
+            this.bonusPointSettings = settings;
+            const room = this.rooms.find((current) => current.id === payload.roomId);
+            if (room) {
+                room.bonusPointSettings = settings;
+            }
+            return settings;
+        },
+        async createBonusPointRule(payload: { roomId: string; userId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] }) {
+            const rule = await RoomsService.createBonusPointRule(payload);
+            this.bonusPointRules = [...this.bonusPointRules, rule];
+            return rule;
+        },
+        async updateBonusPointRule(payload: { roomId: string; userId: string; ruleId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] }) {
+            const rule = await RoomsService.updateBonusPointRule(payload);
+            this.bonusPointRules = this.bonusPointRules.map((current) => (current.id === rule.id ? rule : current));
+            return rule;
+        },
+        async deleteBonusPointRule(payload: { roomId: string; userId: string; ruleId: string }) {
+            const id = await RoomsService.deleteBonusPointRule(payload);
+            this.bonusPointRules = this.bonusPointRules.filter((rule) => rule.id !== id);
+            return id;
+        },
+        async useBonusPointOnRoll(payload: { roomId: string; userId: string; messageId: string }) {
+            this.bonusPointRollUpdatingId = payload.messageId;
+            this.setError(null);
+            try {
+                const message = await RoomsService.useBonusPointOnRoll(payload);
+                this.appendMessages([message]);
+                await this.loadBonusPoints(payload.roomId, true);
+                return message;
+            } catch (error) {
+                this.setError(error instanceof Error ? error.message : 'Unable to use bonus point');
+                throw error;
+            } finally {
+                this.bonusPointRollUpdatingId = null;
             }
         },
         async updateNickname(payload: { roomId: string; userId: string; nickname?: string | null }) {

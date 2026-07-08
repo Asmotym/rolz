@@ -44,9 +44,37 @@
         </div>
         <div class="text-body-2">
           {{ t('messages.result') }}: <strong>{{ message.diceTotal }}</strong>
+          <v-chip
+            v-if="message.pointUsed"
+            size="x-small"
+            color="primary"
+            variant="tonal"
+            class="ml-2"
+          >
+            {{ t('bonusPoints.pointUsedChip', { count: message.bonusPointsUsed ?? 0 }) }}
+          </v-chip>
+        </div>
+        <div v-if="message.pointUsed" class="text-caption">
+          {{ t('bonusPoints.pointUsedDetails', {
+            base: message.diceBaseTotal,
+            adjustment: formatAdjustment(message.bonusPointAdjustment),
+          }) }}
         </div>
         <div class="text-caption">
           {{ t('messages.rolls') }}: {{ (message.diceRolls || []).join(', ') }}
+        </div>
+        <div v-if="canUseBonusPointOnMessage(message)" class="mt-2">
+          <v-btn
+            size="small"
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-star-four-points"
+            :loading="bonusPointActionLoadingId === message.id"
+            :disabled="Boolean(bonusPointActionLoadingId)"
+            @click="emit('use-bonus-point', message)"
+          >
+            {{ t('bonusPoints.useOnRoll') }}
+          </v-btn>
         </div>
       </div>
     </div>
@@ -54,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { RoomCriticalRule, RoomMessage } from 'netlify/core/types/data.types';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
@@ -63,9 +92,25 @@ const props = defineProps<{
   messages: RoomMessage[];
   currentUserId: string | null;
   roomCriticals: RoomCriticalRule[];
+  canUseBonusPoint: boolean;
+  bonusPointAdjustment: number | null;
+  bonusPointRuleNotations: string[];
+  bonusPointActionLoadingId: string | null;
+}>();
+
+const emit = defineEmits<{
+  (event: 'use-bonus-point', message: RoomMessage): void;
 }>();
 
 const { t } = useI18n();
+
+const latestDiceMessageId = computed(() => {
+  const sorted = [...props.messages]
+    .filter((message) => message.type === 'dice')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const latest = sorted[sorted.length - 1];
+  return latest?.id ?? null;
+});
 
 function getCriticalRule(message: RoomMessage) {
   return findMatchingRoomCritical(message, props.roomCriticals);
@@ -73,6 +118,28 @@ function getCriticalRule(message: RoomMessage) {
 
 function getMessageStyle(message: RoomMessage) {
   return getCriticalMessageStyle(getCriticalRule(message));
+}
+
+function formatAdjustment(value?: number | null) {
+  const amount = Number(value ?? 0);
+  return amount > 0 ? `+${amount}` : String(amount);
+}
+
+function canUseBonusPointOnMessage(message: RoomMessage) {
+  const currentTotal = Number(message.diceTotal ?? 0);
+  const faceNotation = getDiceFaceNotation(message.diceNotation);
+  return props.canUseBonusPoint &&
+    message.type === 'dice' &&
+    message.userId === props.currentUserId &&
+    message.id === latestDiceMessageId.value &&
+    Boolean(faceNotation && props.bonusPointRuleNotations.includes(faceNotation)) &&
+    currentTotal > 1 &&
+    currentTotal < 100;
+}
+
+function getDiceFaceNotation(notation?: string | null): string | null {
+  const match = notation?.trim().toLowerCase().match(/^[+-]?(?:\d+)?d([1-9]\d*)(?:[+-]\d+)?$/);
+  return match ? `d${match[1]}` : null;
 }
 </script>
 

@@ -15,7 +15,7 @@ export interface DatabaseUserApiKey {
     last_used_at?: string | null;
 }
 
-import type { RoomCriticalRule } from './data.types';
+import type { RoomBonusPointCondition, RoomBonusPointSpendAdjustment, RoomCriticalRule } from './data.types';
 
 export interface DatabaseRoom {
     id: string;
@@ -27,6 +27,8 @@ export interface DatabaseRoom {
     roll_awards_enabled?: number | boolean | null;
     roll_awards_window?: number | null;
     room_criticals?: string | RoomCriticalRule[] | null;
+    bonus_points_enabled?: number | boolean | null;
+    bonus_points_max?: number | null;
     archived_at?: string | null;
     created_at?: string;
     updated_at?: string;
@@ -66,6 +68,11 @@ export interface DatabaseRoomMessage {
     dice_notation?: string | null;
     dice_total?: number | null;
     dice_rolls?: number[] | string | null;
+    point_used?: number | boolean | null;
+    dice_base_total?: number | null;
+    bonus_point_adjustment?: number | null;
+    bonus_points_used?: number | null;
+    bonus_point_rule_used?: string | { id: string; name: string } | null;
     created_at: string;
     username?: string | null;
     avatar?: string | null;
@@ -81,6 +88,49 @@ export interface NewRoomMessage {
     dice_notation?: string | null;
     dice_total?: number | null;
     dice_rolls?: number[];
+    point_used?: number | boolean;
+    dice_base_total?: number | null;
+    bonus_point_adjustment?: number | null;
+    bonus_points_used?: number | null;
+    bonus_point_rule_used?: string | null;
+}
+
+export interface DatabaseRoomBonusPointRule {
+    id: string;
+    room_id: string;
+    created_by?: string | null;
+    name: string;
+    dice_notation: string;
+    condition_operator: RoomBonusPointCondition['operator'];
+    threshold: number;
+    threshold_max?: number | null;
+    adjustment_sign: RoomBonusPointSpendAdjustment['sign'];
+    adjustment_amount: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface NewRoomBonusPointRule {
+    id?: string;
+    room_id: string;
+    created_by?: string | null;
+    name: string;
+    dice_notation: string;
+    condition_operator: RoomBonusPointCondition['operator'];
+    threshold: number;
+    threshold_max?: number | null;
+    adjustment_sign: RoomBonusPointSpendAdjustment['sign'];
+    adjustment_amount: number;
+}
+
+export interface DatabaseRoomBonusPointBalance {
+    room_id: string;
+    user_id: string;
+    points: number;
+    updated_at?: string;
+    username?: string | null;
+    avatar?: string | null;
+    nickname?: string | null;
 }
 
 export interface DatabaseRoomDice {

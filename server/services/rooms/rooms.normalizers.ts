@@ -1,5 +1,10 @@
-import type { RoomCriticalRule } from '../../core/types/data.types';
+import type { RoomBonusPointCondition, RoomBonusPointRule, RoomCriticalRule } from '../../core/types/data.types';
 import {
+    BONUS_POINT_ADJUSTMENT_MAX,
+    BONUS_POINT_RULE_NAME_MAX_LENGTH,
+    BONUS_POINT_RULES_MAX_ITEMS,
+    BONUS_POINTS_MAX_PER_USER_MAX,
+    BONUS_POINTS_MAX_PER_USER_MIN,
     DEFAULT_DICE_LIMIT,
     DICE_CATEGORY_NAME_MAX_LENGTH,
     DICE_DESCRIPTION_MAX_LENGTH,
@@ -209,4 +214,117 @@ export function normalizeRoomCriticalColor(value: string): string {
         return `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`;
     }
     return normalized;
+}
+
+export function normalizeBonusPointsMax(value: number): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        throw new Error('Maximum points must be a whole number.');
+    }
+    if (parsed < BONUS_POINTS_MAX_PER_USER_MIN || parsed > BONUS_POINTS_MAX_PER_USER_MAX) {
+        throw new Error(`Maximum points must be between ${BONUS_POINTS_MAX_PER_USER_MIN} and ${BONUS_POINTS_MAX_PER_USER_MAX}.`);
+    }
+    return parsed;
+}
+
+export function normalizeBonusPointRuleName(value: string): string {
+    const trimmed = value?.trim() ?? '';
+    if (!trimmed) {
+        throw new Error('Bonus point rule name is required.');
+    }
+    if (trimmed.length > BONUS_POINT_RULE_NAME_MAX_LENGTH) {
+        throw new Error(`Bonus point rule name is too long (max ${BONUS_POINT_RULE_NAME_MAX_LENGTH} characters).`);
+    }
+    return trimmed;
+}
+
+export function normalizeBonusPointDiceNotation(value: string): string {
+    const trimmed = value?.trim().toLowerCase() ?? '';
+    const match = trimmed.match(ROLL_AWARD_DICE_NOTATION_REGEX);
+    if (!match) {
+        throw new Error('Bonus point dice notation must look like d20 or d100.');
+    }
+    return `d${match[1]}`;
+}
+
+export function normalizeBonusPointCondition(value: RoomBonusPointCondition): RoomBonusPointCondition {
+    if (!value || typeof value !== 'object') {
+        throw new Error('Bonus point condition is required.');
+    }
+    const operator = value.operator;
+    if (operator !== 'moreThan' && operator !== 'lessThan' && operator !== 'between') {
+        throw new Error('Bonus point comparison must be moreThan, lessThan, or between.');
+    }
+    const threshold = normalizeBonusPointThreshold(value.threshold);
+    if (operator !== 'between') {
+        return { operator, threshold, thresholdMax: null };
+    }
+    const thresholdMax = normalizeBonusPointThreshold(value.thresholdMax);
+    if (threshold > thresholdMax) {
+        throw new Error('Between thresholds must be in ascending order.');
+    }
+    return { operator, threshold, thresholdMax };
+}
+
+export function normalizeBonusPointThreshold(value: unknown): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        throw new Error('Bonus point thresholds must be whole numbers.');
+    }
+    if (parsed < ROOM_CRITICAL_INT_MIN || parsed > ROOM_CRITICAL_INT_MAX) {
+        throw new Error('Bonus point thresholds are out of range.');
+    }
+    return parsed;
+}
+
+export function normalizeBonusPointSpendAdjustment(value: RoomBonusPointRule['spendAdjustment']): RoomBonusPointRule['spendAdjustment'] {
+    if (!value || typeof value !== 'object') {
+        throw new Error('Bonus point spend adjustment is required.');
+    }
+    if (value.sign !== '+' && value.sign !== '-') {
+        throw new Error('Bonus point spend adjustment sign must be + or -.');
+    }
+    const amount = Number(value.amount);
+    if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount < 1 || amount > BONUS_POINT_ADJUSTMENT_MAX) {
+        throw new Error(`Bonus point spend amount must be between 1 and ${BONUS_POINT_ADJUSTMENT_MAX}.`);
+    }
+    return { sign: value.sign, amount };
+}
+
+export function normalizeBonusPointRulePayload(value: {
+    name: string;
+    diceNotation: string;
+    condition: RoomBonusPointCondition;
+    spendAdjustment: RoomBonusPointRule['spendAdjustment'];
+}) {
+    return {
+        name: normalizeBonusPointRuleName(value.name),
+        diceNotation: normalizeBonusPointDiceNotation(value.diceNotation),
+        condition: normalizeBonusPointCondition(value.condition),
+        spendAdjustment: normalizeBonusPointSpendAdjustment(value.spendAdjustment),
+    };
+}
+
+export function ensureUniqueBonusPointRules(rules: Array<Pick<RoomBonusPointRule, 'diceNotation' | 'condition'>>): void {
+    if (rules.length > BONUS_POINT_RULES_MAX_ITEMS) {
+        throw new Error(`You can only save up to ${BONUS_POINT_RULES_MAX_ITEMS} bonus point rules.`);
+    }
+
+    const seen = new Set<string>();
+    for (const rule of rules) {
+        const key = getBonusPointRuleDedupeKey(rule);
+        if (seen.has(key)) {
+            throw new Error('A bonus point rule with this dice notation and comparison already exists.');
+        }
+        seen.add(key);
+    }
+}
+
+export function getBonusPointRuleDedupeKey(rule: Pick<RoomBonusPointRule, 'diceNotation' | 'condition'>): string {
+    return [
+        rule.diceNotation,
+        rule.condition.operator,
+        rule.condition.threshold,
+        rule.condition.thresholdMax ?? ''
+    ].join(':');
 }

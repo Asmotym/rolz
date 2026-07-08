@@ -6,8 +6,21 @@ import {
     updateRoomName,
     setRoomArchived,
     updateRollAwardsSettings,
+    updateBonusPointsSettings,
     updateRoomCriticals as updateRoomCriticalsRecord
 } from '../core/database/tables/rooms.table';
+import {
+    capRoomBonusPointBalances,
+    deleteRoomBonusPointRule,
+    getRoomBonusPointBalance,
+    getRoomBonusPointRule,
+    insertRoomBonusPointRule,
+    listRoomBonusPointBalances,
+    listRoomBonusPointRules,
+    setRoomBonusPointBalance,
+    updateRoomBonusPointRule
+} from '../core/database/tables/room-bonus-points.table';
+import { getMessageById, updateMessageBonusPointUsage } from '../core/database/tables/room-messages.table';
 import { upsertMember, countMembers, listMembers, getMember, updateMemberNickname, removeMember } from '../core/database/tables/room-members.table';
 import { deleteRoomDice, getRoomDice, insertRoomDice, listRoomDices, updateRoomDice as updateRoomDiceRecord } from '../core/database/tables/room-dices.table';
 import {
@@ -27,7 +40,7 @@ import {
 import { getUser } from '../core/database/tables/users.table';
 import { NotFoundError } from '../core/errors/http-errors';
 import type { DatabaseRoomDiceCategory } from '../core/types/database.types';
-import type { RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
+import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
 import { handleListMessages, handleSendMessage, listRoomDiceRolls as listRoomDiceRollsForRoom } from './rooms/room-messages.service';
@@ -36,6 +49,9 @@ import {
     normalizeDiceCategoryName,
     normalizeDiceDescription,
     normalizeDiceNotation,
+    ensureUniqueBonusPointRules,
+    normalizeBonusPointRulePayload,
+    normalizeBonusPointsMax,
     normalizeRollAwardDescription,
     normalizeRollAwardDiceNotations,
     normalizeRollAwardName,
@@ -46,7 +62,10 @@ import {
 } from './rooms/rooms.normalizers';
 import {
     isDefaultCategoryFlag,
+    mapBonusPointBalanceRecord,
+    mapBonusPointRuleRecord,
     mapMemberRecord,
+    mapMessageRecord,
     mapRollAwardRecord,
     mapRoomDiceCategoryRecord,
     mapRoomDiceRecord,
@@ -64,6 +83,12 @@ export type RoomsAction =
     | { action: 'member'; payload: { roomId: string; userId: string } }
     | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
     | { action: 'updateCriticals'; payload: { roomId: string; userId: string; criticals: RoomCriticalRule[] } }
+    | { action: 'bonusPoints'; payload: { roomId: string } }
+    | { action: 'updateBonusPointSettings'; payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number } }
+    | { action: 'createBonusPointRule'; payload: { roomId: string; userId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] } }
+    | { action: 'updateBonusPointRule'; payload: { roomId: string; userId: string; ruleId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] } }
+    | { action: 'deleteBonusPointRule'; payload: { roomId: string; userId: string; ruleId: string } }
+    | { action: 'useBonusPointOnRoll'; payload: { roomId: string; userId: string; messageId: string } }
     | { action: 'updateNickname'; payload: { roomId: string; userId: string; nickname?: string | null } }
     | { action: 'leaveRoom'; payload: { roomId: string; userId: string } }
     | { action: 'archiveRoom'; payload: { roomId: string; userId: string } }
@@ -87,6 +112,10 @@ export type RoomsActionResponse =
     | { roomId: string; members: RoomMemberDetails[] }
     | { member: RoomMemberDetails }
     | { message: RoomMessage }
+    | { roomId: string; settings: RoomBonusPointSettings; rules: RoomBonusPointRule[]; balances: RoomBonusPointBalance[] }
+    | { bonusPointSettings: RoomBonusPointSettings }
+    | { bonusPointRule: RoomBonusPointRule }
+    | { bonusPointRuleId: string }
     | { roomId: string; dices: RoomDice[]; categories: RoomDiceCategory[] }
     | { dice: RoomDice }
     | { diceId: string }
@@ -119,6 +148,18 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
             return { room: await handleUpdateRoom(payload.payload) };
         case 'updateCriticals':
             return { room: await handleUpdateCriticals(payload.payload) };
+        case 'bonusPoints':
+            return await handleListBonusPoints(payload.payload);
+        case 'updateBonusPointSettings':
+            return { bonusPointSettings: await handleUpdateBonusPointSettings(payload.payload) };
+        case 'createBonusPointRule':
+            return { bonusPointRule: await handleCreateBonusPointRule(payload.payload) };
+        case 'updateBonusPointRule':
+            return { bonusPointRule: await handleUpdateBonusPointRule(payload.payload) };
+        case 'deleteBonusPointRule':
+            return { bonusPointRuleId: await handleDeleteBonusPointRule(payload.payload) };
+        case 'useBonusPointOnRoll':
+            return { message: await handleUseBonusPointOnRoll(payload.payload) };
         case 'updateNickname':
             return { member: await handleUpdateNickname(payload.payload) };
         case 'leaveRoom':
@@ -379,6 +420,192 @@ async function handleUpdateCriticals(payload: { roomId: string; userId: string; 
 
     const memberCount = await countMembers(payload.roomId);
     return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
+}
+
+async function handleListBonusPoints(payload: { roomId: string }): Promise<{ roomId: string; settings: RoomBonusPointSettings; rules: RoomBonusPointRule[]; balances: RoomBonusPointBalance[] }> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    const room = await requireRoom(payload.roomId);
+    const rules = (await listRoomBonusPointRules(room.id)).map(mapBonusPointRuleRecord);
+    const balances = (await listRoomBonusPointBalances(room.id)).map(mapBonusPointBalanceRecord);
+    return {
+        roomId: room.id,
+        settings: {
+            roomId: room.id,
+            enabled: Boolean(room.bonus_points_enabled),
+            maxPointsPerUser: normalizeMappedBonusPointsMax(room.bonus_points_max)
+        },
+        rules,
+        balances
+    };
+}
+
+async function handleUpdateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number }): Promise<RoomBonusPointSettings> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+    const room = await requireRoom(payload.roomId);
+    if (!room.created_by || room.created_by !== payload.userId) {
+        throw new Error('Only the room creator can update bonus point settings');
+    }
+    const maxPointsPerUser = typeof payload.maxPointsPerUser === 'undefined'
+        ? normalizeMappedBonusPointsMax(room.bonus_points_max)
+        : normalizeBonusPointsMax(payload.maxPointsPerUser);
+    const updated = await updateBonusPointsSettings(room.id, {
+        enabled: payload.enabled,
+        maxPointsPerUser,
+    });
+    if (!updated) throw new Error('Failed to update bonus point settings');
+    await capRoomBonusPointBalances(room.id, maxPointsPerUser);
+    return {
+        roomId: room.id,
+        enabled: Boolean(updated.bonus_points_enabled),
+        maxPointsPerUser: normalizeMappedBonusPointsMax(updated.bonus_points_max)
+    };
+}
+
+async function handleCreateBonusPointRule(payload: { roomId: string; userId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] }): Promise<RoomBonusPointRule> {
+    const room = await ensureCanManageBonusPoints(payload.roomId, payload.userId);
+    const normalized = normalizeBonusPointRulePayload(payload);
+    const existing = (await listRoomBonusPointRules(room.id)).map(mapBonusPointRuleRecord);
+    ensureUniqueBonusPointRules([...existing, {
+        id: '',
+        roomId: room.id,
+        createdBy: payload.userId,
+        ...normalized
+    }]);
+    const created = await insertRoomBonusPointRule({
+        room_id: room.id,
+        created_by: payload.userId,
+        name: normalized.name,
+        dice_notation: normalized.diceNotation,
+        condition_operator: normalized.condition.operator,
+        threshold: normalized.condition.threshold,
+        threshold_max: normalized.condition.thresholdMax ?? null,
+        adjustment_sign: normalized.spendAdjustment.sign,
+        adjustment_amount: normalized.spendAdjustment.amount
+    });
+    return mapBonusPointRuleRecord(created);
+}
+
+async function handleUpdateBonusPointRule(payload: { roomId: string; userId: string; ruleId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] }): Promise<RoomBonusPointRule> {
+    const room = await ensureCanManageBonusPoints(payload.roomId, payload.userId);
+    if (!payload.ruleId) throw new Error('Bonus point rule id missing');
+    const existingRule = await getRoomBonusPointRule(payload.ruleId);
+    if (!existingRule || existingRule.room_id !== room.id) {
+        throw new Error('Bonus point rule not found');
+    }
+    const normalized = normalizeBonusPointRulePayload(payload);
+    const existing = (await listRoomBonusPointRules(room.id))
+        .map(mapBonusPointRuleRecord)
+        .filter((rule) => rule.id !== payload.ruleId);
+    ensureUniqueBonusPointRules([...existing, {
+        id: payload.ruleId,
+        roomId: room.id,
+        createdBy: payload.userId,
+        ...normalized
+    }]);
+    const updated = await updateRoomBonusPointRule({
+        id: payload.ruleId,
+        name: normalized.name,
+        dice_notation: normalized.diceNotation,
+        condition_operator: normalized.condition.operator,
+        threshold: normalized.condition.threshold,
+        threshold_max: normalized.condition.thresholdMax ?? null,
+        adjustment_sign: normalized.spendAdjustment.sign,
+        adjustment_amount: normalized.spendAdjustment.amount
+    });
+    return mapBonusPointRuleRecord(updated);
+}
+
+async function handleDeleteBonusPointRule(payload: { roomId: string; userId: string; ruleId: string }): Promise<string> {
+    const room = await ensureCanManageBonusPoints(payload.roomId, payload.userId);
+    if (!payload.ruleId) throw new Error('Bonus point rule id missing');
+    const existing = await getRoomBonusPointRule(payload.ruleId);
+    if (!existing || existing.room_id !== room.id) {
+        throw new Error('Bonus point rule not found');
+    }
+    await deleteRoomBonusPointRule(payload.ruleId);
+    return payload.ruleId;
+}
+
+async function handleUseBonusPointOnRoll(payload: { roomId: string; userId: string; messageId: string }): Promise<RoomMessage> {
+    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.messageId) throw new Error('Message id missing');
+
+    const room = await requireRoom(payload.roomId);
+    if (!room.bonus_points_enabled) {
+        throw new Error('Bonus Points are disabled for this room.');
+    }
+
+    const message = await getMessageById(payload.messageId);
+    if (!message || message.room_id !== payload.roomId) {
+        throw new Error('Dice message not found');
+    }
+    if (message.type !== 'dice') {
+        throw new Error('Bonus points can only be used on dice rolls');
+    }
+    if (message.user_id !== payload.userId) {
+        throw new Error('You can only use bonus points on your own rolls');
+    }
+
+    const balance = await getRoomBonusPointBalance(payload.roomId, payload.userId);
+    if (balance < 1) {
+        throw new Error('Not enough bonus points available.');
+    }
+
+    const spendRule = (await listRoomBonusPointRules(payload.roomId)).map(mapBonusPointRuleRecord)[0];
+    if (!spendRule) {
+        throw new Error('No bonus point rule is configured for spending.');
+    }
+
+    const adjustment = getSignedBonusPointAdjustment(spendRule);
+    const currentTotal = Number(message.dice_total ?? 0);
+    const nextTotal = clampBonusPointRollTotal(currentTotal + adjustment);
+    const previousAdjustment = Number(message.bonus_point_adjustment ?? 0);
+    const previousPointsUsed = Number(message.bonus_points_used ?? 0);
+    const baseTotal = message.dice_base_total === null || message.dice_base_total === undefined
+        ? currentTotal
+        : Number(message.dice_base_total);
+
+    await setRoomBonusPointBalance(payload.roomId, payload.userId, balance - 1);
+
+    const updated = await updateMessageBonusPointUsage({
+        messageId: payload.messageId,
+        diceTotal: nextTotal,
+        diceBaseTotal: baseTotal,
+        bonusPointAdjustment: previousAdjustment + adjustment,
+        bonusPointsUsed: previousPointsUsed + 1,
+        bonusPointRuleUsed: JSON.stringify({ id: spendRule.id, name: spendRule.name })
+    });
+
+    return mapMessageRecord(updated);
+}
+
+function getSignedBonusPointAdjustment(rule: RoomBonusPointRule): number {
+    const amount = Math.abs(rule.spendAdjustment.amount);
+    return rule.spendAdjustment.sign === '-' ? -amount : amount;
+}
+
+function clampBonusPointRollTotal(value: number): number {
+    return Math.min(100, Math.max(1, value));
+}
+
+async function ensureCanManageBonusPoints(roomId: string, userId: string) {
+    if (!roomId) throw new Error('Room id missing');
+    if (!userId) throw new Error('User id missing');
+    const room = await requireRoom(roomId);
+    if (!room.created_by || room.created_by !== userId) {
+        throw new Error('Only the room creator can manage bonus points');
+    }
+    return room;
+}
+
+function normalizeMappedBonusPointsMax(value?: number | string | null): number {
+    const parsed = Number(value ?? 0);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+        return 0;
+    }
+    return Math.floor(parsed);
 }
 
 async function handleUpdateNickname(payload: { roomId: string; userId: string; nickname?: string | null }): Promise<RoomMemberDetails> {

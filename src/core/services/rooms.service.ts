@@ -1,5 +1,5 @@
 import { getApiUrl } from 'modules/discord-auth/utils/urls.utils';
-import type { RoomCriticalRule, RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory, RoomRollAward } from 'netlify/core/types/data.types';
+import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomMemberDetails, RoomMessage, RoomDice, RoomDiceCategory, RoomRollAward } from 'netlify/core/types/data.types';
 import i18n from 'modules/language-switcher/plugins/i18n.plugin';
 
 const ROOMS_ENDPOINT = getApiUrl('/rooms');
@@ -127,6 +127,54 @@ export class RoomsService {
             payload
         });
         return data.room;
+    }
+
+    static async fetchBonusPoints(roomId: string): Promise<{ settings: RoomBonusPointSettings; rules: RoomBonusPointRule[]; balances: RoomBonusPointBalance[] }> {
+        const data = await request<{ roomId: string; settings: RoomBonusPointSettings; rules: RoomBonusPointRule[]; balances: RoomBonusPointBalance[] }>({
+            action: 'bonusPoints',
+            payload: { roomId }
+        });
+        return { settings: data.settings, rules: data.rules, balances: data.balances };
+    }
+
+    static async updateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number }): Promise<RoomBonusPointSettings> {
+        const data = await request<{ bonusPointSettings: RoomBonusPointSettings }>({
+            action: 'updateBonusPointSettings',
+            payload
+        });
+        return data.bonusPointSettings;
+    }
+
+    static async createBonusPointRule(payload: { roomId: string; userId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] }): Promise<RoomBonusPointRule> {
+        const data = await request<{ bonusPointRule: RoomBonusPointRule }>({
+            action: 'createBonusPointRule',
+            payload
+        });
+        return data.bonusPointRule;
+    }
+
+    static async updateBonusPointRule(payload: { roomId: string; userId: string; ruleId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] }): Promise<RoomBonusPointRule> {
+        const data = await request<{ bonusPointRule: RoomBonusPointRule }>({
+            action: 'updateBonusPointRule',
+            payload
+        });
+        return data.bonusPointRule;
+    }
+
+    static async deleteBonusPointRule(payload: { roomId: string; userId: string; ruleId: string }): Promise<string> {
+        const data = await request<{ bonusPointRuleId: string }>({
+            action: 'deleteBonusPointRule',
+            payload
+        });
+        return data.bonusPointRuleId;
+    }
+
+    static async useBonusPointOnRoll(payload: { roomId: string; userId: string; messageId: string }): Promise<RoomMessage> {
+        const data = await request<{ message: RoomMessage }>({
+            action: 'useBonusPointOnRoll',
+            payload
+        });
+        return data.message;
     }
 
     static async updateNickname(payload: { roomId: string; userId: string; nickname?: string | null }): Promise<RoomMemberDetails> {

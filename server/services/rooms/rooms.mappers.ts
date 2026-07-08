@@ -4,9 +4,11 @@ import type {
     DatabaseRoomDiceCategory,
     DatabaseRoomMemberWithUser,
     DatabaseRoomMessage,
+    DatabaseRoomBonusPointBalance,
+    DatabaseRoomBonusPointRule,
     DatabaseRoomRollAward
 } from '../../core/types/database.types';
-import type { RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../../core/types/data.types';
+import type { RoomBonusPointBalance, RoomBonusPointRule, RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../../core/types/data.types';
 import { ONLINE_MEMBER_WINDOW_MS, ROOM_CRITICALS_MAX_ITEMS } from './rooms.constants';
 import {
     normalizeRollAwardDiceNotations,
@@ -92,7 +94,46 @@ export function mapRoomToSummary(room: DatabaseRoom, options?: { currentUserId?:
         createdAt: room.created_at ?? undefined,
         rollAwardsEnabled: Boolean(room.roll_awards_enabled),
         rollAwardsWindow: normalizeRollAwardWindowSize(room.roll_awards_window),
-        criticals: parseStoredRoomCriticals(room.room_criticals)
+        criticals: parseStoredRoomCriticals(room.room_criticals),
+        bonusPointSettings: {
+            roomId: room.id,
+            enabled: Boolean(room.bonus_points_enabled),
+            maxPointsPerUser: normalizeBonusPointsMaxForMapping(room.bonus_points_max)
+        }
+    };
+}
+
+export function mapBonusPointRuleRecord(record: DatabaseRoomBonusPointRule): RoomBonusPointRule {
+    return {
+        id: record.id,
+        roomId: record.room_id,
+        name: record.name,
+        diceNotation: record.dice_notation,
+        condition: {
+            operator: record.condition_operator,
+            threshold: Number(record.threshold),
+            thresholdMax: record.threshold_max === null || record.threshold_max === undefined
+                ? null
+                : Number(record.threshold_max)
+        },
+        spendAdjustment: {
+            sign: record.adjustment_sign,
+            amount: Number(record.adjustment_amount)
+        },
+        createdBy: record.created_by ?? undefined,
+        createdAt: record.created_at ?? undefined,
+        updatedAt: record.updated_at ?? undefined
+    };
+}
+
+export function mapBonusPointBalanceRecord(record: DatabaseRoomBonusPointBalance): RoomBonusPointBalance {
+    return {
+        roomId: record.room_id,
+        userId: record.user_id,
+        points: Number(record.points ?? 0),
+        username: record.username ?? undefined,
+        avatar: record.avatar ?? undefined,
+        nickname: record.nickname ?? undefined
     };
 }
 
@@ -197,6 +238,28 @@ export function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
     const diceTotal = record.dice_total !== null && record.dice_total !== undefined
         ? Number(record.dice_total)
         : undefined;
+    let bonusPointRuleUsed: { id: string; name: string } | null = null;
+    if (record.bonus_point_rule_used) {
+        if (typeof record.bonus_point_rule_used === 'string') {
+            try {
+                const parsed = JSON.parse(record.bonus_point_rule_used);
+                if (parsed && typeof parsed.id === 'string' && typeof parsed.name === 'string') {
+                    bonusPointRuleUsed = { id: parsed.id, name: parsed.name };
+                }
+            } catch {
+                bonusPointRuleUsed = null;
+            }
+        } else if (
+            typeof record.bonus_point_rule_used === 'object' &&
+            typeof record.bonus_point_rule_used.id === 'string' &&
+            typeof record.bonus_point_rule_used.name === 'string'
+        ) {
+            bonusPointRuleUsed = {
+                id: record.bonus_point_rule_used.id,
+                name: record.bonus_point_rule_used.name
+            };
+        }
+    }
 
     return {
         id: record.id,
@@ -209,9 +272,26 @@ export function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
         diceNotation: record.dice_notation ?? undefined,
         diceTotal,
         diceRolls,
+        pointUsed: Boolean(record.point_used),
+        diceBaseTotal: record.dice_base_total === null || record.dice_base_total === undefined
+            ? undefined
+            : Number(record.dice_base_total),
+        bonusPointAdjustment: record.bonus_point_adjustment === null || record.bonus_point_adjustment === undefined
+            ? undefined
+            : Number(record.bonus_point_adjustment),
+        bonusPointsUsed: Number(record.bonus_points_used ?? 0),
+        bonusPointRuleUsed,
         createdAt: record.created_at,
         nickname: record.member_nickname ?? undefined
     };
+}
+
+function normalizeBonusPointsMaxForMapping(value?: number | string | null): number {
+    const parsed = Number(value ?? 0);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+        return 0;
+    }
+    return Math.floor(parsed);
 }
 
 export function calculateIsOnline(lastSeen?: string | null): boolean {

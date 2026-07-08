@@ -70,6 +70,8 @@ async function createTables(): Promise<void> {
             roll_awards_enabled TINYINT(1) DEFAULT 0,
             roll_awards_window INT NULL,
             room_criticals JSON NULL,
+            bonus_points_enabled TINYINT(1) DEFAULT 0,
+            bonus_points_max INT DEFAULT 0,
             archived_at TIMESTAMP NULL DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -101,6 +103,11 @@ async function createTables(): Promise<void> {
             dice_notation VARCHAR(64),
             dice_total INT,
             dice_rolls JSON,
+            point_used TINYINT(1) DEFAULT 0,
+            dice_base_total INT NULL,
+            bonus_point_adjustment INT NULL,
+            bonus_points_used INT DEFAULT 0,
+            bonus_point_rule_used JSON NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_messages_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
             CONSTRAINT fk_messages_user FOREIGN KEY (user_id) REFERENCES users(discord_user_id) ON DELETE SET NULL
@@ -153,6 +160,38 @@ async function createTables(): Promise<void> {
             CONSTRAINT fk_roll_awards_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
             CONSTRAINT fk_roll_awards_user FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL,
             INDEX idx_roll_awards_room (room_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS room_bonus_point_rules (
+            id CHAR(36) PRIMARY KEY,
+            room_id CHAR(36) NOT NULL,
+            created_by VARCHAR(64),
+            name VARCHAR(120) NOT NULL,
+            dice_notation VARCHAR(64) NOT NULL,
+            condition_operator VARCHAR(16) NOT NULL,
+            threshold INT NOT NULL,
+            threshold_max INT NULL,
+            adjustment_sign CHAR(1) NOT NULL,
+            adjustment_amount INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_bonus_point_rules_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+            CONSTRAINT fk_bonus_point_rules_user FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL,
+            INDEX idx_bonus_point_rules_room (room_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS room_bonus_point_balances (
+            room_id CHAR(36) NOT NULL,
+            user_id VARCHAR(64) NOT NULL,
+            points INT NOT NULL DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (room_id, user_id),
+            CONSTRAINT fk_bonus_point_balances_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+            CONSTRAINT fk_bonus_point_balances_user FOREIGN KEY (user_id) REFERENCES users(discord_user_id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
@@ -247,6 +286,24 @@ async function ensureAllColumnsCreated(): Promise<void> {
         `);
     }
 
+    if (!(await columnExists('rooms', 'bonus_points_max'))) {
+        logger.info('Creating missing "bonus_points_max" column in "rooms" table...');
+
+        await query(`
+            ALTER TABLE rooms
+            ADD COLUMN bonus_points_max INT DEFAULT 0
+        `);
+    }
+
+    if (!(await columnExists('rooms', 'bonus_points_enabled'))) {
+        logger.info('Creating missing "bonus_points_enabled" column in "rooms" table...');
+
+        await query(`
+            ALTER TABLE rooms
+            ADD COLUMN bonus_points_enabled TINYINT(1) DEFAULT 0
+        `);
+    }
+
     // room members table
     if (!(await columnExists('room_members', 'nickname'))) {
         logger.info('Creating missing "nickname" column in "room_members" table...');
@@ -283,5 +340,30 @@ async function ensureAllColumnsCreated(): Promise<void> {
             ALTER TABLE room_roll_awards
             ADD COLUMN dice_notation VARCHAR(64) NULL AFTER description
         `);
+    }
+
+    if (!(await columnExists('room_messages', 'point_used'))) {
+        logger.info('Creating missing "point_used" column in "room_messages" table...');
+        await query(`ALTER TABLE room_messages ADD COLUMN point_used TINYINT(1) DEFAULT 0`);
+    }
+
+    if (!(await columnExists('room_messages', 'dice_base_total'))) {
+        logger.info('Creating missing "dice_base_total" column in "room_messages" table...');
+        await query(`ALTER TABLE room_messages ADD COLUMN dice_base_total INT NULL`);
+    }
+
+    if (!(await columnExists('room_messages', 'bonus_point_adjustment'))) {
+        logger.info('Creating missing "bonus_point_adjustment" column in "room_messages" table...');
+        await query(`ALTER TABLE room_messages ADD COLUMN bonus_point_adjustment INT NULL`);
+    }
+
+    if (!(await columnExists('room_messages', 'bonus_points_used'))) {
+        logger.info('Creating missing "bonus_points_used" column in "room_messages" table...');
+        await query(`ALTER TABLE room_messages ADD COLUMN bonus_points_used INT DEFAULT 0`);
+    }
+
+    if (!(await columnExists('room_messages', 'bonus_point_rule_used'))) {
+        logger.info('Creating missing "bonus_point_rule_used" column in "room_messages" table...');
+        await query(`ALTER TABLE room_messages ADD COLUMN bonus_point_rule_used JSON NULL`);
     }
 }
