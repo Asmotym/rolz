@@ -9,6 +9,7 @@ interface ApiResponse<T> {
 }
 
 type ThemeTarget = {
+  change: (themeName: string) => void;
   global: {
     name: {
       value: string;
@@ -41,7 +42,7 @@ export function saveTheme(theme: AppTheme): void {
 }
 
 export function applyTheme(themeTarget: ThemeTarget, theme: AppTheme): void {
-  themeTarget.global.name.value = theme;
+  themeTarget.change(theme);
 }
 
 export function getAppliedTheme(themeTarget: ThemeTarget): AppTheme {

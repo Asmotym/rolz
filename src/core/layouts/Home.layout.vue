@@ -19,7 +19,10 @@
 
         <!-- Text slot -->
         <template v-slot:text>
-          <div v-html="t('home.not_logged_in_text')"></div>
+          <div>
+            <p>{{ t('home.not_logged_in_text_intro') }}</p>
+            <p>{{ t('home.not_logged_in_text_login') }}</p>
+          </div>
         </template>
 
         <!-- Discord Auth button -->

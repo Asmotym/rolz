@@ -22,7 +22,8 @@
   "home": {
     "not_logged_in_title": "¡Bienvenido a Rolz!",
     "not_logged_in_message": "La herramienta sencilla y potente para tirar dados de rol.",
-    "not_logged_in_text": "<p>Esta herramienta te permite crear o unirte a salas con un chat totalmente funcional y tiradas de dados.</p><p>Debes estar conectado para usarla; pulsa el botón de abajo para conectarte con tu cuenta de Discord.</p>"
+    "not_logged_in_text_intro": "Esta herramienta te permite crear o unirte a salas con un chat totalmente funcional y tiradas de dados.",
+    "not_logged_in_text_login": "Debes estar conectado para usarla. Pulsa el botón de abajo para conectarte con tu cuenta de Discord."
   },
   "settings": {
     "tabs": {
