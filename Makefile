@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 COMPOSE ?= docker compose
 COMPOSE_FILE ?= docker-compose.yml
-SERVICE ?= rolz
+SERVICES ?= rolz api-docs phpmyadmin
 ENV_FILE ?= .env
 
 export FRONTEND_PORT ?= 5173
@@ -31,7 +31,7 @@ build:
 run: up
 
 up:
-	$(COMPOSE_CMD) up -d --build $(SERVICE)
+	$(COMPOSE_CMD) up -d --build $(SERVICES)
 
 stop:
 	-$(COMPOSE_CMD) stop $(SERVICE)
