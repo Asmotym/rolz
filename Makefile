@@ -33,6 +33,13 @@ run: up
 up:
 	$(COMPOSE_CMD) up -d --build $(SERVICES)
 
+update:
+        git fetch
+        git pull origin main
+        make prod-down
+        make deploy
+        docker image prune -f
+
 deploy: prod-up
 
 prod-up:

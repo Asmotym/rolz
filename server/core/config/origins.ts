@@ -1,4 +1,4 @@
-const DEFAULT_HOSTS = ['rolz.asmotym.fr', 'localhost:5173'] as const;
+const DEFAULT_HOSTS = ['rolz.asmotym.fr', 'localhost:5173', 'staging.rolz.asmotym.fr'] as const;
 
 const envHosts = (process.env.TRUSTED_FRONTEND_HOSTS ?? '')
     .split(',')
