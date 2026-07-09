@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: Public read API for Rolz rooms, members, and dice roll history.
 servers:
-  - url: https://rolz.asmotym.fr/api
-    description: Production API
+  - url: __API_BASE_URL__
+    description: Rolz API
 security:
   - ApiKeyAuth: []
 tags:

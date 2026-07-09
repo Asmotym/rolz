@@ -47,6 +47,7 @@ export PORT="$BACKEND_PORT"
 export FRONTEND_PORT="${FRONTEND_PORT:-5173}"
 export FRONTEND_URL="${FRONTEND_URL:-http://localhost:${FRONTEND_PORT}}"
 export VITE_BACKEND_URL="${VITE_BACKEND_URL:-http://localhost:${BACKEND_PORT}}"
+export VITE_API_BASE_URL="${VITE_API_BASE_URL:-http://localhost:${BACKEND_PORT}/api}"
 export HOST="${HOST:-0.0.0.0}"
 
 wait_for_mysql() {
