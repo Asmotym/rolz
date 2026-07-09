@@ -159,7 +159,7 @@ const revoking = ref(false);
 const copying = ref(false);
 const feedback = ref<FeedbackState>(null);
 const docsUrl = import.meta.env.VITE_API_DOCS_URL || 'https://api.rolz.asmotym.fr';
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.rolz.asmotym.fr';
+const apiBaseUrl = import.meta.env.VITE_PUBLIC_API_BASE_URL || 'https://api.rolz.asmotym.fr';
 const headersExample = `Accept: application/json
 X-API-Key: <your-api-key>`;
 

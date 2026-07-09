@@ -51,7 +51,7 @@ services:
       FRONTEND_PORT: ${FRONTEND_PORT:-5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api.rolz.asmotym.fr}
+      VITE_PUBLIC_API_BASE_URL: ${VITE_PUBLIC_API_BASE_URL:-https://api.rolz.asmotym.fr}
       VITE_API_DOCS_URL: ${VITE_API_DOCS_URL:-http://localhost:6000}
       DATABASE_URL: ${DATABASE_URL:-mysql://rolz:rolz@mysql:3306/rolz}
       DATABASE_SSL: ${DATABASE_SSL:-false}
@@ -86,7 +86,7 @@ services:
     container_name: rolz-api-docs
     environment:
       PORT: 6000
-      API_BASE_URL: ${API_BASE_URL:-https://api.rolz.asmotym.fr}
+      API_DOCS_BASE_URL: ${API_DOCS_BASE_URL:-https://api.rolz.asmotym.fr}
       SWAGGER_JSON: /tmp/rolz-api.yaml
       VIRTUAL_HOST: docs.rolz.asmotym.fr
       VIRTUAL_PORT: 6000
@@ -95,7 +95,7 @@ services:
     command:
       - sh
       - -c
-      - sed "s|__API_BASE_URL__|$${API_BASE_URL}|g" /openapi/rolz-api.template.yaml > /tmp/rolz-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
+      - sed "s|__API_BASE_URL__|$${API_DOCS_BASE_URL}|g" /openapi/rolz-api.template.yaml > /tmp/rolz-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
     ports:
       - "${API_DOCS_PORT:-6000}:6000"
     volumes:
