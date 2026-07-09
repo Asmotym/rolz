@@ -33,23 +33,27 @@ run: up
 up:
 	$(COMPOSE_CMD) up -d --build $(SERVICES)
 
-update:
-    @echo "Updating repository..."
-    @git fetch
-    git pull origin main
-	@echo "Stopping production services..."
-    @make prod-down
-    @echo "Deploying production services..."
-    @make deploy
-    @echo "Pruning old Docker images..."
-    @docker image prune -f
+update: update-repo prod-down deploy prune-images
 
-deploy: prod-up
+update-repo:
+	@echo "Updating repository..."
+	@git fetch
+	@git pull origin main
+
+prune-images:
+	@echo "Pruning old Docker images..."
+	@docker image prune -f
+
+deploy: 
+	@echo "Deploying production services..."
+	@make prod-up
 
 prod-up:
+	@echo "Starting production services..."
 	$(PROD_COMPOSE_CMD) up -d --build $(PROD_SERVICES)
 
 prod-down:
+	@echo "Stopping production services..."
 	$(PROD_COMPOSE_CMD) down
 
 prod-logs:
