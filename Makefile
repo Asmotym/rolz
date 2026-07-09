@@ -2,7 +2,9 @@ SHELL := /bin/bash
 
 COMPOSE ?= docker compose
 COMPOSE_FILE ?= docker-compose.yml
+PROD_COMPOSE_FILE ?= docker-compose.prod.yml
 SERVICES ?= rolz api-docs phpmyadmin
+PROD_SERVICES ?= rolz api-docs
 ENV_FILE ?= .env
 
 ifneq ("$(wildcard $(ENV_FILE))","")
@@ -30,8 +32,9 @@ WATCH_DATABASE_URL ?= mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@127.0.0.1:$(MYSQL_
 
 ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")
 COMPOSE_CMD := $(COMPOSE) -f $(COMPOSE_FILE) $(ENV_FILE_FLAG)
+PROD_COMPOSE_CMD := $(COMPOSE) -f $(PROD_COMPOSE_FILE) $(ENV_FILE_FLAG)
 
-.PHONY: build run up stop logs clean shell down
+.PHONY: build run up stop logs clean shell down deploy prod-up prod-down prod-logs
 
 build:
 	$(COMPOSE_CMD) build $(SERVICE)
@@ -40,6 +43,17 @@ run: up
 
 up:
 	$(COMPOSE_CMD) up -d --build $(SERVICES)
+
+deploy: prod-up
+
+prod-up:
+	$(PROD_COMPOSE_CMD) up -d --build $(PROD_SERVICES)
+
+prod-down:
+	$(PROD_COMPOSE_CMD) down
+
+prod-logs:
+	$(PROD_COMPOSE_CMD) logs -f $(SERVICE)
 
 up-api-docs:
 	$(COMPOSE_CMD) up -d --build api-docs

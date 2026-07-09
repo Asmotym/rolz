@@ -1,0 +1,76 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: rolz-mysql
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_TCP_PORT: 3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command:
+      - --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    networks:
+      - rolz-internal
+
+  rolz:
+    build:
+      context: .
+      target: runner
+    image: rolz-all:latest
+    container_name: rolz-stack
+    depends_on:
+      - mysql
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_PORT: 3306
+      ROLZ_DEV_MODE: "false"
+      NODE_ENV: production
+      BACKEND_PORT: 4000
+      FRONTEND_PORT: 5173
+      FRONTEND_URL: https://rolz.asmotym.fr
+      VITE_BACKEND_URL: https://api.rolz.asmotym.fr
+      VITE_PUBLIC_API_BASE_URL: https://api.rolz.asmotym.fr/api
+      VITE_API_DOCS_URL: https://docs.rolz.asmotym.fr
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_SSL: "false"
+    restart: unless-stopped
+    networks:
+      - proxy
+      - rolz-internal
+
+  api-docs:
+    image: swaggerapi/swagger-ui:latest
+    container_name: rolz-api-docs
+    environment:
+      PORT: 6000
+      API_DOCS_BASE_URL: https://api.rolz.asmotym.fr/api
+      SWAGGER_JSON: /tmp/rolz-api.yaml
+    command:
+      - sh
+      - -c
+      - sed "s|__API_BASE_URL__|$${API_DOCS_BASE_URL}|g" /openapi/rolz-api.template.yaml > /tmp/rolz-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
+    volumes:
+      - ./docs/openapi.template.yaml:/openapi/rolz-api.template.yaml:ro
+    restart: unless-stopped
+    networks:
+      - proxy
+
+volumes:
+  mysql-data:
+
+networks:
+  proxy:
+    external: true
+  rolz-internal:
+    name: rolz-internal
