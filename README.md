@@ -31,6 +31,15 @@ Fill in the `.env` file with:
 
 Run both commands in separate terminals for a full-stack dev experience.
 
+## Monitoring
+
+The API exposes unauthenticated root-level probes for monitoring tools:
+
+- `GET /health` – liveness check for the API process. It returns `200` when Express can respond and does not touch the database, so it is safe for frequent probes.
+- `GET /ready` – readiness check for the API and MySQL. It runs a lightweight database query, returns `200` when dependencies are available, and returns `503` when the database is unavailable.
+
+Use `/health` for frequent process liveness checks and `/ready` for deployment, load balancer, or dependency-aware readiness checks.
+
 ## Production Builds
 
 - `npm run build` – Type-check and bundle the Vue client (output in `dist/`).

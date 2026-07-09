@@ -10,6 +10,7 @@ import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/
 import { sentry } from './middlewares/sentry'
 import * as Sentry from '@sentry/node'
 import { DatabaseUnavailableError } from './core/database/errors';
+import { query } from './core/database/client';
 import { HttpError } from './core/errors/http-errors';
 import { ensureDatabaseSetup } from './core/database/schema';
 import { getUser } from './core/database/tables/users.table';
@@ -21,11 +22,41 @@ const app = express();
 
 app.use(cors);
 app.use(express.json({ limit: '1mb' }));
-app.use('/api', requireApiKeyForUntrustedOrigins);
+
+function sendHealthResponse(res: Response, statusCode: number, payload: Record<string, unknown>) {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(statusCode).json({ ...payload, timestamp: new Date().toISOString() });
+}
 
 app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    return sendHealthResponse(res, 200, { status: 'ok' });
 });
+
+app.get('/ready', async (_req, res) => {
+    try {
+        await query('SELECT 1 AS ok');
+        return sendHealthResponse(res, 200, {
+            status: 'ready',
+            dependencies: {
+                database: 'ok'
+            }
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unexpected database readiness failure';
+        const meta = error instanceof Error ? { stack: error.stack } : undefined;
+        logger.warn(`Readiness check failed: ${message}`, meta);
+
+        return sendHealthResponse(res, 503, {
+            status: 'unavailable',
+            dependencies: {
+                database: 'unavailable'
+            },
+            error: message
+        });
+    }
+});
+
+app.use('/api', requireApiKeyForUntrustedOrigins);
 
 function respondWithServiceError(res: Response, error: unknown, context: string) {
     const message = error instanceof Error ? error.message : 'Unexpected error';
