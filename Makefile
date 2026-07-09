@@ -34,11 +34,15 @@ up:
 	$(COMPOSE_CMD) up -d --build $(SERVICES)
 
 update:
-    git fetch
+    @echo "Updating repository..."
+    @git fetch
     git pull origin main
-    make prod-down
-    make deploy
-    docker image prune -f
+	@echo "Stopping production services..."
+    @make prod-down
+    @echo "Deploying production services..."
+    @make deploy
+    @echo "Pruning old Docker images..."
+    @docker image prune -f
 
 deploy: prod-up
 
