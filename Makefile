@@ -5,21 +5,27 @@ COMPOSE_FILE ?= docker-compose.yml
 SERVICES ?= rolz api-docs phpmyadmin
 ENV_FILE ?= .env
 
-export FRONTEND_PORT ?= 5173
-export BACKEND_PORT ?= 4000
-export MYSQL_PORT ?= 3306
-export API_DOCS_PORT ?= 6000
-export MYSQL_USER ?= rolz
-export MYSQL_PASSWORD ?= rolz
-export MYSQL_DATABASE ?= rolz
-export MYSQL_ROOT_PASSWORD ?= root
-export FRONTEND_URL ?= http://localhost:5173
-export VITE_BACKEND_URL ?= http://localhost:4000
-export API_DOCS_BASE_URL ?= http://localhost:$(BACKEND_PORT)/api
-export VITE_PUBLIC_API_BASE_URL ?= $(API_DOCS_BASE_URL)
-export VITE_API_DOCS_URL ?= http://localhost:$(API_DOCS_PORT)
-export DATABASE_URL ?= mysql://rolz:rolz@mysql:3306/rolz
-export DATABASE_SSL ?= false
+ifneq ("$(wildcard $(ENV_FILE))","")
+include $(ENV_FILE)
+export
+endif
+
+FRONTEND_PORT ?= 5173
+BACKEND_PORT ?= 4000
+MYSQL_PORT ?= 3306
+API_DOCS_PORT ?= 6000
+API_DOCS_HOST_PORT ?= 60600000
+MYSQL_USER ?= rolz
+MYSQL_PASSWORD ?= rolz
+MYSQL_DATABASE ?= rolz
+MYSQL_ROOT_PASSWORD ?= root
+FRONTEND_URL ?= http://localhost:5173
+VITE_BACKEND_URL ?= http://localhost:4000
+API_DOCS_BASE_URL ?= http://localhost:$(BACKEND_PORT)/api
+VITE_PUBLIC_API_BASE_URL ?= $(API_DOCS_BASE_URL)
+VITE_API_DOCS_URL ?= http://localhost:$(API_DOCS_HOST_PORT)
+DATABASE_URL ?= mysql://rolz:rolz@mysql:3306/rolz
+DATABASE_SSL ?= false
 WATCH_DATABASE_URL ?= mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@127.0.0.1:$(MYSQL_PORT)/$(MYSQL_DATABASE)
 
 ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")

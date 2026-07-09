@@ -52,7 +52,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
       VITE_PUBLIC_API_BASE_URL: ${VITE_PUBLIC_API_BASE_URL:-https://api.rolz.asmotym.fr}
-      VITE_API_DOCS_URL: ${VITE_API_DOCS_URL:-http://localhost:6000}
+      VITE_API_DOCS_URL: ${VITE_API_DOCS_URL:-http://localhost:6060}
       DATABASE_URL: ${DATABASE_URL:-mysql://rolz:rolz@mysql:3306/rolz}
       DATABASE_SSL: ${DATABASE_SSL:-false}
       VIRTUAL_HOST: rolz.asmotym.fr
@@ -97,7 +97,7 @@ services:
       - -c
       - sed "s|__API_BASE_URL__|$${API_DOCS_BASE_URL}|g" /openapi/rolz-api.template.yaml > /tmp/rolz-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
     ports:
-      - "${API_DOCS_PORT:-6000}:6000"
+      - "${API_DOCS_HOST_PORT:-6060}:6000"
     volumes:
       - ./docs/openapi.template.yaml:/openapi/rolz-api.template.yaml:ro
     restart: unless-stopped
