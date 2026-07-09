@@ -13,21 +13,10 @@ export
 endif
 
 FRONTEND_PORT ?= 5173
-BACKEND_PORT ?= 4000
 MYSQL_PORT ?= 3306
-API_DOCS_PORT ?= 6000
-API_DOCS_HOST_PORT ?= 60600000
 MYSQL_USER ?= rolz
 MYSQL_PASSWORD ?= rolz
 MYSQL_DATABASE ?= rolz
-MYSQL_ROOT_PASSWORD ?= root
-FRONTEND_URL ?= http://localhost:5173
-VITE_BACKEND_URL ?= http://localhost:4000
-API_DOCS_BASE_URL ?= http://localhost:$(BACKEND_PORT)/api
-VITE_PUBLIC_API_BASE_URL ?= $(API_DOCS_BASE_URL)
-VITE_API_DOCS_URL ?= http://localhost:$(API_DOCS_HOST_PORT)
-DATABASE_URL ?= mysql://rolz:rolz@mysql:3306/rolz
-DATABASE_SSL ?= false
 WATCH_DATABASE_URL ?= mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@127.0.0.1:$(MYSQL_PORT)/$(MYSQL_DATABASE)
 
 ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")

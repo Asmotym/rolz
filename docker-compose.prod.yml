@@ -17,6 +17,11 @@ services:
     restart: unless-stopped
     networks:
       - rolz-internal
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   rolz:
     build:
@@ -25,7 +30,8 @@ services:
     image: rolz-all:latest
     container_name: rolz-stack
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     env_file:
       - .env
     environment:
