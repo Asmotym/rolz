@@ -164,7 +164,7 @@ export const useRoomsStore = defineStore('rooms', {
                 this.sendingMessage = false;
             }
         },
-        async sendDiceRoll(payload: { roomId: string; userId: string; roll: DiceRoll }) {
+        async sendDiceRoll(payload: { roomId: string; userId: string; roll: DiceRoll; skipBonusPointRules?: boolean }) {
             this.sendingMessage = true;
             this.setError(null);
             try {
@@ -178,6 +178,7 @@ export const useRoomsStore = defineStore('rooms', {
                         rolls: payload.roll.rolls,
                     },
                     content: payload.roll.description,
+                    skipBonusPointRules: payload.skipBonusPointRules,
                 });
                 this.appendMessages([message]);
                 await this.loadBonusPoints(payload.roomId, true);
@@ -263,12 +264,18 @@ export const useRoomsStore = defineStore('rooms', {
                 this.bonusPointsLoading = false;
             }
         },
-        async updateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number }) {
+        async updateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number; allowExtremeSpend?: boolean }) {
             const settings = await RoomsService.updateBonusPointSettings(payload);
             this.bonusPointSettings = settings;
             const room = this.rooms.find((current) => current.id === payload.roomId);
             if (room) {
                 room.bonusPointSettings = settings;
+            }
+            if (typeof payload.maxPointsPerUser !== 'undefined') {
+                this.bonusPointBalances = this.bonusPointBalances.map((balance) => ({
+                    ...balance,
+                    points: Math.min(balance.points, settings.maxPointsPerUser),
+                }));
             }
             return settings;
         },
@@ -300,6 +307,24 @@ export const useRoomsStore = defineStore('rooms', {
                 throw error;
             } finally {
                 this.bonusPointRollUpdatingId = null;
+            }
+        },
+        async updateBonusPointBalance(payload: { roomId: string; userId: string; targetUserId: string; points: number }) {
+            this.bonusPointsError = null;
+            try {
+                const balance = await RoomsService.updateBonusPointBalance(payload);
+                const existingIndex = this.bonusPointBalances.findIndex((current) => current.userId === balance.userId);
+                if (existingIndex === -1) {
+                    this.bonusPointBalances = [...this.bonusPointBalances, balance];
+                } else {
+                    this.bonusPointBalances = this.bonusPointBalances.map((current) => (
+                        current.userId === balance.userId ? balance : current
+                    ));
+                }
+                return balance;
+            } catch (error) {
+                this.bonusPointsError = error instanceof Error ? error.message : 'Unable to update bonus point balance';
+                throw error;
             }
         },
         async updateNickname(payload: { roomId: string; userId: string; nickname?: string | null }) {

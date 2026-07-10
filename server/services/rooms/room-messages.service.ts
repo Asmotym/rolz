@@ -8,6 +8,7 @@ import { insertMessage, listDiceMessages, listMessages } from '../../core/databa
 import { touchRoom } from '../../core/database/tables/rooms.table';
 import { getUser } from '../../core/database/tables/users.table';
 import type { RoomBonusPointRule, RoomMessage } from '../../core/types/data.types';
+import { getDiceFaceInfo, getSelectedRawRoll } from '../../core/utils/bonus-point-dice';
 import { mapBonusPointRuleRecord, mapMessageRecord } from './rooms.mappers';
 import { sanitizeDiceLimit } from './rooms.normalizers';
 import { requireRoom } from './rooms.shared';
@@ -43,7 +44,7 @@ export async function listRoomDiceRolls(payload: { roomId: string; limit?: numbe
     return rows.map(mapMessageRecord);
 }
 
-export async function handleSendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } }): Promise<RoomMessage> {
+export async function handleSendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] }; skipBonusPointRules?: boolean }): Promise<RoomMessage> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     if (payload.type === 'text' && !payload.content?.trim()) {
@@ -65,7 +66,7 @@ export async function handleSendMessage(payload: { roomId: string; userId: strin
     const diceTotal = payload.dice ? Number(payload.dice.total) : undefined;
     const diceRolls = payload.dice ? payload.dice.rolls.map((roll) => Number(roll)) : undefined;
     if (payload.type === 'dice' && payload.dice) {
-        if (room.bonus_points_enabled) {
+        if (room.bonus_points_enabled && !payload.skipBonusPointRules) {
             await awardBonusPointsForRoll({
                 roomId: payload.roomId,
                 userId: payload.userId,
@@ -85,7 +86,8 @@ export async function handleSendMessage(payload: { roomId: string; userId: strin
         type: payload.type,
         dice_notation: diceNotation,
         dice_total: diceTotal,
-        dice_rolls: diceRolls
+        dice_rolls: diceRolls,
+        bonus_point_rules_skipped: payload.type === 'dice' && payload.skipBonusPointRules ? 1 : 0
     });
 
     await touchRoom(payload.roomId);
@@ -115,7 +117,7 @@ async function awardBonusPointsForRoll(payload: {
 }
 
 function countMatchingBonusRules(rules: RoomBonusPointRule[], notation: string, rolls: number[]): number {
-    const faceNotation = getDiceFaceNotation(notation);
+    const faceNotation = getDiceFaceInfo(notation)?.faceNotation ?? null;
     const selectedRoll = getSelectedRawRoll(notation, rolls);
     if (!faceNotation || !Number.isFinite(selectedRoll)) {
         return 0;
@@ -124,25 +126,6 @@ function countMatchingBonusRules(rules: RoomBonusPointRule[], notation: string, 
         rule.diceNotation === faceNotation &&
         matchesBonusCondition(Number(selectedRoll), rule)
     )).length;
-}
-
-function getDiceFaceNotation(notation: string): string | null {
-    const match = notation.trim().toLowerCase().match(/^[+-]?(?:\d+)?d([1-9]\d*)(?:[+-]\d+)?$/);
-    return match ? `d${match[1]}` : null;
-}
-
-function getSelectedRawRoll(notation: string, rolls: number[]): number {
-    const match = notation.trim().toLowerCase().match(/^([+-])?(?:\d+)?d[1-9]\d*(?:[+-]\d+)?$/);
-    if (!rolls.length) {
-        return Number.NaN;
-    }
-    if (match?.[1] === '+') {
-        return Math.min(...rolls);
-    }
-    if (match?.[1] === '-') {
-        return Math.max(...rolls);
-    }
-    return rolls[0];
 }
 
 function matchesBonusCondition(value: number, rule: RoomBonusPointRule): boolean {

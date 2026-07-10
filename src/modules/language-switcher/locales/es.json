@@ -423,6 +423,8 @@
     "enable": "Activar puntos de bonificación en esta sala",
     "disabled": "Los puntos de bonificación están desactivados. Actívalos arriba para conceder y usar puntos.",
     "maxPoints": "Puntos máximos por usuario",
+    "allowExtremeSpend": "Permitir puntos en tiradas naturales mínimas o máximas",
+    "skipRulesForRoll": "Tirar sin conceder puntos de bonificación",
     "useOnRoll": "Usar punto",
     "memberPoints": "{current}/{max} puntos de bonificación",
     "pointUsedChip": "{count} punto usado | {count} puntos usados",
@@ -453,6 +455,11 @@
       "savedRules": "Reglas guardadas",
       "empty": "Aún no hay reglas de puntos de bonificación. Añade una arriba para empezar a conceder puntos."
     },
+    "balances": {
+      "title": "Puntos de miembros",
+      "description": "Ajusta el saldo actual de puntos de bonificación de cada miembro de la sala.",
+      "empty": "Aún no hay miembros de la sala que gestionar."
+    },
     "feedback": {
       "settingsSaved": "Configuración de puntos de bonificación guardada.",
       "ruleSaved": "Regla de puntos de bonificación guardada.",
@@ -461,7 +468,8 @@
     "errors": {
       "saveSettings": "No se pudo guardar la configuración de puntos de bonificación.",
       "saveRule": "No se pudo guardar la regla de puntos de bonificación.",
-      "deleteRule": "No se pudo eliminar la regla de puntos de bonificación."
+      "deleteRule": "No se pudo eliminar la regla de puntos de bonificación.",
+      "saveBalance": "No se pudo actualizar el saldo de puntos de bonificación."
     }
   }
 }

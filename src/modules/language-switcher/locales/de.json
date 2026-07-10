@@ -423,6 +423,8 @@
     "enable": "Bonuspunkte für diesen Raum aktivieren",
     "disabled": "Bonuspunkte sind derzeit deaktiviert. Aktiviere sie oben, um Punkte zu vergeben und zu verwenden.",
     "maxPoints": "Maximale Punkte pro Benutzer",
+    "allowExtremeSpend": "Punkte bei natürlichen Mindest- oder Höchstwürfen erlauben",
+    "skipRulesForRoll": "Würfeln, ohne Bonuspunkte zu vergeben",
     "useOnRoll": "Punkt verwenden",
     "memberPoints": "{current}/{max} Bonuspunkte",
     "pointUsedChip": "{count} Punkt verwendet | {count} Punkte verwendet",
@@ -453,6 +455,11 @@
       "savedRules": "Gespeicherte Regeln",
       "empty": "Noch keine Bonuspunkte-Regeln. Füge oben eine hinzu, um Punkte zu vergeben."
     },
+    "balances": {
+      "title": "Punkte der Mitglieder",
+      "description": "Passe den aktuellen Bonuspunkte-Stand jedes Raummitglieds an.",
+      "empty": "Noch keine Raummitglieder zu verwalten."
+    },
     "feedback": {
       "settingsSaved": "Bonuspunkte-Einstellungen gespeichert.",
       "ruleSaved": "Bonuspunkte-Regel gespeichert.",
@@ -461,7 +468,8 @@
     "errors": {
       "saveSettings": "Bonuspunkte-Einstellungen konnten nicht gespeichert werden.",
       "saveRule": "Bonuspunkte-Regel konnte nicht gespeichert werden.",
-      "deleteRule": "Bonuspunkte-Regel konnte nicht gelöscht werden."
+      "deleteRule": "Bonuspunkte-Regel konnte nicht gelöscht werden.",
+      "saveBalance": "Bonuspunkte-Stand konnte nicht aktualisiert werden."
     }
   }
 }

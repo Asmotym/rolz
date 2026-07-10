@@ -201,7 +201,7 @@ async function handleJoinRoom(payload: { inviteCode: string; password?: string |
   }
 }
 
-async function handleSendMessage(content: string) {
+async function handleSendMessage(content: string, skipBonusPointRules = false) {
   if (!currentUser.value || !roomsStore.selectedRoomId) return;
   const trimmed = content.trim();
   if (!trimmed) return;
@@ -214,6 +214,7 @@ async function handleSendMessage(content: string) {
         roomId: roomsStore.selectedRoomId,
         userId: currentUser.value.id,
         roll,
+        skipBonusPointRules,
       });
     } catch (error) {
       console.error(error);
@@ -232,13 +233,14 @@ async function handleSendMessage(content: string) {
   }
 }
 
-async function handleDiceRoll(roll: DiceRoll) {
+async function handleDiceRoll(roll: DiceRoll, skipBonusPointRules = false) {
   if (!currentUser.value || !roomsStore.selectedRoomId) return;
   try {
     await roomsStore.sendDiceRoll({
       roomId: roomsStore.selectedRoomId,
       userId: currentUser.value.id,
       roll,
+      skipBonusPointRules,
     });
   } catch (error) {
     console.error(error);

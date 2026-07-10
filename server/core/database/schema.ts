@@ -73,6 +73,7 @@ async function createTables(): Promise<void> {
             room_criticals JSON NULL,
             bonus_points_enabled TINYINT(1) DEFAULT 0,
             bonus_points_max INT DEFAULT 0,
+            bonus_points_allow_extreme_spend TINYINT(1) DEFAULT 0,
             archived_at TIMESTAMP NULL DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -109,6 +110,7 @@ async function createTables(): Promise<void> {
             bonus_point_adjustment INT NULL,
             bonus_points_used INT DEFAULT 0,
             bonus_point_rule_used JSON NULL,
+            bonus_point_rules_skipped TINYINT(1) DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_messages_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
             CONSTRAINT fk_messages_user FOREIGN KEY (user_id) REFERENCES users(discord_user_id) ON DELETE SET NULL
@@ -315,6 +317,15 @@ async function ensureAllColumnsCreated(): Promise<void> {
         `);
     }
 
+    if (!(await columnExists('rooms', 'bonus_points_allow_extreme_spend'))) {
+        logger.info('Creating missing "bonus_points_allow_extreme_spend" column in "rooms" table...');
+
+        await query(`
+            ALTER TABLE rooms
+            ADD COLUMN bonus_points_allow_extreme_spend TINYINT(1) DEFAULT 0
+        `);
+    }
+
     // room members table
     if (!(await columnExists('room_members', 'nickname'))) {
         logger.info('Creating missing "nickname" column in "room_members" table...');
@@ -376,5 +387,10 @@ async function ensureAllColumnsCreated(): Promise<void> {
     if (!(await columnExists('room_messages', 'bonus_point_rule_used'))) {
         logger.info('Creating missing "bonus_point_rule_used" column in "room_messages" table...');
         await query(`ALTER TABLE room_messages ADD COLUMN bonus_point_rule_used JSON NULL`);
+    }
+
+    if (!(await columnExists('room_messages', 'bonus_point_rules_skipped'))) {
+        logger.info('Creating missing "bonus_point_rules_skipped" column in "room_messages" table...');
+        await query(`ALTER TABLE room_messages ADD COLUMN bonus_point_rules_skipped TINYINT(1) DEFAULT 0`);
     }
 }

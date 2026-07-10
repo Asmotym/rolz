@@ -32,6 +32,7 @@ export interface DatabaseRoom {
     room_criticals?: string | RoomCriticalRule[] | null;
     bonus_points_enabled?: number | boolean | null;
     bonus_points_max?: number | null;
+    bonus_points_allow_extreme_spend?: number | boolean | null;
     archived_at?: string | null;
     created_at?: string;
     updated_at?: string;
@@ -76,6 +77,7 @@ export interface DatabaseRoomMessage {
     bonus_point_adjustment?: number | null;
     bonus_points_used?: number | null;
     bonus_point_rule_used?: string | { id: string; name: string } | null;
+    bonus_point_rules_skipped?: number | boolean | null;
     created_at: string;
     username?: string | null;
     avatar?: string | null;
@@ -96,6 +98,7 @@ export interface NewRoomMessage {
     bonus_point_adjustment?: number | null;
     bonus_points_used?: number | null;
     bonus_point_rule_used?: string | null;
+    bonus_point_rules_skipped?: number | boolean;
 }
 
 export interface DatabaseRoomBonusPointRule {

@@ -137,7 +137,7 @@ export class RoomsService {
         return { settings: data.settings, rules: data.rules, balances: data.balances };
     }
 
-    static async updateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number }): Promise<RoomBonusPointSettings> {
+    static async updateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number; allowExtremeSpend?: boolean }): Promise<RoomBonusPointSettings> {
         const data = await request<{ bonusPointSettings: RoomBonusPointSettings }>({
             action: 'updateBonusPointSettings',
             payload
@@ -177,6 +177,14 @@ export class RoomsService {
         return data.message;
     }
 
+    static async updateBonusPointBalance(payload: { roomId: string; userId: string; targetUserId: string; points: number }): Promise<RoomBonusPointBalance> {
+        const data = await request<{ bonusPointBalance: RoomBonusPointBalance }>({
+            action: 'updateBonusPointBalance',
+            payload
+        });
+        return data.bonusPointBalance;
+    }
+
     static async updateNickname(payload: { roomId: string; userId: string; nickname?: string | null }): Promise<RoomMemberDetails> {
         const data = await request<{ member: RoomMemberDetails }>({
             action: 'updateNickname',
@@ -208,7 +216,7 @@ export class RoomsService {
         return data.room;
     }
 
-    static async sendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } }): Promise<RoomMessage> {
+    static async sendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] }; skipBonusPointRules?: boolean }): Promise<RoomMessage> {
         const data = await request<{ message: RoomMessage }>({
             action: 'message',
             payload

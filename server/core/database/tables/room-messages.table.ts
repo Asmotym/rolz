@@ -19,8 +19,9 @@ export async function insertMessage(message: NewRoomMessage): Promise<DatabaseRo
             dice_base_total,
             bonus_point_adjustment,
             bonus_points_used,
-            bonus_point_rule_used
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            bonus_point_rule_used,
+            bonus_point_rules_skipped
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             id,
             message.room_id,
@@ -34,7 +35,8 @@ export async function insertMessage(message: NewRoomMessage): Promise<DatabaseRo
             message.dice_base_total ?? null,
             message.bonus_point_adjustment ?? null,
             message.bonus_points_used ?? 0,
-            message.bonus_point_rule_used ?? null
+            message.bonus_point_rule_used ?? null,
+            message.bonus_point_rules_skipped ? 1 : 0
         ]
     );
 

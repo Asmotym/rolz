@@ -24,6 +24,7 @@ export interface RoomBonusPointSettings {
     roomId: string;
     enabled: boolean;
     maxPointsPerUser: number;
+    allowExtremeSpend: boolean;
 }
 
 export interface RoomBonusPointRule {
@@ -97,6 +98,7 @@ export interface RoomMessage {
     bonusPointAdjustment?: number | null;
     bonusPointsUsed?: number;
     bonusPointRuleUsed?: { id: string; name: string } | null;
+    bonusPointRulesSkipped?: boolean;
     createdAt: string;
 }
 

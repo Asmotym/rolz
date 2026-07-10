@@ -149,7 +149,7 @@ export async function updateRoomCriticals(roomId: string, criticals: string | nu
 
 export async function updateBonusPointsSettings(
     roomId: string,
-    settings: { enabled?: boolean; maxPointsPerUser?: number }
+    settings: { enabled?: boolean; maxPointsPerUser?: number; allowExtremeSpend?: boolean }
 ): Promise<DatabaseRoom | undefined> {
     await ensureBonusPointsColumns();
     const updates: string[] = [];
@@ -163,6 +163,11 @@ export async function updateBonusPointsSettings(
     if (typeof settings.maxPointsPerUser !== 'undefined') {
         updates.push('bonus_points_max = ?');
         params.push(settings.maxPointsPerUser);
+    }
+
+    if (typeof settings.allowExtremeSpend !== 'undefined') {
+        updates.push('bonus_points_allow_extreme_spend = ?');
+        params.push(settings.allowExtremeSpend ? 1 : 0);
     }
 
     if (!updates.length) {
@@ -208,6 +213,10 @@ async function ensureBonusPointsColumns() {
     const hasEnabledColumn = await columnExists('rooms', 'bonus_points_enabled');
     if (!hasEnabledColumn) {
         await execute('ALTER TABLE rooms ADD COLUMN bonus_points_enabled TINYINT(1) DEFAULT 0');
+    }
+    const hasAllowExtremeSpendColumn = await columnExists('rooms', 'bonus_points_allow_extreme_spend');
+    if (!hasAllowExtremeSpendColumn) {
+        await execute('ALTER TABLE rooms ADD COLUMN bonus_points_allow_extreme_spend TINYINT(1) DEFAULT 0');
     }
     bonusPointsColumnsChecked = true;
 }

@@ -423,6 +423,8 @@
     "enable": "Activer les points bonus pour cette salle",
     "disabled": "Les points bonus sont désactivés. Activez-les ci-dessus pour attribuer et utiliser des points.",
     "maxPoints": "Nombre maximum de points par utilisateur",
+    "allowExtremeSpend": "Autoriser les points sur les jets naturels minimum ou maximum",
+    "skipRulesForRoll": "Lancer sans attribuer de points bonus",
     "useOnRoll": "Utiliser un point",
     "memberPoints": "{current}/{max} points bonus",
     "pointUsedChip": "{count} point utilisé | {count} points utilisés",
@@ -453,6 +455,11 @@
       "savedRules": "Règles enregistrées",
       "empty": "Aucune règle de points bonus. Ajoutez-en une ci-dessus pour commencer à attribuer des points."
     },
+    "balances": {
+      "title": "Points des membres",
+      "description": "Ajustez le solde actuel de points bonus de chaque membre de la salle.",
+      "empty": "Aucun membre de salle à gérer pour le moment."
+    },
     "feedback": {
       "settingsSaved": "Paramètres des points bonus enregistrés.",
       "ruleSaved": "Règle de points bonus enregistrée.",
@@ -461,7 +468,8 @@
     "errors": {
       "saveSettings": "Impossible d’enregistrer les paramètres des points bonus.",
       "saveRule": "Impossible d’enregistrer la règle de points bonus.",
-      "deleteRule": "Impossible de supprimer la règle de points bonus."
+      "deleteRule": "Impossible de supprimer la règle de points bonus.",
+      "saveBalance": "Impossible de mettre à jour le solde de points bonus."
     }
   }
 }

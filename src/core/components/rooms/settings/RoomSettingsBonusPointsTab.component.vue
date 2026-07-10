@@ -56,6 +56,18 @@
             density="comfortable"
             :disabled="!context.canManageBonusPoints.value || context.bonusPointsSaving.value"
           />
+          <v-switch
+            :model-value="context.bonusPointsAllowExtremeSpend.value"
+            :disabled="!context.canManageBonusPoints.value || context.bonusPointsSaving.value"
+            inset
+            density="comfortable"
+            color="primary"
+            @update:model-value="context.handleBonusPointsAllowExtremeSpendToggle"
+          >
+            <template #label>
+              <span>{{ context.t('bonusPoints.allowExtremeSpend') }}</span>
+            </template>
+          </v-switch>
           <v-btn
             color="primary"
             :disabled="!context.canManageBonusPoints.value || context.bonusPointsSaving.value"
@@ -208,8 +220,72 @@
         </v-expansion-panel>
       </v-expansion-panels>
 
+      <section v-if="context.canManageBonusPoints.value" class="mt-6">
+        <div class="d-flex align-center justify-space-between mb-2">
+          <div class="text-subtitle-2">{{ context.t('bonusPoints.balances.title') }}</div>
+          <v-chip size="small" variant="tonal">
+            {{ context.$roomsStore.bonusPointBalances.length }}
+          </v-chip>
+        </div>
+        <p class="text-caption text-medium-emphasis mb-3">
+          {{ context.t('bonusPoints.balances.description') }}
+        </p>
+        <v-list v-if="context.$roomsStore.bonusPointBalances.length" density="comfortable">
+          <v-list-item
+            v-for="balance in context.$roomsStore.bonusPointBalances"
+            :key="balance.userId"
+            class="bonus-balance-item"
+          >
+            <template #prepend>
+              <v-avatar size="32">
+                <v-img
+                  v-if="balance.avatar"
+                  :src="balance.avatar"
+                  :alt="context.getBonusPointBalanceDisplayName(balance)"
+                />
+                <v-icon v-else>mdi-account</v-icon>
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ context.getBonusPointBalanceDisplayName(balance) }}</v-list-item-title>
+            <template #append>
+              <div class="bonus-balance-controls">
+                <v-btn
+                  icon="mdi-minus"
+                  size="small"
+                  variant="text"
+                  :disabled="context.bonusPointBalanceSavingId.value === balance.userId || Number(balance.points) <= 0"
+                  @click="context.incrementMemberBonusPoints(balance.userId, -1)"
+                />
+                <v-text-field
+                  :model-value="balance.points"
+                  type="number"
+                  min="0"
+                  :max="context.bonusPointsMaxInput.value"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  class="bonus-balance-input"
+                  :disabled="context.bonusPointBalanceSavingId.value === balance.userId"
+                  @update:model-value="context.updateMemberBonusPointBalance(balance.userId, Number($event))"
+                />
+                <v-btn
+                  icon="mdi-plus"
+                  size="small"
+                  variant="text"
+                  :disabled="context.bonusPointBalanceSavingId.value === balance.userId || Number(balance.points) >= Number(context.bonusPointsMaxInput.value)"
+                  @click="context.incrementMemberBonusPoints(balance.userId, 1)"
+                />
+              </div>
+            </template>
+          </v-list-item>
+        </v-list>
+        <p v-else class="text-caption text-medium-emphasis">
+          {{ context.t('bonusPoints.balances.empty') }}
+        </p>
+      </section>
+
       <v-alert
-        v-else
+        v-if="!context.bonusPointsEnabled.value"
         type="info"
         variant="tonal"
         density="comfortable"
@@ -257,9 +333,37 @@ const { expansionPanelColor, expansionPanelBgColor } = useExpansionPanelTheme();
   padding-bottom: 0;
 }
 
+.bonus-balance-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+
+.bonus-balance-item:last-of-type {
+  border-bottom: none;
+}
+
+.bonus-balance-controls {
+  display: grid;
+  grid-template-columns: 32px 88px 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+.bonus-balance-input {
+  width: 88px;
+}
+
 @media (max-width: 640px) {
   .bonus-points-form__row {
     grid-template-columns: 1fr;
+  }
+
+  .bonus-balance-controls {
+    grid-template-columns: 32px 72px 32px;
+  }
+
+  .bonus-balance-input {
+    width: 72px;
   }
 }
 </style>

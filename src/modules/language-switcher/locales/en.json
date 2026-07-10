@@ -423,6 +423,8 @@
     "enable": "Enable Bonus Points for this room",
     "disabled": "Bonus Points are currently disabled. Enable them above to award and spend points.",
     "maxPoints": "Maximum points per user",
+    "allowExtremeSpend": "Allow points on natural minimum or maximum rolls",
+    "skipRulesForRoll": "Roll without awarding Bonus Points",
     "useOnRoll": "Use point",
     "memberPoints": "{current}/{max} bonus points",
     "pointUsedChip": "{count} point used | {count} points used",
@@ -453,6 +455,11 @@
       "savedRules": "Saved rules",
       "empty": "No Bonus Point rules yet. Add one above to start awarding points."
     },
+    "balances": {
+      "title": "Member points",
+      "description": "Adjust each room member's current Bonus Point balance.",
+      "empty": "No room members to manage yet."
+    },
     "feedback": {
       "settingsSaved": "Bonus Point settings saved.",
       "ruleSaved": "Bonus Point rule saved.",
@@ -461,7 +468,8 @@
     "errors": {
       "saveSettings": "Unable to save Bonus Point settings.",
       "saveRule": "Unable to save Bonus Point rule.",
-      "deleteRule": "Unable to delete Bonus Point rule."
+      "deleteRule": "Unable to delete Bonus Point rule.",
+      "saveBalance": "Unable to update Bonus Point balance."
     }
   }
 }

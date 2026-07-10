@@ -76,8 +76,8 @@
                 :current-user-id="currentUser?.id ?? null"
                 :room-criticals="room?.criticals ?? []"
                 :can-use-bonus-point="canUseBonusPoints"
-                :bonus-point-adjustment="bonusPointAdjustment"
-                :bonus-point-rule-notations="bonusPointRuleNotations"
+                :allow-extreme-bonus-point-spend="allowExtremeBonusPointSpend"
+                :bonus-point-rules="roomsStore.bonusPointRules"
                 :bonus-point-action-loading-id="roomsStore.bonusPointRollUpdatingId"
                 @use-bonus-point="useBonusPointOnRoll"
               />
@@ -103,6 +103,15 @@
                   />
                 </template>
               </v-text-field>
+              <v-checkbox
+                v-if="bonusPointsEnabled"
+                v-model="skipBonusPointRules"
+                :label="t('bonusPoints.skipRulesForRoll')"
+                density="compact"
+                hide-details
+                class="mt-n2 mb-2"
+                :disabled="sending"
+              />
               <div class="text-caption text-medium-emphasis d-flex flex-column">
                 <span>{{ t('chat.dicePrefixHelp') }}</span>
                 <span>{{ t('chat.examples') }}</span>
@@ -216,14 +225,15 @@ const { t } = useI18n();
 const roomsStore = useRoomsStore();
 
 const emit = defineEmits<{
-  (event: 'send-message', message: string): void;
-  (event: 'send-dice', roll: DiceRoll): void;
+  (event: 'send-message', message: string, skipBonusPointRules: boolean): void;
+  (event: 'send-dice', roll: DiceRoll, skipBonusPointRules: boolean): void;
   (event: 'use-bonus-point', message: RoomMessage): void;
   (event: 'load-older'): void;
   (event: 'trim-history'): void;
 }>();
 
 const messageText = ref('');
+const skipBonusPointRules = ref(false);
 const messageInput = ref<{ focus: () => void } | null>(null);
 const chatLayout = ref<HTMLElement | null>(null);
 const chatWidth = ref(loadInitialWidth());
@@ -264,15 +274,12 @@ const currentUserBonusPoints = computed(() => {
   return roomsStore.bonusPointBalances.find((balance) => balance.userId === props.currentUser?.id)?.points ?? 0;
 });
 const bonusPointsEnabled = computed(() => Boolean(roomsStore.bonusPointSettings?.enabled ?? props.room?.bonusPointSettings?.enabled));
-const canUseBonusPoints = computed(() => bonusPointsEnabled.value && currentUserBonusPoints.value > 0 && roomsStore.bonusPointRules.length > 0);
-const bonusPointRuleNotations = computed(() => roomsStore.bonusPointRules.map((rule) => rule.diceNotation));
-const bonusPointAdjustment = computed(() => {
-  const rule = roomsStore.bonusPointRules[0];
-  if (!rule) return null;
-  const amount = Math.abs(Number(rule.spendAdjustment.amount));
-  return rule.spendAdjustment.sign === '-' ? -amount : amount;
-});
-
+const allowExtremeBonusPointSpend = computed(() => Boolean(roomsStore.bonusPointSettings?.allowExtremeSpend ?? props.room?.bonusPointSettings?.allowExtremeSpend));
+const canUseBonusPoints = computed(() => (
+  bonusPointsEnabled.value &&
+  currentUserBonusPoints.value > 0 &&
+  roomsStore.bonusPointRules.length > 0
+));
 const chatLayoutStyles = computed(() => ({
   '--chat-panel-width': `${chatWidth.value}%`,
   '--dice-panel-width': `${Math.max(0, 100 - chatWidth.value)}%`,
@@ -282,7 +289,8 @@ const diceManager = useRoomDiceManager(
   () => props.room,
   () => props.currentUser,
   (roll) => {
-    emit('send-dice', roll);
+    emit('send-dice', roll, skipBonusPointRules.value);
+    skipBonusPointRules.value = false;
     focusMessageInput();
   }
 );
@@ -310,6 +318,7 @@ function finishPendingLoad(status: InfiniteScrollStatus = 'ok') {
 
 function resetRoomState() {
   messageText.value = '';
+  skipBonusPointRules.value = false;
   finishPendingLoad('ok');
   loadingOlder.value = false;
   hasLoadedOlder.value = false;
@@ -426,8 +435,9 @@ function handleScroll() {
 
 function sendMessage() {
   if (!messageText.value.trim()) return;
-  emit('send-message', messageText.value);
+  emit('send-message', messageText.value, skipBonusPointRules.value);
   messageText.value = '';
+  skipBonusPointRules.value = false;
   focusMessageInput();
 }
 

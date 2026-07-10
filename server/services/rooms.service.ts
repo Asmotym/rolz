@@ -39,8 +39,9 @@ import {
 } from '../core/database/tables/room-roll-awards.table';
 import { getUser } from '../core/database/tables/users.table';
 import { NotFoundError } from '../core/errors/http-errors';
-import type { DatabaseRoomDiceCategory } from '../core/types/database.types';
+import type { DatabaseRoomDiceCategory, DatabaseRoomMessage } from '../core/types/database.types';
 import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
+import { clampTotalToDiceFace, getDiceFaceInfo, isNaturalExtremeRoll } from '../core/utils/bonus-point-dice';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
 import { handleListMessages, handleSendMessage, listRoomDiceRolls as listRoomDiceRollsForRoom } from './rooms/room-messages.service';
@@ -84,16 +85,17 @@ export type RoomsAction =
     | { action: 'updateRoom'; payload: { roomId: string; userId: string; name: string } }
     | { action: 'updateCriticals'; payload: { roomId: string; userId: string; criticals: RoomCriticalRule[] } }
     | { action: 'bonusPoints'; payload: { roomId: string } }
-    | { action: 'updateBonusPointSettings'; payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number } }
+    | { action: 'updateBonusPointSettings'; payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number; allowExtremeSpend?: boolean } }
     | { action: 'createBonusPointRule'; payload: { roomId: string; userId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] } }
     | { action: 'updateBonusPointRule'; payload: { roomId: string; userId: string; ruleId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] } }
     | { action: 'deleteBonusPointRule'; payload: { roomId: string; userId: string; ruleId: string } }
     | { action: 'useBonusPointOnRoll'; payload: { roomId: string; userId: string; messageId: string } }
+    | { action: 'updateBonusPointBalance'; payload: { roomId: string; userId: string; targetUserId: string; points: number } }
     | { action: 'updateNickname'; payload: { roomId: string; userId: string; nickname?: string | null } }
     | { action: 'leaveRoom'; payload: { roomId: string; userId: string } }
     | { action: 'archiveRoom'; payload: { roomId: string; userId: string } }
     | { action: 'unarchiveRoom'; payload: { roomId: string; userId: string } }
-    | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] } } }
+    | { action: 'message'; payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] }; skipBonusPointRules?: boolean } }
     | { action: 'roomDices'; payload: { roomId: string; userId: string } }
     | { action: 'createDice'; payload: { roomId: string; userId: string; notation: string; description?: string | null; categoryId?: string | null } }
     | { action: 'updateDice'; payload: { roomId: string; userId: string; diceId: string; notation: string; description?: string | null; categoryId?: string | null } }
@@ -116,6 +118,7 @@ export type RoomsActionResponse =
     | { bonusPointSettings: RoomBonusPointSettings }
     | { bonusPointRule: RoomBonusPointRule }
     | { bonusPointRuleId: string }
+    | { bonusPointBalance: RoomBonusPointBalance }
     | { roomId: string; dices: RoomDice[]; categories: RoomDiceCategory[] }
     | { dice: RoomDice }
     | { diceId: string }
@@ -160,6 +163,8 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
             return { bonusPointRuleId: await handleDeleteBonusPointRule(payload.payload) };
         case 'useBonusPointOnRoll':
             return { message: await handleUseBonusPointOnRoll(payload.payload) };
+        case 'updateBonusPointBalance':
+            return { bonusPointBalance: await handleUpdateBonusPointBalance(payload.payload) };
         case 'updateNickname':
             return { member: await handleUpdateNickname(payload.payload) };
         case 'leaveRoom':
@@ -432,14 +437,15 @@ async function handleListBonusPoints(payload: { roomId: string }): Promise<{ roo
         settings: {
             roomId: room.id,
             enabled: Boolean(room.bonus_points_enabled),
-            maxPointsPerUser: normalizeMappedBonusPointsMax(room.bonus_points_max)
+            maxPointsPerUser: normalizeMappedBonusPointsMax(room.bonus_points_max),
+            allowExtremeSpend: Boolean(room.bonus_points_allow_extreme_spend)
         },
         rules,
         balances
     };
 }
 
-async function handleUpdateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number }): Promise<RoomBonusPointSettings> {
+async function handleUpdateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number; allowExtremeSpend?: boolean }): Promise<RoomBonusPointSettings> {
     if (!payload.roomId) throw new Error('Room id missing');
     if (!payload.userId) throw new Error('User id missing');
     const room = await requireRoom(payload.roomId);
@@ -452,13 +458,15 @@ async function handleUpdateBonusPointSettings(payload: { roomId: string; userId:
     const updated = await updateBonusPointsSettings(room.id, {
         enabled: payload.enabled,
         maxPointsPerUser,
+        allowExtremeSpend: payload.allowExtremeSpend,
     });
     if (!updated) throw new Error('Failed to update bonus point settings');
     await capRoomBonusPointBalances(room.id, maxPointsPerUser);
     return {
         roomId: room.id,
         enabled: Boolean(updated.bonus_points_enabled),
-        maxPointsPerUser: normalizeMappedBonusPointsMax(updated.bonus_points_max)
+        maxPointsPerUser: normalizeMappedBonusPointsMax(updated.bonus_points_max),
+        allowExtremeSpend: Boolean(updated.bonus_points_allow_extreme_spend)
     };
 }
 
@@ -553,14 +561,24 @@ async function handleUseBonusPointOnRoll(payload: { roomId: string; userId: stri
         throw new Error('Not enough bonus points available.');
     }
 
-    const spendRule = (await listRoomBonusPointRules(payload.roomId)).map(mapBonusPointRuleRecord)[0];
+    const diceInfo = getDiceFaceInfo(message.dice_notation);
+    if (!diceInfo) {
+        throw new Error('Unable to determine dice bounds for this roll.');
+    }
+
+    const spendRule = (await listRoomBonusPointRules(payload.roomId))
+        .map(mapBonusPointRuleRecord)
+        .find((rule) => rule.diceNotation === diceInfo.faceNotation);
     if (!spendRule) {
-        throw new Error('No bonus point rule is configured for spending.');
+        throw new Error('No bonus point rule is configured for this dice type.');
     }
 
     const adjustment = getSignedBonusPointAdjustment(spendRule);
     const currentTotal = Number(message.dice_total ?? 0);
-    const nextTotal = clampBonusPointRollTotal(currentTotal + adjustment);
+    if (!room.bonus_points_allow_extreme_spend && isNaturalExtremeRoll(message.dice_notation, parseMessageRolls(message.dice_rolls))) {
+        throw new Error('Bonus points cannot be used on natural minimum or maximum rolls.');
+    }
+    const nextTotal = clampTotalToDiceFace(currentTotal + adjustment, diceInfo.sides);
     const previousAdjustment = Number(message.bonus_point_adjustment ?? 0);
     const previousPointsUsed = Number(message.bonus_points_used ?? 0);
     const baseTotal = message.dice_base_total === null || message.dice_base_total === undefined
@@ -581,13 +599,30 @@ async function handleUseBonusPointOnRoll(payload: { roomId: string; userId: stri
     return mapMessageRecord(updated);
 }
 
+async function handleUpdateBonusPointBalance(payload: { roomId: string; userId: string; targetUserId: string; points: number }): Promise<RoomBonusPointBalance> {
+    const room = await ensureCanManageBonusPoints(payload.roomId, payload.userId);
+    if (!payload.targetUserId) throw new Error('Target user id missing');
+    const member = await getMember(room.id, payload.targetUserId);
+    if (!member) {
+        throw new Error('Target user is not a member of this room');
+    }
+
+    const maxPoints = normalizeMappedBonusPointsMax(room.bonus_points_max);
+    const requestedPoints = normalizeBonusPointBalanceValue(payload.points);
+    const nextPoints = Math.min(maxPoints, requestedPoints);
+    await setRoomBonusPointBalance(room.id, payload.targetUserId, nextPoints);
+
+    const balances = (await listRoomBonusPointBalances(room.id)).map(mapBonusPointBalanceRecord);
+    const updated = balances.find((balance) => balance.userId === payload.targetUserId);
+    if (!updated) {
+        throw new Error('Failed to update bonus point balance');
+    }
+    return updated;
+}
+
 function getSignedBonusPointAdjustment(rule: RoomBonusPointRule): number {
     const amount = Math.abs(rule.spendAdjustment.amount);
     return rule.spendAdjustment.sign === '-' ? -amount : amount;
-}
-
-function clampBonusPointRollTotal(value: number): number {
-    return Math.min(100, Math.max(1, value));
 }
 
 async function ensureCanManageBonusPoints(roomId: string, userId: string) {
@@ -598,6 +633,31 @@ async function ensureCanManageBonusPoints(roomId: string, userId: string) {
         throw new Error('Only the room creator can manage bonus points');
     }
     return room;
+}
+
+function normalizeBonusPointBalanceValue(value: number): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        throw new Error('Bonus point balance must be a whole number.');
+    }
+    return Math.max(0, parsed);
+}
+
+function parseMessageRolls(value: DatabaseRoomMessage['dice_rolls']): number[] {
+    if (Array.isArray(value)) {
+        return value.map((roll) => Number(roll)).filter((roll) => Number.isFinite(roll));
+    }
+    if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed)
+                ? parsed.map((roll) => Number(roll)).filter((roll) => Number.isFinite(roll))
+                : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
 }
 
 function normalizeMappedBonusPointsMax(value?: number | string | null): number {

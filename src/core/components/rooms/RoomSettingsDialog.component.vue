@@ -187,8 +187,10 @@ const criticalsSaving = ref(false);
 const criticalsError = ref<string | null>(null);
 const bonusPointsEnabled = ref(false);
 const bonusPointsMaxInput = ref<number>(0);
+const bonusPointsAllowExtremeSpend = ref(false);
 const bonusPointsSaving = ref(false);
 const bonusPointsError = ref<string | null>(null);
+const bonusPointBalanceSavingId = ref<string | null>(null);
 const newBonusRuleName = ref('');
 const newBonusRuleDiceNotation = ref('d100');
 const newBonusRuleOperator = ref<RoomBonusPointRule['condition']['operator']>('moreThan');
@@ -497,7 +499,9 @@ function resetSettingsState() {
   resetBonusPointRuleForm();
   bonusPointsEnabled.value = props.room?.bonusPointSettings?.enabled ?? false;
   bonusPointsMaxInput.value = props.room?.bonusPointSettings?.maxPointsPerUser ?? 0;
+  bonusPointsAllowExtremeSpend.value = props.room?.bonusPointSettings?.allowExtremeSpend ?? false;
   bonusPointsSaving.value = false;
+  bonusPointBalanceSavingId.value = null;
   bonusPointsError.value = null;
   bonusPointsPanelsOpen.value = ['create'];
   clearRollAwardForm();
@@ -552,6 +556,7 @@ function resetCriticalForm() {
 function syncBonusPointsForm() {
   bonusPointsEnabled.value = roomsStore.bonusPointSettings?.enabled ?? props.room?.bonusPointSettings?.enabled ?? false;
   bonusPointsMaxInput.value = roomsStore.bonusPointSettings?.maxPointsPerUser ?? props.room?.bonusPointSettings?.maxPointsPerUser ?? 0;
+  bonusPointsAllowExtremeSpend.value = roomsStore.bonusPointSettings?.allowExtremeSpend ?? props.room?.bonusPointSettings?.allowExtremeSpend ?? false;
 }
 
 function resetBonusPointRuleForm() {
@@ -621,6 +626,7 @@ async function saveBonusPointSettings() {
       userId: props.currentUser.id,
       enabled: bonusPointsEnabled.value,
       maxPointsPerUser: Number(bonusPointsMaxInput.value),
+      allowExtremeSpend: bonusPointsAllowExtremeSpend.value,
     });
     syncBonusPointsForm();
     showSettingsFeedback('success', t('bonusPoints.feedback.settingsSaved'));
@@ -655,6 +661,64 @@ async function handleBonusPointsToggle(value: boolean | null) {
   } finally {
     bonusPointsSaving.value = false;
   }
+}
+
+async function handleBonusPointsAllowExtremeSpendToggle(value: boolean | null) {
+  if (!props.room || !props.currentUser) return;
+  if (!canManageBonusPoints.value) {
+    bonusPointsError.value = t('bonusPoints.creatorOnly');
+    return;
+  }
+  const nextValue = Boolean(value);
+  bonusPointsAllowExtremeSpend.value = nextValue;
+  bonusPointsSaving.value = true;
+  bonusPointsError.value = null;
+  try {
+    await roomsStore.updateBonusPointSettings({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      allowExtremeSpend: nextValue,
+    });
+    syncBonusPointsForm();
+    showSettingsFeedback('success', t('bonusPoints.feedback.settingsSaved'));
+  } catch (error) {
+    bonusPointsError.value = error instanceof Error ? error.message : t('bonusPoints.errors.saveSettings');
+    syncBonusPointsForm();
+  } finally {
+    bonusPointsSaving.value = false;
+  }
+}
+
+function getBonusPointBalanceDisplayName(balance: { username?: string; nickname?: string; userId: string }) {
+  return balance.nickname || balance.username || balance.userId;
+}
+
+async function updateMemberBonusPointBalance(targetUserId: string, points: number) {
+  if (!props.room || !props.currentUser) return;
+  if (!canManageBonusPoints.value) {
+    bonusPointsError.value = t('bonusPoints.creatorOnly');
+    return;
+  }
+  bonusPointBalanceSavingId.value = targetUserId;
+  bonusPointsError.value = null;
+  try {
+    await roomsStore.updateBonusPointBalance({
+      roomId: props.room.id,
+      userId: props.currentUser.id,
+      targetUserId,
+      points,
+    });
+  } catch (error) {
+    bonusPointsError.value = error instanceof Error ? error.message : t('bonusPoints.errors.saveBalance');
+  } finally {
+    bonusPointBalanceSavingId.value = null;
+  }
+}
+
+function incrementMemberBonusPoints(userId: string, delta: number) {
+  const balance = roomsStore.bonusPointBalances.find((current) => current.userId === userId);
+  if (!balance) return;
+  void updateMemberBonusPointBalance(userId, Number(balance.points ?? 0) + delta);
 }
 
 async function saveBonusPointRule() {
@@ -1279,8 +1343,10 @@ const settingsContext = {
   criticalsError,
   bonusPointsEnabled,
   bonusPointsMaxInput,
+  bonusPointsAllowExtremeSpend,
   bonusPointsSaving,
   bonusPointsError,
+  bonusPointBalanceSavingId,
   bonusPointsPanelsOpen,
   newBonusRuleName,
   newBonusRuleDiceNotation,
@@ -1335,8 +1401,12 @@ const settingsContext = {
   formatBonusPointAdjustment,
   saveBonusPointSettings,
   handleBonusPointsToggle,
+  handleBonusPointsAllowExtremeSpendToggle,
   saveBonusPointRule,
   removeBonusPointRule,
+  getBonusPointBalanceDisplayName,
+  updateMemberBonusPointBalance,
+  incrementMemberBonusPoints,
   getCriticalOperatorText,
   formatCriticalRule,
   getCriticalColorChipStyle,

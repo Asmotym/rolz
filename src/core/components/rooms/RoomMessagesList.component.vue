@@ -84,17 +84,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { RoomCriticalRule, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomBonusPointRule, RoomCriticalRule, RoomMessage } from 'netlify/core/types/data.types';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
 import { findMatchingRoomCritical, getCriticalMessageStyle } from 'core/utils/room-criticals.utils';
+import { getDiceFaceInfo, isNaturalExtremeRoll } from 'netlify/core/utils/bonus-point-dice';
 
 const props = defineProps<{
   messages: RoomMessage[];
   currentUserId: string | null;
   roomCriticals: RoomCriticalRule[];
   canUseBonusPoint: boolean;
-  bonusPointAdjustment: number | null;
-  bonusPointRuleNotations: string[];
+  allowExtremeBonusPointSpend: boolean;
+  bonusPointRules: RoomBonusPointRule[];
   bonusPointActionLoadingId: string | null;
 }>();
 
@@ -126,20 +127,17 @@ function formatAdjustment(value?: number | null) {
 }
 
 function canUseBonusPointOnMessage(message: RoomMessage) {
-  const currentTotal = Number(message.diceTotal ?? 0);
-  const faceNotation = getDiceFaceNotation(message.diceNotation);
+  const diceInfo = getDiceFaceInfo(message.diceNotation);
+  const rule = diceInfo
+    ? props.bonusPointRules.find((current) => current.diceNotation === diceInfo.faceNotation)
+    : null;
   return props.canUseBonusPoint &&
     message.type === 'dice' &&
+    !message.bonusPointRulesSkipped &&
     message.userId === props.currentUserId &&
     message.id === latestDiceMessageId.value &&
-    Boolean(faceNotation && props.bonusPointRuleNotations.includes(faceNotation)) &&
-    currentTotal > 1 &&
-    currentTotal < 100;
-}
-
-function getDiceFaceNotation(notation?: string | null): string | null {
-  const match = notation?.trim().toLowerCase().match(/^[+-]?(?:\d+)?d([1-9]\d*)(?:[+-]\d+)?$/);
-  return match ? `d${match[1]}` : null;
+    Boolean(rule) &&
+    (props.allowExtremeBonusPointSpend || !isNaturalExtremeRoll(message.diceNotation, message.diceRolls));
 }
 </script>
 

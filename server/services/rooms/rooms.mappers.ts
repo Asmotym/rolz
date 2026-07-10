@@ -98,7 +98,8 @@ export function mapRoomToSummary(room: DatabaseRoom, options?: { currentUserId?:
         bonusPointSettings: {
             roomId: room.id,
             enabled: Boolean(room.bonus_points_enabled),
-            maxPointsPerUser: normalizeBonusPointsMaxForMapping(room.bonus_points_max)
+            maxPointsPerUser: normalizeBonusPointsMaxForMapping(room.bonus_points_max),
+            allowExtremeSpend: Boolean(room.bonus_points_allow_extreme_spend)
         }
     };
 }
@@ -281,6 +282,7 @@ export function mapMessageRecord(record: DatabaseRoomMessage): RoomMessage {
             : Number(record.bonus_point_adjustment),
         bonusPointsUsed: Number(record.bonus_points_used ?? 0),
         bonusPointRuleUsed,
+        bonusPointRulesSkipped: Boolean(record.bonus_point_rules_skipped),
         createdAt: record.created_at,
         nickname: record.member_nickname ?? undefined
     };
