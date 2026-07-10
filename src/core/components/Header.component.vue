@@ -33,6 +33,17 @@
       <LanguageSwitcher />
       <v-btn
         icon
+        :href="STATUS_LINK"
+        target="_blank"
+        rel="noreferrer"
+        :title="t('common.openStatusPage')"
+        variant="text"
+        color="primary"
+      >
+        <v-icon icon="mdi-monitor-dashboard" size="20" />
+      </v-btn>
+      <v-btn
+        icon
         :href="BUG_REPORT_LINK"
         target="_blank"
         rel="noreferrer"
@@ -57,6 +68,7 @@ import ThemeSwitcher from 'core/components/ThemeSwitcher.vue';
 import LanguageSwitcher from 'modules/language-switcher/components/LanguageSwitcher.vue';
 import DiscordAuth from 'modules/discord-auth/components/DiscordAuth.vue';
 
+const STATUS_LINK = 'https://uptime.asmotym.fr/status/all';
 const BUG_REPORT_LINK = 'https://asmotym.notion.site/Rolz-Issues-Reporting-2c31392001c0804f84cefb9726da1bdf';
 
 const { t } = useI18n();
