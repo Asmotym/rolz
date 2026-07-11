@@ -8,6 +8,7 @@
     "reportIssue": "Report bug or request feature",
     "retry": "Retry",
     "clear": "Clear",
+    "edit": "Edit",
     "save": "Save",
     "close": "Close",
     "saveChanges": "Save Changes",
@@ -18,13 +19,89 @@
   },
   "navigation": {
     "home": "Home",
-    "settings": "Settings"
+    "settings": "Settings",
+    "articles": "Articles",
+    "administration": "Administration"
   },
   "home": {
     "not_logged_in_title": "Welcome to Rolz!",
     "not_logged_in_message": "The simple and powerful RPG dice rolling tool.",
     "not_logged_in_text_intro": "This tool lets you create or join rooms with fully functional chat and dice rolling.",
-    "not_logged_in_text_login": "You must be connected to use it. Click the button below to connect with your Discord account."
+    "not_logged_in_text_login": "You must be connected to use it. Click the button below to connect with your Discord account.",
+    "connectedWelcome": "Welcome {name}",
+    "connectedIntro": "Create a room for your table, or join one with an invite code to start chatting and rolling dice.",
+    "tutorial": {
+      "createTitle": "Create a room",
+      "createText": "Name the room, add an optional password, then share the invite code with your players.",
+      "joinTitle": "Join a room",
+      "joinText": "Paste an invite code, enter the password if one is required, and open the room from your list."
+    },
+    "news": {
+      "title": "News",
+      "seeMore": "See more",
+      "openArticle": "Open article",
+      "empty": "No news has been published yet."
+    }
+  },
+  "articles": {
+    "title": "Articles",
+    "search": "Search by title",
+    "filterTags": "Filter by tags",
+    "loadMore": "Load more",
+    "empty": "No articles found.",
+    "fields": {
+      "title": "Title",
+      "introduction": "Introduction",
+      "tags": "Tags",
+      "markdown": "Markdown"
+    },
+    "errors": {
+      "load": "Unable to load articles"
+    }
+  },
+  "admin": {
+    "title": "Administration",
+    "tabs": {
+      "users": "Users",
+      "articles": "Articles"
+    },
+    "users": {
+      "title": "Users",
+      "user": "User",
+      "role": "Role",
+      "actions": "Actions",
+      "loadError": "Unable to load users.",
+      "updateError": "Unable to update user role."
+    },
+    "articles": {
+      "title": "Articles",
+      "write": "Write article",
+      "published": "Published",
+      "unpublished": "Unpublished",
+      "archived": "Archived",
+      "unarchived": "Unarchived",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "archive": "Archive"
+    },
+    "writer": {
+      "title": "Write article",
+      "back": "Back to articles",
+      "newTag": "Create tag",
+      "manageTags": "Manage tags",
+      "saveDraft": "Save as draft",
+      "publishOnDate": "Publish on date",
+      "publicationDate": "Publication date",
+      "validateDate": "Validate date",
+      "drafts": "Drafts",
+      "noDrafts": "No drafts yet.",
+      "draftSaved": "Draft saved.",
+      "saveBeforeSwitch": "Save the current article as draft before switching?",
+      "published": "Article published.",
+      "saved": "Article saved.",
+      "saveError": "Unable to save article.",
+      "draftError": "Unable to save draft."
+    }
   },
   "discord": {
     "login_text": "Login with Discord"

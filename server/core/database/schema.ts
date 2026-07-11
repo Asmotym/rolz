@@ -53,6 +53,7 @@ async function createTables(): Promise<void> {
             username VARCHAR(191) NOT NULL,
             avatar TEXT NOT NULL,
             theme VARCHAR(16) NOT NULL DEFAULT 'dark',
+            role VARCHAR(16) NOT NULL DEFAULT 'user',
             rights_update TINYINT(1) DEFAULT 0,
             rights_testing_ground TINYINT(1) DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -210,6 +211,65 @@ async function createTables(): Promise<void> {
             UNIQUE KEY uniq_api_keys_hash (api_key_hash)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS articles (
+            id CHAR(36) PRIMARY KEY,
+            slug VARCHAR(191) NOT NULL UNIQUE,
+            title VARCHAR(191) NOT NULL,
+            introduction TEXT NOT NULL,
+            markdown_source MEDIUMTEXT NOT NULL,
+            sanitized_html MEDIUMTEXT NOT NULL,
+            excerpt TEXT NOT NULL,
+            author_id VARCHAR(64),
+            status VARCHAR(24) NOT NULL DEFAULT 'unpublished',
+            published_at TIMESTAMP NULL DEFAULT NULL,
+            archived_at TIMESTAMP NULL DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_articles_author FOREIGN KEY (author_id) REFERENCES users(discord_user_id) ON DELETE SET NULL,
+            INDEX idx_articles_status_publication (status, archived_at, published_at),
+            INDEX idx_articles_title (title)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS article_tags (
+            id CHAR(36) PRIMARY KEY,
+            name VARCHAR(80) NOT NULL,
+            slug VARCHAR(96) NOT NULL UNIQUE,
+            created_by VARCHAR(64),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_article_tags_created_by FOREIGN KEY (created_by) REFERENCES users(discord_user_id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS article_tag_links (
+            article_id CHAR(36) NOT NULL,
+            tag_id CHAR(36) NOT NULL,
+            PRIMARY KEY (article_id, tag_id),
+            CONSTRAINT fk_article_tag_links_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+            CONSTRAINT fk_article_tag_links_tag FOREIGN KEY (tag_id) REFERENCES article_tags(id) ON DELETE CASCADE,
+            INDEX idx_article_tag_links_tag (tag_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await query(`
+        CREATE TABLE IF NOT EXISTS article_drafts (
+            id CHAR(36) PRIMARY KEY,
+            owner_id VARCHAR(64) NOT NULL,
+            title VARCHAR(191),
+            introduction TEXT NULL,
+            markdown_source MEDIUMTEXT NOT NULL,
+            selected_tag_ids JSON NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_article_drafts_owner FOREIGN KEY (owner_id) REFERENCES users(discord_user_id) ON DELETE CASCADE,
+            INDEX idx_article_drafts_owner_updated (owner_id, updated_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 }
 
 async function ensureContraintsCreated(): Promise<void> {
@@ -260,6 +320,24 @@ async function ensureAllColumnsCreated(): Promise<void> {
             ALTER TABLE users
             ADD COLUMN theme VARCHAR(16) NOT NULL DEFAULT 'dark' AFTER avatar
         `);
+    }
+
+    if (!(await columnExists('users', 'role'))) {
+        logger.info('Creating missing "role" column in "users" table...');
+
+        await query(`
+            ALTER TABLE users
+            ADD COLUMN role VARCHAR(16) NOT NULL DEFAULT 'user' AFTER theme
+        `);
+    }
+
+    const ownerDiscordUserId = process.env.OWNER_DISCORD_USER_ID?.trim();
+    if (ownerDiscordUserId) {
+        logger.info('Ensuring configured owner role is applied...');
+        await query(
+            `UPDATE users SET role = 'owner', updated_at = CURRENT_TIMESTAMP WHERE discord_user_id = ?`,
+            [ownerDiscordUserId]
+        );
     }
 
     // room tables
@@ -392,5 +470,18 @@ async function ensureAllColumnsCreated(): Promise<void> {
     if (!(await columnExists('room_messages', 'bonus_point_rules_skipped'))) {
         logger.info('Creating missing "bonus_point_rules_skipped" column in "room_messages" table...');
         await query(`ALTER TABLE room_messages ADD COLUMN bonus_point_rules_skipped TINYINT(1) DEFAULT 0`);
+    }
+
+    // article tables
+    if (!(await columnExists('articles', 'introduction'))) {
+        logger.info('Creating missing "introduction" column in "articles" table...');
+        await query(`ALTER TABLE articles ADD COLUMN introduction TEXT NULL AFTER title`);
+        await query(`UPDATE articles SET introduction = COALESCE(NULLIF(excerpt, ''), title) WHERE introduction IS NULL OR introduction = ''`);
+        await query(`ALTER TABLE articles MODIFY COLUMN introduction TEXT NOT NULL`);
+    }
+
+    if (!(await columnExists('article_drafts', 'introduction'))) {
+        logger.info('Creating missing "introduction" column in "article_drafts" table...');
+        await query(`ALTER TABLE article_drafts ADD COLUMN introduction TEXT NULL AFTER title`);
     }
 }

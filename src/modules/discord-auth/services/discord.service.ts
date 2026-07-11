@@ -22,11 +22,20 @@ export class DiscordService {
         const savedUser = this.getUser();
         if (savedUser !== null) {
             this.storeUser(savedUser);
-            try {
-                const theme = await fetchUserTheme(savedUser.id);
-                this.updateStoredUserTheme(theme);
-            } catch (error) {
-                console.error('[DiscordAuth] Failed to refresh user preferences', error);
+            const auth = this.getAuth();
+            if (auth?.accessToken) {
+                try {
+                    await this.fetchUserInfo(auth);
+                } catch (error) {
+                    console.error('[DiscordAuth] Failed to refresh user info', error);
+                }
+            } else {
+                try {
+                    const theme = await fetchUserTheme(savedUser.id);
+                    this.updateStoredUserTheme(theme);
+                } catch (error) {
+                    console.error('[DiscordAuth] Failed to refresh user preferences', error);
+                }
             }
         } else {
             const auth = this.getAuth();

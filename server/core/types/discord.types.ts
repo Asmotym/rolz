@@ -1,4 +1,5 @@
 import type { AppTheme } from './theme.types';
+import type { UserRole } from './data.types';
 
 export type DiscordAuth = {
     tokenType: string;
@@ -13,4 +14,5 @@ export interface DiscordUser {
     username: string;
     avatar: string;
     theme?: AppTheme;
+    role?: UserRole;
 }

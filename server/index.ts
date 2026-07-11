@@ -16,6 +16,27 @@ import { ensureDatabaseSetup } from './core/database/schema';
 import { getUser } from './core/database/tables/users.table';
 import { updateUserTheme } from './core/database/tables/users.table';
 import { isAppTheme } from './core/types/theme.types';
+import { listAdminUsers, updateUserRole } from './services/admin.service';
+import { requireAdmin } from './services/roles.service';
+import {
+    archiveArticle,
+    createArticle,
+    createTag,
+    getAdminArticle,
+    getPublicArticle,
+    listAdminArticles,
+    listNewsArticles,
+    listOwnerDrafts,
+    listPublicArticles,
+    listTags,
+    previewMarkdown,
+    removeDraft,
+    removeTag,
+    renameTag,
+    saveDraft,
+    setArticlePublication,
+    updateArticle
+} from './services/articles.service';
 
 const logger = createLogger('Server');
 const app = express();
@@ -83,6 +104,31 @@ function ensureSameUser(res: Response, userId: string): boolean {
         return false;
     }
     return true;
+}
+
+async function readDiscordRequesterId(req: Request): Promise<string | null> {
+    const authHeader = req.header('authorization');
+    if (!authHeader?.toLowerCase().startsWith('bearer ')) {
+        return null;
+    }
+
+    const response = await fetch('https://discord.com/api/v10/users/@me', {
+        headers: { Authorization: authHeader }
+    });
+    if (!response.ok) {
+        return null;
+    }
+    const user = await response.json() as { id?: unknown };
+    return typeof user.id === 'string' ? user.id : null;
+}
+
+async function requireRequesterId(req: Request, res: Response): Promise<string | null> {
+    const userId = await readDiscordRequesterId(req);
+    if (!userId) {
+        res.status(401).json({ success: false, error: 'Discord authentication is required' });
+        return null;
+    }
+    return userId;
 }
 
 app.get('/api/users/:userId/api-key', async (req, res) => {
@@ -197,6 +243,221 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
         res.json({ success: true, data: { theme: savedTheme } });
     } catch (error) {
         respondWithServiceError(res, error, 'Failed to update user preferences');
+    }
+});
+
+app.get('/api/articles', async (req, res) => {
+    try {
+        const articles = await listPublicArticles({
+            search: req.query.search,
+            tags: req.query.tags,
+            limit: req.query.limit,
+            offset: req.query.offset
+        });
+        res.json({ success: true, data: { articles } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to list public articles');
+    }
+});
+
+app.get('/api/articles/news', async (req, res) => {
+    try {
+        const articles = await listNewsArticles(req.query.limit);
+        res.json({ success: true, data: { articles } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to list news articles');
+    }
+});
+
+app.get('/api/articles/tags', async (_req, res) => {
+    try {
+        const tags = await listTags();
+        res.json({ success: true, data: { tags } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to list article tags');
+    }
+});
+
+app.get('/api/articles/:slug', async (req, res) => {
+    try {
+        const article = await getPublicArticle(req.params.slug);
+        res.json({ success: true, data: { article } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to fetch public article');
+    }
+});
+
+app.get('/api/admin/users', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const users = await listAdminUsers(userId);
+        res.json({ success: true, data: { users } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to list users');
+    }
+});
+
+app.patch('/api/admin/users/:targetUserId/role', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const user = await updateUserRole(userId, req.params.targetUserId, (req.body as { role?: unknown }).role);
+        res.json({ success: true, data: { user } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to update user role');
+    }
+});
+
+app.get('/api/admin/articles', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const articles = await listAdminArticles(userId, {
+            search: req.query.search,
+            tags: req.query.tags,
+            statuses: req.query.statuses,
+            archived: req.query.archived,
+            limit: req.query.limit,
+            offset: req.query.offset
+        });
+        res.json({ success: true, data: { articles } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to list admin articles');
+    }
+});
+
+app.get('/api/admin/articles/detail/:articleId', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const article = await getAdminArticle(userId, req.params.articleId);
+        res.json({ success: true, data: { article } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to fetch admin article');
+    }
+});
+
+app.post('/api/admin/articles', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const article = await createArticle(userId, req.body as { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown; status?: unknown; publishedAt?: unknown });
+        res.json({ success: true, data: { article } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to create article');
+    }
+});
+
+app.patch('/api/admin/articles/:articleId', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const article = await updateArticle(userId, req.params.articleId, req.body as { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown });
+        res.json({ success: true, data: { article } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to update article');
+    }
+});
+
+app.post('/api/admin/articles/:articleId/publication', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const body = req.body as { published?: unknown; publishedAt?: unknown };
+        const article = await setArticlePublication(userId, req.params.articleId, { published: body.published === true, publishedAt: body.publishedAt });
+        res.json({ success: true, data: { article } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to update article publication');
+    }
+});
+
+app.post('/api/admin/articles/:articleId/archive', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const article = await archiveArticle(userId, req.params.articleId);
+        res.json({ success: true, data: { article } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to archive article');
+    }
+});
+
+app.post('/api/admin/articles/preview', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        await requireAdmin(userId);
+        const preview = previewMarkdown((req.body as { markdownSource?: unknown }).markdownSource);
+        res.json({ success: true, data: preview });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to preview article');
+    }
+});
+
+app.post('/api/admin/articles/tags', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const tag = await createTag(userId, (req.body as { name?: unknown }).name);
+        res.json({ success: true, data: { tag } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to create article tag');
+    }
+});
+
+app.patch('/api/admin/articles/tags/:tagId', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const tag = await renameTag(userId, req.params.tagId, (req.body as { name?: unknown }).name);
+        res.json({ success: true, data: { tag } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to rename article tag');
+    }
+});
+
+app.delete('/api/admin/articles/tags/:tagId', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        await removeTag(userId, req.params.tagId);
+        res.json({ success: true, data: { tagId: req.params.tagId } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to delete article tag');
+    }
+});
+
+app.get('/api/admin/articles/drafts', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const drafts = await listOwnerDrafts(userId);
+        res.json({ success: true, data: { drafts } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to list article drafts');
+    }
+});
+
+app.post('/api/admin/articles/drafts', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        const draft = await saveDraft(userId, req.body as { id?: unknown; title?: unknown; introduction?: unknown; markdownSource?: unknown; selectedTagIds?: unknown });
+        res.json({ success: true, data: { draft } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to save article draft');
+    }
+});
+
+app.delete('/api/admin/articles/drafts/:draftId', async (req, res) => {
+    const userId = await requireRequesterId(req, res);
+    if (!userId) return;
+    try {
+        await removeDraft(userId, req.params.draftId);
+        res.json({ success: true, data: { draftId: req.params.draftId } });
+    } catch (error) {
+        respondWithServiceError(res, error, 'Failed to delete article draft');
     }
 });
 

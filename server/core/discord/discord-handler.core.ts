@@ -46,13 +46,14 @@ async function handleUserQuery(auth: DiscordAuth) {
             avatar: discordUser.avatar,
             theme,
         });
-        return { ...discordUser, theme };
+        const createdUser = await getUser(discordUser.id);
+        return { ...discordUser, theme, role: createdUser?.role ?? 'user' };
     } else {
         logger.info('User found in database, updating user info');
         await updateUser(discordUser.id, {
             username: discordUser.username,
             avatar: discordUser.avatar,
         });
-        return { ...discordUser, theme: normalizeTheme(existingUser.theme) };
+        return { ...discordUser, theme: normalizeTheme(existingUser.theme), role: existingUser.role ?? 'user' };
     }
 }

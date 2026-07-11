@@ -18,7 +18,7 @@
     </v-alert>
 
     <v-row class="justify-center" style="height: 100%;">
-      <v-col v-if="!selectedRoom" cols="12" md="6">
+      <v-col v-if="!selectedRoom" cols="12" :md="dashboard ? 12 : 6">
         <RoomsSidebar
           :rooms="rooms"
           :selected-room-id="roomsStore.selectedRoomId"
@@ -61,6 +61,10 @@ import type { DiceRoll } from 'core/utils/dice.utils';
 import type { RoomMessage } from 'netlify/core/types/data.types';
 import { parseInlineDiceCommand, rollDiceNotation } from 'core/utils/dice.utils';
 import { HomeRoutes } from 'core/routes';
+
+defineProps<{
+  dashboard?: boolean;
+}>();
 
 const roomsStore = useRoomsStore();
 const discordService = DiscordService.getInstance();

@@ -1,4 +1,5 @@
 import type { DiscordAuth, DiscordUser } from 'netlify/core/types/discord.types';
+import type { UserRole } from 'netlify/core/types/data.types';
 import { isAppTheme, type AppTheme } from 'netlify/core/types/theme.types';
 
 export const APP_STORAGE_KEY = 'rolz_global_state';
@@ -75,6 +76,10 @@ function isStoredLocale(value: unknown): value is StoredLocale {
   return value === 'en' || value === 'es' || value === 'fr' || value === 'de';
 }
 
+function isUserRole(value: unknown): value is UserRole {
+  return value === 'owner' || value === 'admin' || value === 'user';
+}
+
 function isDiscordAuth(value: unknown): value is DiscordAuth {
   if (!isRecord(value)) return false;
   return (
@@ -93,7 +98,8 @@ function isDiscordUser(value: unknown): value is DiscordUser {
     typeof value.id === 'string' &&
     typeof value.username === 'string' &&
     typeof value.avatar === 'string' &&
-    (value.theme === undefined || isAppTheme(value.theme))
+    (value.theme === undefined || isAppTheme(value.theme)) &&
+    (value.role === undefined || isUserRole(value.role))
   );
 }
 

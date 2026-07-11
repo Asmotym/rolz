@@ -17,6 +17,16 @@
       <v-btn variant="text" :to="{ name: HomeRoutes.Base }">
         <span>{{ t('navigation.home') }}</span>
       </v-btn>
+      <v-btn variant="text" :to="{ name: HomeRoutes.Articles }">
+        <span>{{ t('navigation.articles') }}</span>
+      </v-btn>
+      <v-btn
+        v-if="canAccessAdmin"
+        variant="text"
+        :to="{ name: HomeRoutes.AdminUsers }"
+      >
+        <span>{{ t('navigation.administration') }}</span>
+      </v-btn>
       <v-btn
         v-if="activeRoomName && activeRoomId"
         color="primary"
@@ -67,12 +77,14 @@ import { useRoomsStore } from 'core/stores/rooms.store';
 import ThemeSwitcher from 'core/components/ThemeSwitcher.vue';
 import LanguageSwitcher from 'modules/language-switcher/components/LanguageSwitcher.vue';
 import DiscordAuth from 'modules/discord-auth/components/DiscordAuth.vue';
+import { useCurrentUserRole } from 'core/composables/useCurrentUserRole';
 
 const STATUS_LINK = 'https://uptime.asmotym.fr/status/all';
 const BUG_REPORT_LINK = 'https://asmotym.notion.site/Rolz-Issues-Reporting-2c31392001c0804f84cefb9726da1bdf';
 
 const { t } = useI18n();
 const roomsStore = useRoomsStore();
+const { canAccessAdmin } = useCurrentUserRole();
 const activeRoomName = computed(() => roomsStore.selectedRoom?.name ?? null);
 const activeRoomId = computed(() => roomsStore.selectedRoomId);
 </script>

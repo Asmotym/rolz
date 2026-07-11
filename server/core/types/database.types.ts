@@ -1,12 +1,16 @@
 import type { AppTheme } from './theme.types';
+import type { ArticleStatus, UserRole } from './data.types';
 
 export interface DatabaseUser {
     discord_user_id?: string;
     username: string;
     avatar: string;
     theme?: AppTheme;
+    role?: UserRole;
     rights_update?: boolean;
     rights_testing_ground?: boolean;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface DatabaseUserApiKey {
@@ -16,6 +20,43 @@ export interface DatabaseUserApiKey {
     created_at?: string;
     updated_at?: string;
     last_used_at?: string | null;
+}
+
+export interface DatabaseArticle {
+    id: string;
+    slug: string;
+    title: string;
+    introduction: string;
+    markdown_source: string;
+    sanitized_html: string;
+    excerpt: string;
+    author_id?: string | null;
+    author_name?: string | null;
+    status: ArticleStatus;
+    published_at?: string | null;
+    archived_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface DatabaseArticleTag {
+    id: string;
+    name: string;
+    slug: string;
+    created_by?: string | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface DatabaseArticleDraft {
+    id: string;
+    owner_id: string;
+    title?: string | null;
+    introduction?: string | null;
+    markdown_source: string;
+    selected_tag_ids?: string | string[] | null;
+    created_at?: string;
+    updated_at?: string;
 }
 
 import type { RoomBonusPointCondition, RoomBonusPointSpendAdjustment, RoomCriticalRule } from './data.types';

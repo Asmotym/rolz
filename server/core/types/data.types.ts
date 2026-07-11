@@ -1,3 +1,57 @@
+export type UserRole = 'owner' | 'admin' | 'user';
+
+export interface UserSummary {
+    id: string;
+    username: string;
+    avatar: string;
+    role: UserRole;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export type ArticleStatus = 'draft' | 'unpublished' | 'published';
+
+export interface ArticleTag {
+    id: string;
+    name: string;
+    slug: string;
+    createdBy?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface ArticleSummary {
+    id: string;
+    slug: string;
+    title: string;
+    introduction: string;
+    excerpt: string;
+    status: ArticleStatus;
+    authorId?: string | null;
+    authorName?: string | null;
+    publishedAt?: string | null;
+    archivedAt?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+    tags: ArticleTag[];
+}
+
+export interface ArticleDetails extends ArticleSummary {
+    markdownSource?: string;
+    sanitizedHtml: string;
+}
+
+export interface ArticleDraft {
+    id: string;
+    ownerId: string;
+    title?: string | null;
+    introduction?: string | null;
+    markdownSource: string;
+    selectedTagIds: string[];
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export type RoomCriticalRuleOperator = 'moreThan' | 'lessThan';
 
 export interface RoomCriticalRule {
