@@ -1,5 +1,6 @@
 import { query } from './client';
 import { createLogger } from '../utils/logger';
+import { generateArticleUid } from '../utils/id';
 
 const logger = createLogger('DatabaseSchema');
 
@@ -31,6 +32,30 @@ async function indexExists(table: string, indexName: string): Promise<boolean> {
     );
     const count = Number(result[0]?.count ?? 0);
     return Number.isFinite(count) && count > 0;
+}
+
+async function populateMissingArticleUids(table: 'articles' | 'article_drafts'): Promise<void> {
+    const rows = await query<{ id: string }[]>(`SELECT id FROM ${table} WHERE uid IS NULL OR uid = ''`);
+    const used = new Set<string>();
+    if (await columnExists('articles', 'uid')) {
+        for (const row of await query<{ uid: string }[]>(`SELECT uid FROM articles WHERE uid IS NOT NULL AND uid <> ''`)) {
+            used.add(row.uid);
+        }
+    }
+    if (await columnExists('article_drafts', 'uid')) {
+        for (const row of await query<{ uid: string }[]>(`SELECT uid FROM article_drafts WHERE uid IS NOT NULL AND uid <> ''`)) {
+            used.add(row.uid);
+        }
+    }
+
+    for (const row of rows) {
+        let uid = generateArticleUid();
+        while (used.has(uid)) {
+            uid = generateArticleUid();
+        }
+        used.add(uid);
+        await query(`UPDATE ${table} SET uid = ? WHERE id = ?`, [uid, row.id]);
+    }
 }
 
 export async function ensureDatabaseSetup(): Promise<void> {
@@ -215,6 +240,7 @@ async function createTables(): Promise<void> {
     await query(`
         CREATE TABLE IF NOT EXISTS articles (
             id CHAR(36) PRIMARY KEY,
+            uid VARCHAR(16) NOT NULL,
             slug VARCHAR(191) NOT NULL UNIQUE,
             title VARCHAR(191) NOT NULL,
             introduction TEXT NOT NULL,
@@ -228,6 +254,7 @@ async function createTables(): Promise<void> {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             CONSTRAINT fk_articles_author FOREIGN KEY (author_id) REFERENCES users(discord_user_id) ON DELETE SET NULL,
+            UNIQUE KEY uniq_articles_uid (uid),
             INDEX idx_articles_status_publication (status, archived_at, published_at),
             INDEX idx_articles_title (title)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -259,6 +286,7 @@ async function createTables(): Promise<void> {
     await query(`
         CREATE TABLE IF NOT EXISTS article_drafts (
             id CHAR(36) PRIMARY KEY,
+            uid VARCHAR(16) NOT NULL,
             owner_id VARCHAR(64) NOT NULL,
             title VARCHAR(191),
             introduction TEXT NULL,
@@ -267,6 +295,7 @@ async function createTables(): Promise<void> {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             CONSTRAINT fk_article_drafts_owner FOREIGN KEY (owner_id) REFERENCES users(discord_user_id) ON DELETE CASCADE,
+            UNIQUE KEY uniq_article_drafts_uid (uid),
             INDEX idx_article_drafts_owner_updated (owner_id, updated_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
@@ -306,6 +335,16 @@ async function ensureIndexesCreated(): Promise<void> {
         await query(`
             CREATE INDEX idx_room_dices_category ON room_dices (category_id)
         `);
+    }
+
+    if (!(await indexExists('articles', 'uniq_articles_uid'))) {
+        logger.info('Creating missing "uniq_articles_uid" index...');
+        await query(`CREATE UNIQUE INDEX uniq_articles_uid ON articles (uid)`);
+    }
+
+    if (!(await indexExists('article_drafts', 'uniq_article_drafts_uid'))) {
+        logger.info('Creating missing "uniq_article_drafts_uid" index...');
+        await query(`CREATE UNIQUE INDEX uniq_article_drafts_uid ON article_drafts (uid)`);
     }
 }
     
@@ -473,6 +512,13 @@ async function ensureAllColumnsCreated(): Promise<void> {
     }
 
     // article tables
+    if (!(await columnExists('articles', 'uid'))) {
+        logger.info('Creating missing "uid" column in "articles" table...');
+        await query(`ALTER TABLE articles ADD COLUMN uid VARCHAR(16) NULL AFTER id`);
+        await populateMissingArticleUids('articles');
+        await query(`ALTER TABLE articles MODIFY COLUMN uid VARCHAR(16) NOT NULL`);
+    }
+
     if (!(await columnExists('articles', 'introduction'))) {
         logger.info('Creating missing "introduction" column in "articles" table...');
         await query(`ALTER TABLE articles ADD COLUMN introduction TEXT NULL AFTER title`);
@@ -483,5 +529,12 @@ async function ensureAllColumnsCreated(): Promise<void> {
     if (!(await columnExists('article_drafts', 'introduction'))) {
         logger.info('Creating missing "introduction" column in "article_drafts" table...');
         await query(`ALTER TABLE article_drafts ADD COLUMN introduction TEXT NULL AFTER title`);
+    }
+
+    if (!(await columnExists('article_drafts', 'uid'))) {
+        logger.info('Creating missing "uid" column in "article_drafts" table...');
+        await query(`ALTER TABLE article_drafts ADD COLUMN uid VARCHAR(16) NULL AFTER id`);
+        await populateMissingArticleUids('article_drafts');
+        await query(`ALTER TABLE article_drafts MODIFY COLUMN uid VARCHAR(16) NOT NULL`);
     }
 }

@@ -47,7 +47,7 @@ export class AdminArticlesService {
     return data.article;
   }
 
-  static async createArticle(payload: { title: string; introduction: string; markdownSource: string; tagIds: string[]; status: 'unpublished' | 'published'; publishedAt?: string | null }): Promise<ArticleDetails> {
+  static async createArticle(payload: { title: string; introduction: string; markdownSource: string; tagIds: string[]; status: 'unpublished' | 'published'; publishedAt?: string | null; draftId?: string }): Promise<ArticleDetails> {
     const data = await apiRequest<{ article: ArticleDetails }>('/admin/articles', {
       method: 'POST',
       body: JSON.stringify(payload),

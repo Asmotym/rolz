@@ -18,3 +18,7 @@ export function generateInviteCode(length = 8): string {
     }
     return code;
 }
+
+export function generateArticleUid(length = 10): string {
+    return generateInviteCode(length);
+}

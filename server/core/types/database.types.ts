@@ -24,6 +24,7 @@ export interface DatabaseUserApiKey {
 
 export interface DatabaseArticle {
     id: string;
+    uid: string;
     slug: string;
     title: string;
     introduction: string;
@@ -50,6 +51,7 @@ export interface DatabaseArticleTag {
 
 export interface DatabaseArticleDraft {
     id: string;
+    uid: string;
     owner_id: string;
     title?: string | null;
     introduction?: string | null;

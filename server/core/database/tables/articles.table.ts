@@ -16,10 +16,11 @@ export interface ArticleListFilters {
 export async function insertArticle(article: DatabaseArticle): Promise<DatabaseArticle> {
     await execute(
         `INSERT INTO articles
-         (id, slug, title, introduction, markdown_source, sanitized_html, excerpt, author_id, status, published_at, archived_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, uid, slug, title, introduction, markdown_source, sanitized_html, excerpt, author_id, status, published_at, archived_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             article.id,
+            article.uid,
             article.slug,
             article.title,
             article.introduction,
@@ -109,6 +110,22 @@ export async function articleSlugExists(slug: string, exceptArticleId?: string):
     const rows = await query<{ count: number }[]>(
         `SELECT COUNT(*) AS count FROM articles WHERE slug = ? AND (? IS NULL OR id <> ?)`,
         [slug, exceptArticleId ?? null, exceptArticleId ?? null]
+    );
+    return Number(rows[0]?.count ?? 0) > 0;
+}
+
+export async function articleUidExists(uid: string, exceptArticleId?: string): Promise<boolean> {
+    const rows = await query<{ count: number }[]>(
+        `SELECT COUNT(*) AS count FROM articles WHERE uid = ? AND (? IS NULL OR id <> ?)`,
+        [uid, exceptArticleId ?? null, exceptArticleId ?? null]
+    );
+    return Number(rows[0]?.count ?? 0) > 0;
+}
+
+export async function articleDraftUidExists(uid: string, exceptDraftId?: string): Promise<boolean> {
+    const rows = await query<{ count: number }[]>(
+        `SELECT COUNT(*) AS count FROM article_drafts WHERE uid = ? AND (? IS NULL OR id <> ?)`,
+        [uid, exceptDraftId ?? null, exceptDraftId ?? null]
     );
     return Number(rows[0]?.count ?? 0) > 0;
 }
@@ -234,8 +251,8 @@ export async function listDrafts(ownerId: string): Promise<DatabaseArticleDraft[
 
 export async function upsertDraft(draft: DatabaseArticleDraft): Promise<DatabaseArticleDraft> {
     await execute(
-        `INSERT INTO article_drafts (id, owner_id, title, introduction, markdown_source, selected_tag_ids)
-         VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO article_drafts (id, uid, owner_id, title, introduction, markdown_source, selected_tag_ids)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
              title = VALUES(title),
              introduction = VALUES(introduction),
@@ -244,6 +261,7 @@ export async function upsertDraft(draft: DatabaseArticleDraft): Promise<Database
              updated_at = CURRENT_TIMESTAMP`,
         [
             draft.id,
+            draft.uid,
             draft.owner_id,
             draft.title ?? null,
             draft.introduction ?? null,
@@ -258,6 +276,14 @@ export async function upsertDraft(draft: DatabaseArticleDraft): Promise<Database
     );
     if (!rows[0]) throw new Error('Failed to save draft');
     return rows[0];
+}
+
+export async function getDraftById(ownerId: string, draftId: string): Promise<DatabaseArticleDraft | null> {
+    const rows = await query<DatabaseArticleDraft[]>(
+        `SELECT * FROM article_drafts WHERE id = ? AND owner_id = ? LIMIT 1`,
+        [draftId, ownerId]
+    );
+    return rows[0] ?? null;
 }
 
 export async function deleteDraft(ownerId: string, draftId: string): Promise<void> {

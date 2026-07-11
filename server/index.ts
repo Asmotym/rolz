@@ -342,7 +342,7 @@ app.post('/api/admin/articles', async (req, res) => {
     const userId = await requireRequesterId(req, res);
     if (!userId) return;
     try {
-        const article = await createArticle(userId, req.body as { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown; status?: unknown; publishedAt?: unknown });
+        const article = await createArticle(userId, req.body as { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown; status?: unknown; publishedAt?: unknown; draftId?: unknown });
         res.json({ success: true, data: { article } });
     } catch (error) {
         respondWithServiceError(res, error, 'Failed to create article');

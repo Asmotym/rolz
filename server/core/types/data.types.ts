@@ -22,6 +22,7 @@ export interface ArticleTag {
 
 export interface ArticleSummary {
     id: string;
+    uid: string;
     slug: string;
     title: string;
     introduction: string;
@@ -43,6 +44,7 @@ export interface ArticleDetails extends ArticleSummary {
 
 export interface ArticleDraft {
     id: string;
+    uid: string;
     ownerId: string;
     title?: string | null;
     introduction?: string | null;

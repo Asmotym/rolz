@@ -4,10 +4,13 @@ import sanitizeHtml from 'sanitize-html';
 import { hljs } from '../core/utils/markdown-highlight';
 import {
     articleSlugExists,
+    articleDraftUidExists,
+    articleUidExists,
     deleteArticleTag,
     deleteDraft,
     getArticleById,
     getArticleBySlug,
+    getDraftById,
     getArticleTagBySlug,
     insertArticle,
     insertArticleTag,
@@ -24,6 +27,7 @@ import {
 import type { DatabaseArticle, DatabaseArticleDraft, DatabaseArticleTag } from '../core/types/database.types';
 import type { ArticleDetails, ArticleDraft, ArticleStatus, ArticleSummary, ArticleTag } from '../core/types/data.types';
 import { BadRequestError, NotFoundError } from '../core/errors/http-errors';
+import { generateArticleUid } from '../core/utils/id';
 import { requireAdmin, requireOwner } from './roles.service';
 
 const ARTICLE_TITLE_MAX = 191;
@@ -79,6 +83,16 @@ async function uniqueArticleSlug(title: string, articleId?: string): Promise<str
         index += 1;
     }
     return candidate;
+}
+
+async function uniqueArticleUid(exceptDraftId?: string): Promise<string> {
+    for (let attempts = 0; attempts < 25; attempts += 1) {
+        const uid = generateArticleUid();
+        if (!(await articleUidExists(uid)) && !(await articleDraftUidExists(uid, exceptDraftId))) {
+            return uid;
+        }
+    }
+    throw new Error('Failed to generate article UID, please retry');
 }
 
 function sanitizeRenderedHtml(html: string): string {
@@ -163,6 +177,7 @@ async function attachTags(rows: DatabaseArticle[]): Promise<ArticleSummary[]> {
 
     return rows.map((row) => ({
         id: row.id,
+        uid: row.uid,
         slug: row.slug,
         title: row.title,
         introduction: row.introduction,
@@ -306,8 +321,9 @@ export async function getAdminArticle(userId: string, articleId: string): Promis
     return mapArticleDetails(article, true);
 }
 
-export async function createArticle(userId: string, payload: { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown; status?: unknown; publishedAt?: unknown }) {
+export async function createArticle(userId: string, payload: { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown; status?: unknown; publishedAt?: unknown; draftId?: unknown }) {
     await requireOwner(userId);
+    const draft = typeof payload.draftId === 'string' && payload.draftId ? await getDraftById(userId, payload.draftId) : null;
     const title = normalizeTitle(payload.title);
     const introduction = normalizeIntroduction(payload.introduction);
     const markdown = normalizeMarkdown(payload.markdownSource);
@@ -319,6 +335,7 @@ export async function createArticle(userId: string, payload: { title?: unknown; 
 
     const article = await insertArticle({
         id: randomUUID(),
+        uid: draft?.uid ?? await uniqueArticleUid(),
         slug: await uniqueArticleSlug(title),
         title,
         introduction,
@@ -412,6 +429,7 @@ export async function listOwnerDrafts(userId: string): Promise<ArticleDraft[]> {
     await requireOwner(userId);
     return (await listDrafts(userId)).map((draft) => ({
         id: draft.id,
+        uid: draft.uid,
         ownerId: draft.owner_id,
         title: draft.title,
         introduction: draft.introduction,
@@ -425,8 +443,10 @@ export async function listOwnerDrafts(userId: string): Promise<ArticleDraft[]> {
 export async function saveDraft(userId: string, payload: { id?: unknown; title?: unknown; introduction?: unknown; markdownSource?: unknown; selectedTagIds?: unknown }): Promise<ArticleDraft> {
     await requireOwner(userId);
     const markdown = typeof payload.markdownSource === 'string' ? payload.markdownSource.slice(0, ARTICLE_MARKDOWN_MAX) : '';
+    const existing = typeof payload.id === 'string' && payload.id ? await getDraftById(userId, payload.id) : null;
     const draft = await upsertDraft({
-        id: typeof payload.id === 'string' && payload.id ? payload.id : randomUUID(),
+        id: existing?.id ?? randomUUID(),
+        uid: existing?.uid ?? await uniqueArticleUid(existing?.id),
         owner_id: userId,
         title: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim().slice(0, ARTICLE_TITLE_MAX) : null,
         introduction: typeof payload.introduction === 'string' && payload.introduction.trim() ? payload.introduction.trim().slice(0, ARTICLE_INTRODUCTION_MAX) : null,
@@ -435,6 +455,7 @@ export async function saveDraft(userId: string, payload: { id?: unknown; title?:
     });
     return {
         id: draft.id,
+        uid: draft.uid,
         ownerId: draft.owner_id,
         title: draft.title,
         introduction: draft.introduction,

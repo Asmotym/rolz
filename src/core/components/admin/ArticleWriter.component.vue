@@ -1,7 +1,22 @@
 <template>
   <div>
     <div class="d-flex align-center justify-space-between mb-4">
-      <h2 class="text-h5">{{ t('admin.writer.title') }}</h2>
+      <div class="writer-heading">
+        <h2 class="text-h5">{{ t('admin.writer.title') }}</h2>
+        <div class="article-uid">
+          <span>{{ t('admin.writer.uid', { uid: articleUid }) }}</span>
+          <v-btn
+            icon="mdi-content-copy"
+            size="x-small"
+            variant="text"
+            :title="t('admin.writer.copyUid')"
+            :aria-label="t('admin.writer.copyUid')"
+            :disabled="!articleUid"
+            :loading="copyingUid"
+            @click="copyArticleUid"
+          />
+        </div>
+      </div>
       <v-btn variant="text" :to="{ name: HomeRoutes.AdminArticles }">{{ t('admin.writer.back') }}</v-btn>
     </div>
 
@@ -105,8 +120,11 @@ const scheduleDialog = ref(false);
 const tagDialog = ref(false);
 const publishedAt = ref('');
 const dirty = ref(false);
+const articleUid = ref('');
+const copyingUid = ref(false);
 const tagEdits = reactive<Record<string, string>>({});
 let autosave: number | null = null;
+let draftCreation: Promise<void> | null = null;
 
 const hasContent = computed(() => title.value.trim() || introduction.value.trim() || markdownSource.value.trim());
 
@@ -154,8 +172,29 @@ async function saveCurrentDraft() {
     selectedTagIds: selectedTagIds.value,
   });
   currentDraftId.value = draft.id;
+  articleUid.value = draft.uid;
   await loadDrafts();
   markSaved(t('admin.writer.draftSaved'));
+}
+
+async function createInitialDraft() {
+  if (currentDraftId.value) return;
+  if (!draftCreation) {
+    draftCreation = (async () => {
+      const draft = await AdminArticlesService.saveDraft({
+        title: null,
+        introduction: null,
+        markdownSource: '',
+        selectedTagIds: [],
+      });
+      currentDraftId.value = draft.id;
+      articleUid.value = draft.uid;
+      await loadDrafts();
+    })().finally(() => {
+      draftCreation = null;
+    });
+  }
+  await draftCreation;
 }
 
 async function selectDraft(draft: ArticleDraft) {
@@ -164,6 +203,7 @@ async function selectDraft(draft: ArticleDraft) {
     if (shouldSave) await saveCurrentDraft();
   }
   currentDraftId.value = draft.id;
+  articleUid.value = draft.uid;
   title.value = draft.title ?? '';
   introduction.value = draft.introduction ?? '';
   markdownSource.value = draft.markdownSource;
@@ -173,19 +213,23 @@ async function selectDraft(draft: ArticleDraft) {
 
 async function deleteDraft(draftId: string) {
   await AdminArticlesService.deleteDraft(draftId);
-  if (currentDraftId.value === draftId) currentDraftId.value = undefined;
+  if (currentDraftId.value === draftId) {
+    currentDraftId.value = undefined;
+    articleUid.value = '';
+  }
   await loadDrafts();
 }
 
 async function saveArticle(status: 'unpublished' | 'published', date?: string) {
   try {
-    await AdminArticlesService.createArticle({
+    const article = await AdminArticlesService.createArticle({
       title: title.value,
       introduction: introduction.value,
       markdownSource: markdownSource.value,
       tagIds: selectedTagIds.value,
       status,
       publishedAt: date ? new Date(date).toISOString() : null,
+      draftId: currentDraftId.value,
     });
     const savedDraftId = currentDraftId.value;
     if (savedDraftId) {
@@ -198,18 +242,49 @@ async function saveArticle(status: 'unpublished' | 'published', date?: string) {
     markdownSource.value = '';
     selectedTagIds.value = [];
     currentDraftId.value = undefined;
+    articleUid.value = article.uid;
     markSaved(status === 'published' ? t('admin.writer.published') : t('admin.writer.saved'));
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : t('admin.writer.saveError');
   }
 }
 
+async function copyArticleUid() {
+  if (!articleUid.value) return;
+  copyingUid.value = true;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(articleUid.value);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = articleUid.value;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    notifications.success(t('admin.writer.copyUidSuccess'));
+  } catch {
+    notifications.error(t('admin.writer.copyUidError'));
+  } finally {
+    copyingUid.value = false;
+  }
+}
+
 watch([title, introduction, markdownSource, selectedTagIds], () => {
+  if (!currentDraftId.value && hasContent.value) {
+    createInitialDraft().catch((caught) => {
+      error.value = caught instanceof Error ? caught.message : t('admin.writer.draftError');
+    });
+  }
   dirty.value = true;
 });
 
 onMounted(async () => {
   await Promise.all([loadTags(), loadDrafts()]);
+  await createInitialDraft();
   autosave = window.setInterval(() => {
     if (dirty.value && hasContent.value) {
       saveCurrentDraft().catch((caught) => {
@@ -227,5 +302,21 @@ onUnmounted(() => {
 <style scoped>
 .admin-card {
   border-radius: 8px;
+}
+
+.writer-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.article-uid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  font-family: monospace;
+  font-size: 0.875rem;
 }
 </style>
