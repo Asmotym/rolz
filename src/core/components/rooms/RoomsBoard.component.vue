@@ -120,7 +120,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  roomsStore.teardown();
+  roomsStore.stopLiveUpdates();
 });
 
 watch(
