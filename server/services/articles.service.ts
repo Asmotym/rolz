@@ -32,6 +32,7 @@ const ARTICLE_MARKDOWN_MAX = 250_000;
 const ARTICLE_EXCERPT_MAX = 260;
 const TAG_NAME_MAX = 80;
 const DEFAULT_PUBLIC_LIMIT = 5;
+const SAFE_COLOR_STYLE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$|^rgb\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*\)$/;
 
 function escapeHtml(value: string): string {
     return value
@@ -95,7 +96,12 @@ function sanitizeRenderedHtml(html: string): string {
             th: ['align'],
             td: ['align'],
             code: ['class'],
-            span: ['class']
+            span: ['class', 'style']
+        },
+        allowedStyles: {
+            span: {
+                color: [SAFE_COLOR_STYLE]
+            }
         },
         allowedSchemes: ['http', 'https', 'mailto'],
         transformTags: {
@@ -176,7 +182,7 @@ async function mapArticleDetails(row: DatabaseArticle, includeMarkdown: boolean)
     const [summary] = await attachTags([row]);
     return {
         ...summary,
-        sanitizedHtml: row.sanitized_html,
+        sanitizedHtml: renderMarkdown(row.markdown_source),
         markdownSource: includeMarkdown ? row.markdown_source : undefined
     };
 }

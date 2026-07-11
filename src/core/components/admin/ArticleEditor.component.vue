@@ -72,6 +72,41 @@
         </v-tooltip>
       </template>
       <v-divider vertical class="mx-1" />
+      <v-menu :close-on-content-click="false" location="bottom">
+        <template #activator="{ props: menuProps }">
+          <v-tooltip text="Text color" location="top">
+            <template #activator="{ props: tooltipProps }">
+              <v-btn
+                v-bind="{ ...menuProps, ...tooltipProps }"
+                icon="mdi-format-color-text"
+                aria-label="Text color"
+                title="Text color"
+                size="small"
+                variant="text"
+                density="comfortable"
+              >
+                <v-icon icon="mdi-format-color-text" />
+                <span class="color-indicator" :style="{ backgroundColor: selectedTextColor }"></span>
+              </v-btn>
+            </template>
+          </v-tooltip>
+        </template>
+        <v-card class="color-menu" elevation="6">
+          <v-color-picker
+            v-model="selectedTextColor"
+            mode="hex"
+            hide-inputs
+            show-swatches
+            width="260"
+          />
+          <v-card-actions class="justify-end">
+            <v-btn size="small" variant="text" @click="applyTextColor">
+              Apply
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-menu>
+      <v-divider vertical class="mx-1" />
       <v-tooltip :text="previewVisible ? 'Hide preview' : 'Show preview'" location="top">
         <template #activator="{ props: tooltipProps }">
           <v-btn
@@ -165,6 +200,8 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const markdownTextarea = ref<ComponentPublicInstance | null>(null);
 const previewVisible = ref(true);
+const selectedTextColor = ref('#93c5fd');
+const SAFE_COLOR_STYLE = /^color:\s*(?:#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})|rgb\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*\))\s*;?$/;
 
 function escapeHtml(value: string): string {
   return value
@@ -204,7 +241,7 @@ const ALLOWED_ATTRIBUTES = new Map<string, Set<string>>([
   ['TH', new Set(['align'])],
   ['TD', new Set(['align'])],
   ['CODE', new Set(['class'])],
-  ['SPAN', new Set(['class'])],
+  ['SPAN', new Set(['class', 'style'])],
 ]);
 
 const toolbarGroups: ToolbarGroup[] = [
@@ -326,6 +363,20 @@ async function wrapSelection(before: string, after: string, placeholder: string)
   await replaceSelection(nextValue, nextStart, nextEnd);
 }
 
+function normalizeHexColor(value: string): string {
+  const color = value.trim();
+  if (/^#[0-9a-fA-F]{3}$/.test(color) || /^#[0-9a-fA-F]{6}$/.test(color)) {
+    return color.toLowerCase();
+  }
+  return '#93c5fd';
+}
+
+async function applyTextColor() {
+  const color = normalizeHexColor(selectedTextColor.value);
+  selectedTextColor.value = color;
+  await wrapSelection(`<span style="color: ${color};">`, '</span>', 'colored text');
+}
+
 async function insertBlock(block: string, cursorOffset = 0) {
   const textarea = getTextarea();
   if (!textarea) return;
@@ -406,7 +457,11 @@ function sanitizePreviewHtml(html: string): string {
           const value = attribute.value.trim();
           const allowed = allowedAttributes.has(name);
           const safeUrl = !['href', 'src'].includes(name) || /^(https?:|mailto:)/i.test(value);
-          if (!allowed || !safeUrl || name.startsWith('on')) {
+          const safeStyle = name !== 'style' || (
+            element.tagName === 'SPAN'
+            && SAFE_COLOR_STYLE.test(value)
+          );
+          if (!allowed || !safeUrl || !safeStyle || name.startsWith('on')) {
             element.removeAttribute(attribute.name);
           }
         }
@@ -450,6 +505,19 @@ const previewHtml = computed(() => {
   padding: 4px;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 8px;
+}
+
+.color-menu {
+  border-radius: 8px;
+}
+
+.color-indicator {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
 }
 
 .markdown-body-row {
