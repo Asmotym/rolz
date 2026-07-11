@@ -39,8 +39,20 @@
           <div class="article-row">
             <div>
               <strong>{{ article.title }}</strong>
-              <div class="text-caption text-medium-emphasis">
-                {{ article.status }} · {{ formatDate(article.publishedAt ?? article.createdAt) }}
+              <div class="article-meta text-caption text-medium-emphasis">
+                <span>{{ article.status }} · {{ formatDate(article.publishedAt ?? article.createdAt) }}</span>
+                <span class="article-uid">
+                  {{ t('admin.writer.uid', { uid: article.uid }) }}
+                  <v-btn
+                    icon="mdi-content-copy"
+                    size="x-small"
+                    variant="text"
+                    :title="t('admin.writer.copyUid')"
+                    :aria-label="t('admin.writer.copyUid')"
+                    :loading="copyingUid === article.uid"
+                    @click.stop="copyArticleUid(article.uid)"
+                  />
+                </span>
               </div>
             </div>
             <div class="d-flex align-center ga-2 actions" @click.stop>
@@ -97,6 +109,7 @@ import type { ArticleDetails, ArticleSummary, ArticleTag } from 'netlify/core/ty
 import { AdminArticlesService, ArticlesService } from 'core/services/articles.service';
 import { useCurrentUserRole } from 'core/composables/useCurrentUserRole';
 import { HomeRoutes } from 'core/routes';
+import { notifications } from 'core/services/notifications.service';
 import ArticleEditor from './ArticleEditor.component.vue';
 
 const { t, locale } = useI18n();
@@ -119,6 +132,7 @@ const editTitle = ref('');
 const editIntroduction = ref('');
 const editMarkdown = ref('');
 const editTagIds = ref<string[]>([]);
+const copyingUid = ref<string | null>(null);
 let timer: number | null = null;
 
 function formatDate(value?: string | null): string {
@@ -217,6 +231,29 @@ async function archive(articleId: string) {
   await loadArticles();
 }
 
+async function copyArticleUid(uid: string) {
+  copyingUid.value = uid;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(uid);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = uid;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    notifications.success(t('admin.writer.copyUidSuccess'));
+  } catch {
+    notifications.error(t('admin.writer.copyUidError'));
+  } finally {
+    copyingUid.value = null;
+  }
+}
+
 watch([search, selectedTags, published, unpublished, archived, unarchived], () => {
   if (timer) window.clearTimeout(timer);
   timer = window.setTimeout(loadArticles, 300);
@@ -244,6 +281,20 @@ onMounted(async () => {
 .actions {
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.article-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.article-uid {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: monospace;
 }
 
 .rendered-article {
