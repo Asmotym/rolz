@@ -1,5 +1,4 @@
 import './sentry.ts';
-import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { createLogger } from './core/utils/logger';
 import { handleRoomsAction, listRoomDiceRolls, listRoomsForUser, listRoomMembersForUser, type RoomsAction } from './services/rooms.service';
@@ -7,8 +6,7 @@ import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/dis
 import { cors } from './middlewares/cors';
 import { requireApiKeyForUntrustedOrigins } from './middlewares/api-key';
 import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/api-keys.service';
-import { sentry } from './middlewares/sentry'
-import * as Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node';
 import { DatabaseUnavailableError } from './core/database/errors';
 import { query } from './core/database/client';
 import { HttpError } from './core/errors/http-errors';
@@ -83,16 +81,21 @@ function respondWithServiceError(res: Response, error: unknown, context: string)
     const message = error instanceof Error ? error.message : 'Unexpected error';
     const meta = error instanceof Error ? { stack: error.stack } : undefined;
     if (error instanceof DatabaseUnavailableError) {
+        Sentry.captureException(error, { extra: { context } });
         logger.error(`${context} - database unavailable: ${message}`, meta);
         return res.status(503).json({ success: false, error: message });
     }
 
     if (error instanceof HttpError) {
+        if (error.status >= 500) {
+            Sentry.captureException(error, { extra: { context } });
+        }
         const log = error.status >= 500 ? logger.error : logger.warn;
         log(`${context}: ${message}`, meta);
         return res.status(error.status).json({ success: false, error: message });
     }
 
+    Sentry.captureException(error, { extra: { context } });
     logger.error(`${context}: ${message}`, meta);
     return res.status(400).json({ success: false, error: message });
 }
@@ -545,6 +548,8 @@ app.get('/api/rooms/:roomId/dice-rolls', async (req, res) => {
     }
 });
 
+Sentry.setupExpressErrorHandler(app);
+
 app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof SyntaxError) {
         logger.warn(`Invalid JSON payload: ${error.message}`);
@@ -559,9 +564,6 @@ app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
     logger.error(`Unhandled error: ${error.message}`);
     return res.status(500).json({ success: false, error: 'Internal server error' });
 });
-
-Sentry.setupExpressErrorHandler(app);
-app.use(sentry)
 
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 8888);
 const host = process.env.HOST ?? '0.0.0.0';

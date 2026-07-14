@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import * as Sentry from '@sentry/node';
 
 if (typeof process.env.SENTRY_DSN === 'string') {
