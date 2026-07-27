@@ -6,10 +6,16 @@ PROD_COMPOSE_FILE ?= docker-compose.prod.yml
 SERVICES ?= rolz api-docs phpmyadmin
 PROD_SERVICES ?= rolz api-docs
 ENV_FILE ?= .env
+SENTRY_AUTH_TOKEN_FILE ?= .secrets/sentry-auth-token
+SENTRY_AUTH_TOKEN_FROM_ENV := $(strip $(SENTRY_AUTH_TOKEN))
 
 ifneq ("$(wildcard $(ENV_FILE))","")
 include $(ENV_FILE)
 export
+endif
+
+ifneq ($(SENTRY_AUTH_TOKEN_FROM_ENV),)
+SENTRY_AUTH_TOKEN := $(SENTRY_AUTH_TOKEN_FROM_ENV)
 endif
 
 SENTRY_RELEASE := $(if $(strip $(SENTRY_RELEASE)),$(SENTRY_RELEASE),$(shell git rev-parse HEAD 2>/dev/null))
@@ -26,7 +32,7 @@ ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")
 COMPOSE_CMD := $(COMPOSE) -f $(COMPOSE_FILE) $(ENV_FILE_FLAG)
 PROD_COMPOSE_CMD := $(COMPOSE) -f $(PROD_COMPOSE_FILE) $(ENV_FILE_FLAG)
 
-.PHONY: build run up update update-repo prune-images stop logs clean shell down deploy prod-up prod-down prod-logs
+.PHONY: build run up update update-repo prune-images stop logs clean shell down deploy prod-preflight prod-up prod-down prod-logs
 
 build:
 	$(COMPOSE_CMD) build $(SERVICE)
@@ -37,6 +43,7 @@ up:
 	$(COMPOSE_CMD) up -d --build $(SERVICES)
 
 update: update-repo
+	@$(MAKE) prod-preflight SENTRY_RELEASE="$$(git rev-parse HEAD)"
 	@$(MAKE) prod-down
 	@$(MAKE) deploy SENTRY_RELEASE="$$(git rev-parse HEAD)"
 	@$(MAKE) prune-images
@@ -54,14 +61,18 @@ deploy:
 	@echo "Deploying production services..."
 	@$(MAKE) prod-up
 
-prod-up:
-	@echo "Starting production services..."
+prod-preflight:
 	@[[ "$(SENTRY_RELEASE)" =~ ^[0-9a-f]{40}$$ ]] || (echo "SENTRY_RELEASE must be the full 40-character Git SHA" >&2; exit 1)
 	@test -n "$(SENTRY_DSN)" || (echo "SENTRY_DSN is required" >&2; exit 1)
 	@test -n "$(SENTRY_ORG)" || (echo "SENTRY_ORG is required" >&2; exit 1)
 	@test -n "$(SENTRY_PROJECT)" || (echo "SENTRY_PROJECT is required" >&2; exit 1)
-	@test -n "$${SENTRY_AUTH_TOKEN:-}" || (echo "SENTRY_AUTH_TOKEN is required in the shell environment" >&2; exit 1)
-	$(PROD_COMPOSE_CMD) up -d --build $(PROD_SERVICES)
+	@test -n "$${SENTRY_AUTH_TOKEN:-}" || test -s "$(SENTRY_AUTH_TOKEN_FILE)" || (echo "SENTRY_AUTH_TOKEN is required in the shell environment or $(SENTRY_AUTH_TOKEN_FILE)" >&2; exit 1)
+
+prod-up: prod-preflight
+	@echo "Starting production services..."
+	@token="$${SENTRY_AUTH_TOKEN:-}"; \
+	if [[ -z "$$token" ]]; then token="$$(tr -d '\r\n' < "$(SENTRY_AUTH_TOKEN_FILE)")"; fi; \
+	SENTRY_AUTH_TOKEN="$$token" $(PROD_COMPOSE_CMD) up -d --build $(PROD_SERVICES)
 
 prod-down:
 	@echo "Stopping production services..."

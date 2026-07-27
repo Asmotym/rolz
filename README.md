@@ -46,7 +46,16 @@ Set `SENTRY_DSN` to enable server-side error reporting. Events include a generat
 
 `SENTRY_TRACES_SAMPLE_RATE` accepts a number from `0` to `1` and defaults to `0.1` in production or `1.0` in development. Health and readiness probes are never sampled. Every response includes `X-Request-ID`, and JSON error responses also include `requestId`.
 
-Production source-map upload requires `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_RELEASE`, and `SENTRY_AUTH_TOKEN`. `make prod-up` derives `SENTRY_RELEASE` from the full Git commit SHA and fails if upload configuration is incomplete. Provide `SENTRY_AUTH_TOKEN` through the shell or deployment secret manager; do not store it in `.env`, because it is a build-only credential passed to Docker as a BuildKit secret.
+Production source-map upload requires `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_RELEASE`, and a Sentry auth token. `make prod-up` derives `SENTRY_RELEASE` from the full Git commit SHA and fails if upload configuration is incomplete. For one-command deployments, put the token in the git-ignored `.secrets/sentry-auth-token` file and restrict it to the deployment user:
+
+```bash
+mkdir -p .secrets
+chmod 700 .secrets
+nano .secrets/sentry-auth-token
+chmod 600 .secrets/sentry-auth-token
+```
+
+The file must contain only the token. Set `SENTRY_AUTH_TOKEN_FILE` if it lives elsewhere. As an alternative, export `SENTRY_AUTH_TOKEN` from the shell or deployment secret manager. In either case, the token is passed to the Docker build as an ephemeral BuildKit secret; it is not a build argument or runtime container secret. `make update` validates the complete Sentry configuration before stopping production, then uses the post-pull Git SHA for the release.
 
 After a production build, send a deliberate synthetic event with:
 
