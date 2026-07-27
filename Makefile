@@ -26,7 +26,7 @@ ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")
 COMPOSE_CMD := $(COMPOSE) -f $(COMPOSE_FILE) $(ENV_FILE_FLAG)
 PROD_COMPOSE_CMD := $(COMPOSE) -f $(PROD_COMPOSE_FILE) $(ENV_FILE_FLAG)
 
-.PHONY: build run up stop logs clean shell down deploy prod-up prod-down prod-logs
+.PHONY: build run up update update-repo prune-images stop logs clean shell down deploy prod-up prod-down prod-logs
 
 build:
 	$(COMPOSE_CMD) build $(SERVICE)
@@ -36,7 +36,10 @@ run: up
 up:
 	$(COMPOSE_CMD) up -d --build $(SERVICES)
 
-update: update-repo prod-down deploy prune-images
+update: update-repo
+	@$(MAKE) prod-down
+	@$(MAKE) deploy SENTRY_RELEASE="$$(git rev-parse HEAD)"
+	@$(MAKE) prune-images
 
 update-repo:
 	@echo "Updating repository..."
@@ -49,7 +52,7 @@ prune-images:
 
 deploy: 
 	@echo "Deploying production services..."
-	@make prod-up
+	@$(MAKE) prod-up
 
 prod-up:
 	@echo "Starting production services..."
