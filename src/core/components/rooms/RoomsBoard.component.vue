@@ -120,7 +120,11 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  roomsStore.stopLiveUpdates();
+  // Home.layout swaps two RoomsBoard instances when entering a room. Do not let
+  // the outgoing dashboard instance tear down the socket started for that room.
+  if (!routeRoomId.value) {
+    roomsStore.stopLiveUpdates();
+  }
 });
 
 watch(
@@ -143,6 +147,15 @@ watch(
       attemptInviteJoin();
     } else if (!user && previous) {
       await roomsStore.selectRoom(null);
+      navigateHome();
+    }
+  }
+);
+
+watch(
+  () => roomsStore.selectedRoomId,
+  (selectedRoomId) => {
+    if (!selectedRoomId && routeRoomId.value) {
       navigateHome();
     }
   }

@@ -2,6 +2,7 @@ import { ref, watch } from 'vue';
 import type { RoomDetails, RoomRollAward } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomsService } from 'core/services/rooms.service';
+import { useRoomsStore } from 'core/stores/rooms.store';
 import i18n from 'modules/language-switcher/plugins/i18n.plugin';
 
 export const RoomRollAwardsManagerKey = Symbol('RoomRollAwardsManager');
@@ -12,6 +13,7 @@ export function useRoomRollAwardsManager(
   getCurrentUser: () => DiscordUser | null
 ) {
   const ROLL_AWARD_NOTATION_REGEX = /^d([1-9]\d*)$/i;
+  const roomsStore = useRoomsStore();
   const awards = ref<RoomRollAward[]>([]);
   const awardsEnabled = ref(false);
   const awardsLoading = ref(false);
@@ -32,6 +34,17 @@ export function useRoomRollAwardsManager(
       }
     },
     { immediate: true }
+  );
+
+  watch(
+    () => roomsStore.rollAwardsRealtimeSnapshot,
+    (snapshot) => {
+      if (!snapshot || snapshot.roomId !== getRoom()?.id) return;
+      awards.value = snapshot.awards.map(normalizeAwardNotation);
+      awardsEnabled.value = snapshot.enabled;
+      rollAwardsWindowSize.value = snapshot.windowSize;
+      awardsLoadedRoomId.value = snapshot.roomId;
+    }
   );
 
   async function ensureAwardsLoaded(force = false) {

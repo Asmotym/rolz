@@ -1,5 +1,6 @@
 import './sentry.ts';
 import express, { type NextFunction, type Request, type Response } from 'express';
+import { createServer } from 'http';
 import { createLogger } from './core/utils/logger';
 import { handleRoomsAction, listRoomDiceRolls, listRoomsForUser, listRoomMembersForUser, type RoomsAction } from './services/rooms.service';
 import { handleDiscordQuery, type DiscordQueryPayload } from './core/discord/discord-handler.core';
@@ -41,6 +42,8 @@ import {
     setAuthenticatedUser,
     type SafeSentryContext
 } from './observability/server-observability';
+import { roomRealtimeHub } from './realtime/room-realtime.server';
+import { publishRoomsActionResult } from './realtime/room-action-events';
 
 const logger = createLogger('Server');
 const app = express();
@@ -501,6 +504,7 @@ app.post('/api/rooms', async (req, res) => {
             userId: 'payload' in payload && 'userId' in payload.payload ? payload.payload.userId : undefined
         });
         const data = await handleRoomsAction(payload);
+        await publishRoomsActionResult(payload, data);
         res.json({ success: true, data });
     } catch (error) {
         respondWithServiceError(res, error, `room.action.${payload.action}`, {
@@ -574,11 +578,13 @@ app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
 
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 8888);
 const host = process.env.HOST ?? '0.0.0.0';
+const httpServer = createServer(app);
+roomRealtimeHub.attach(httpServer);
 
 async function startServer() {
     try {
         await ensureDatabaseSetup();
-        app.listen(port, host, () => {
+        httpServer.listen(port, host, () => {
             const displayHost = host === '0.0.0.0' ? 'localhost' : host;
             logger.success(`API server listening on http://${displayHost}:${port}`);
         });

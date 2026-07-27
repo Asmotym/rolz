@@ -3,7 +3,17 @@
     <template v-if="room">
       <v-card-title class="d-flex justify-space-between align-center flex-wrap gap-2">
         <div>
-          <div class="text-h6">{{ room.name }}</div>
+          <div class="d-flex align-center ga-2">
+            <div class="text-h6">{{ room.name }}</div>
+            <v-chip
+              size="x-small"
+              variant="tonal"
+              :color="realtimeIndicator.color"
+              :prepend-icon="realtimeIndicator.icon"
+            >
+              {{ realtimeIndicator.label }}
+            </v-chip>
+          </div>
           <div class="text-medium-emphasis d-flex align-center gap-2">
             <small>{{ t('chat.inviteCode', { code: displayedInviteCode }) }}</small>
             <v-btn
@@ -223,6 +233,18 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const roomsStore = useRoomsStore();
+const realtimeIndicator = computed(() => {
+  switch (roomsStore.realtimeStatus) {
+    case 'connected':
+      return { color: 'success', icon: 'mdi-access-point', label: t('chat.realtime.connected') };
+    case 'connecting':
+      return { color: 'info', icon: 'mdi-access-point', label: t('chat.realtime.connecting') };
+    case 'reconnecting':
+      return { color: 'warning', icon: 'mdi-access-point-network-off', label: t('chat.realtime.reconnecting') };
+    default:
+      return { color: 'error', icon: 'mdi-access-point-network-off', label: t('chat.realtime.disconnected') };
+  }
+});
 
 const emit = defineEmits<{
   (event: 'send-message', message: string, skipBonusPointRules: boolean): void;
@@ -305,11 +327,6 @@ const rollAwardsManager = useRoomRollAwardsManager(
 provide(RoomRollAwardsManagerKey, rollAwardsManager);
 
 let hasMounted = false;
-// Queue refreshes to avoid overlapping award loads when messages change quickly.
-const refreshRollAwardsAfterMessageChange = createQueuedAsyncTask(async () => {
-  if (!props.room) return;
-  await rollAwardsManager.ensureAwardsLoaded(true);
-});
 
 function finishPendingLoad(status: InfiniteScrollStatus = 'ok') {
   pendingLoadDone.value?.(status);
@@ -344,9 +361,6 @@ watch(
     const added = previousLength !== undefined && length > previousLength;
     if (added && !props.historyLoading && !loadingOlder.value && !hasLoadedOlder.value) {
       nextTick(scrollToBottom);
-    }
-    if (props.room && length !== previousLength) {
-      void refreshRollAwardsAfterMessageChange();
     }
   }
 );
@@ -476,27 +490,6 @@ function openRollAwardsSettings() {
 function persistChatWidth(value: number) {
   if (!isBrowser) return;
   appStorage.setChatWidthPercent(value);
-}
-
-function createQueuedAsyncTask(task: () => Promise<void>) {
-  let running = false;
-  let queued = false;
-
-  return async function run() {
-    if (running) {
-      queued = true;
-      return;
-    }
-    running = true;
-    try {
-      do {
-        queued = false;
-        await task();
-      } while (queued);
-    } finally {
-      running = false;
-    }
-  };
 }
 
 function startResize(event: MouseEvent | TouchEvent) {

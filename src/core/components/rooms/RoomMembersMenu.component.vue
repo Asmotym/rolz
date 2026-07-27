@@ -109,8 +109,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { RoomBonusPointBalance, RoomDetails, RoomMemberDetails } from 'netlify/core/types/data.types';
-import { RoomsService } from 'core/services/rooms.service';
+import type { RoomBonusPointBalance, RoomDetails } from 'netlify/core/types/data.types';
+import { useRoomsStore } from 'core/stores/rooms.store';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
 
 const props = defineProps<{
@@ -120,9 +120,10 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const roomsStore = useRoomsStore();
 
 const menuOpen = ref(false);
-const members = ref<RoomMemberDetails[]>([]);
+const members = computed(() => roomsStore.members);
 const membersLoading = ref(false);
 const membersError = ref<string | null>(null);
 const membersLoadedRoomId = ref<string | null>(null);
@@ -166,9 +167,8 @@ async function fetchMembers(roomId: string) {
   membersLoading.value = true;
   membersError.value = null;
   try {
-    const list = await RoomsService.fetchMembers(roomId);
+    await roomsStore.loadMembers(roomId);
     if (props.room.id === roomId) {
-      members.value = list;
       membersLoadedRoomId.value = roomId;
     }
   } catch (error) {
@@ -184,7 +184,6 @@ async function fetchMembers(roomId: string) {
 
 function resetMembersState() {
   menuOpen.value = false;
-  members.value = [];
   membersError.value = null;
   membersLoadedRoomId.value = null;
   membersLoading.value = false;

@@ -162,7 +162,13 @@
     "disadvantageExample": "- « -2d100 » compte comme un désavantage et garde le pire jet",
     "emptyTitle": "Sélectionnez ou créez une salle",
     "emptyDescription": "Choisissez une salle dans la liste de gauche ou créez-en une pour commencer à discuter et lancer les dés.",
-    "copyInviteLinkError": "Impossible de copier le lien d’invitation"
+    "copyInviteLinkError": "Impossible de copier le lien d’invitation",
+    "realtime": {
+      "connected": "En direct",
+      "connecting": "Connexion",
+      "reconnecting": "Reconnexion",
+      "disconnected": "Hors ligne"
+    }
   },
   "messages": {
     "rolled": "{name} a lancé {notation}",

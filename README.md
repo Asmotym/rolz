@@ -21,6 +21,7 @@ Fill in the `.env` file with:
 - `BACKEND_PORT` – Port for the API server (default `4000`)  
 - `FRONTEND_URL` – Comma-separated origins that should be allowed to call the API  
 - `VITE_BACKEND_URL` – Base URL the Vue app uses when talking to the API
+- `VITE_REALTIME_URL` – Optional WebSocket base URL override; by default it is derived from `VITE_BACKEND_URL`
 - `VITE_PUBLIC_API_BASE_URL` – Public API base URL displayed in Settings → API (dev default: `http://localhost:4000/api`, production: `https://api.rolz.asmotym.fr`)
 - `VITE_API_DOCS_URL` – URL opened from Settings → API for the API documentation portal (default dev value: `http://localhost:6060`)
 
@@ -72,6 +73,10 @@ The command prints the event ID after Sentry acknowledges the event. Confirm tha
 - `npm run server:start` – Run the compiled server (`dist-server/index.js`).
 
 Deploy the static assets (e.g. Netlify) and host the Express server anywhere that can expose Node.js + access to the database.
+
+The API host must forward WebSocket upgrades for `/ws/rooms/*` to the same
+Express server. Keep the proxy idle timeout above 30 seconds so the server
+heartbeat can keep active room connections alive.
 
 ## Docker (all-in-one)
 

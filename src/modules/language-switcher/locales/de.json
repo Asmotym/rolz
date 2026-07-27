@@ -162,7 +162,13 @@
     "disadvantageExample": "- \"-2d100\" zählt als Nachteil und behält den schlechtesten Wurf",
     "emptyTitle": "Raum auswählen oder erstellen",
     "emptyDescription": "Wähle links einen Raum aus oder erstelle einen neuen, um zu chatten und zu würfeln.",
-    "copyInviteLinkError": "Einladungslink konnte nicht kopiert werden"
+    "copyInviteLinkError": "Einladungslink konnte nicht kopiert werden",
+    "realtime": {
+      "connected": "Live",
+      "connecting": "Verbindung",
+      "reconnecting": "Erneute Verbindung",
+      "disconnected": "Offline"
+    }
   },
   "messages": {
     "rolled": "{name} würfelte {notation}",

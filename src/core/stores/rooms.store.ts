@@ -1,15 +1,16 @@
 import { defineStore } from 'pinia';
-import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
+import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomMemberDetails, RoomMessage, RoomRealtimeEvent, RoomRealtimeStatus, RoomRollAwardsSnapshot } from 'netlify/core/types/data.types';
 import type { DiceRoll } from 'core/utils/dice.utils';
 import { RoomsService } from 'core/services/rooms.service';
+import { RoomRealtimeService } from 'core/services/room-realtime.service';
 import i18n from 'modules/language-switcher/plugins/i18n.plugin';
 
 export const ROOM_MESSAGES_PAGE_SIZE = 20;
 const t = i18n.global.t;
 
-interface LiveTimer {
-    id: number | null;
-}
+const realtimeService = new RoomRealtimeService();
+let bufferedRealtimeEvents: RoomRealtimeEvent[] = [];
+const seenRealtimeEventIds = new Set<string>();
 
 const ensureAscending = (items: RoomMessage[]): RoomMessage[] => {
     return [...items].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -21,6 +22,7 @@ export const useRoomsStore = defineStore('rooms', {
         selectedRoomId: null as string | null,
         selectedRoomUserId: null as string | null,
         messages: [] as RoomMessage[],
+        members: [] as RoomMemberDetails[],
         bonusPointSettings: null as RoomBonusPointSettings | null,
         bonusPointRules: [] as RoomBonusPointRule[],
         bonusPointBalances: [] as RoomBonusPointBalance[],
@@ -34,7 +36,9 @@ export const useRoomsStore = defineStore('rooms', {
         lastMessageAt: null as string | null,
         historyLoading: false,
         historyExhausted: false,
-        live: { id: null } as LiveTimer,
+        realtimeStatus: 'disconnected' as RoomRealtimeStatus,
+        realtimeHydrated: false,
+        rollAwardsRealtimeSnapshot: null as RoomRollAwardsSnapshot | null,
         errorMessage: null as string | null,
     }),
     getters: {
@@ -96,12 +100,17 @@ export const useRoomsStore = defineStore('rooms', {
         async selectRoom(roomId: string | null, userId?: string | null) {
             const normalizedUserId = userId ?? null;
             if (roomId === this.selectedRoomId && normalizedUserId === this.selectedRoomUserId) {
+                if (roomId && this.realtimeStatus === 'disconnected') {
+                    await this.connectAndHydrateRoom(roomId, normalizedUserId);
+                }
                 return;
             }
 
+            this.stopLiveUpdates();
             this.selectedRoomId = roomId;
             this.selectedRoomUserId = normalizedUserId;
             this.messages = [];
+            this.members = [];
             this.bonusPointSettings = null;
             this.bonusPointRules = [];
             this.bonusPointBalances = [];
@@ -109,14 +118,30 @@ export const useRoomsStore = defineStore('rooms', {
             this.lastMessageAt = null;
             this.historyExhausted = false;
             this.historyLoading = false;
+            this.realtimeHydrated = false;
+            this.rollAwardsRealtimeSnapshot = null;
 
             if (!roomId) {
-                this.stopLiveUpdates();
                 return;
             }
 
-            await this.loadMessages(roomId, normalizedUserId);
-            this.startLiveUpdates(roomId, normalizedUserId);
+            await this.connectAndHydrateRoom(roomId, normalizedUserId);
+        },
+        async connectAndHydrateRoom(roomId: string, userId?: string | null) {
+            this.realtimeHydrated = false;
+            this.startLiveUpdates(roomId, userId);
+            await Promise.all([
+                this.loadMessages(roomId, userId),
+                this.loadMembers(roomId),
+                this.loadBonusPoints(roomId, true)
+            ]);
+            if (this.selectedRoomId !== roomId) return;
+            this.realtimeHydrated = true;
+            const buffered = bufferedRealtimeEvents;
+            bufferedRealtimeEvents = [];
+            for (const event of buffered) {
+                this.applyRealtimeEvent(event);
+            }
         },
         async loadMessages(roomId: string, userId?: string | null, limit: number = ROOM_MESSAGES_PAGE_SIZE) {
             try {
@@ -129,21 +154,19 @@ export const useRoomsStore = defineStore('rooms', {
                 this.setError(error instanceof Error ? error.message : t('rooms.errors.loadMessages'));
             }
         },
-        async refreshMessages(roomId: string, userId?: string | null) {
-            if (!this.lastMessageAt) {
-                await this.loadMessages(roomId, userId ?? this.selectedRoomUserId ?? null);
-                return;
-            }
-
+        async loadMembers(roomId: string) {
             try {
-                const updates = await RoomsService.fetchMessages(roomId, {
-                    since: this.lastMessageAt,
-                    userId: userId ?? this.selectedRoomUserId ?? undefined,
-                });
-                if (updates.length === 0) return;
-                this.appendMessages(updates);
+                const members = await RoomsService.fetchMembers(roomId);
+                if (this.selectedRoomId === roomId) {
+                    this.members = members.map((member) => ({
+                        ...member,
+                        isOnline: this.members.find((current) => current.userId === member.userId)?.isOnline ?? false
+                    }));
+                }
+                return members;
             } catch (error) {
                 console.error(error);
+                return [];
             }
         },
         async sendChatMessage(payload: { roomId: string; userId: string; content: string }) {
@@ -366,19 +389,151 @@ export const useRoomsStore = defineStore('rooms', {
         },
         startLiveUpdates(roomId: string, userId?: string | null) {
             if (typeof window === 'undefined') return;
-            this.stopLiveUpdates();
-            const heartbeatUser = userId ?? this.selectedRoomUserId ?? null;
-            this.live.id = window.setInterval(() => {
-                if (this.selectedRoomId === roomId) {
-                    this.refreshMessages(roomId, heartbeatUser);
+            bufferedRealtimeEvents = [];
+            seenRealtimeEventIds.clear();
+            realtimeService.connect(roomId, {
+                onEvent: (event) => {
+                    if (this.selectedRoomId !== roomId) return;
+                    this.receiveRealtimeEvent(event);
+                },
+                onStatus: (status) => {
+                    if (this.selectedRoomId === roomId || status === 'disconnected') {
+                        this.realtimeStatus = status;
+                    }
+                },
+                onReady: () => {
+                    if (this.realtimeHydrated && this.selectedRoomId === roomId) {
+                        void this.catchUpMessages(roomId, userId ?? this.selectedRoomUserId);
+                    }
+                },
+                onTerminalClose: (code) => {
+                    if (this.selectedRoomId !== roomId) return;
+                    this.exitUnavailableRoom(code === 4004
+                        ? 'This room is no longer available.'
+                        : 'You are no longer a member of this room.');
                 }
-            }, 3500);
+            });
         },
         stopLiveUpdates() {
-            if (this.live.id) {
-                clearInterval(this.live.id);
-                this.live.id = null;
+            if (typeof window !== 'undefined') realtimeService.disconnect();
+            this.realtimeStatus = 'disconnected';
+            this.realtimeHydrated = false;
+            bufferedRealtimeEvents = [];
+            seenRealtimeEventIds.clear();
+        },
+        async catchUpMessages(roomId: string, userId?: string | null) {
+            if (this.selectedRoomId !== roomId) return;
+            const latestTimestamp = this.lastMessageAt;
+            if (!latestTimestamp) {
+                await this.loadMessages(roomId, userId);
+                return;
             }
+            const parsed = new Date(latestTimestamp);
+            const overlapSince = Number.isNaN(parsed.getTime())
+                ? latestTimestamp
+                : new Date(parsed.getTime() - 1_000).toISOString();
+            try {
+                const updates = await RoomsService.fetchMessages(roomId, {
+                    since: overlapSince,
+                    userId: userId ?? undefined
+                });
+                if (this.selectedRoomId === roomId) this.appendMessages(updates);
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        receiveRealtimeEvent(event: RoomRealtimeEvent) {
+            if (seenRealtimeEventIds.has(event.eventId)) return;
+            seenRealtimeEventIds.add(event.eventId);
+            if (seenRealtimeEventIds.size > 1_000) {
+                seenRealtimeEventIds.clear();
+                seenRealtimeEventIds.add(event.eventId);
+            }
+            if (!this.realtimeHydrated) {
+                bufferedRealtimeEvents.push(event);
+                return;
+            }
+            this.applyRealtimeEvent(event);
+        },
+        applyRealtimeEvent(event: RoomRealtimeEvent) {
+            if (event.roomId !== this.selectedRoomId) return;
+            switch (event.type) {
+                case 'connection.ready':
+                    return;
+                case 'message.created':
+                case 'message.updated':
+                    this.appendMessages([event.message]);
+                    return;
+                case 'room.updated': {
+                    const existing = this.rooms.find((room) => room.id === event.room.id);
+                    this.upsertRoom({
+                        ...existing,
+                        ...event.room,
+                        isCreator: existing?.isCreator
+                    });
+                    return;
+                }
+                case 'room.archived': {
+                    const room = this.rooms.find((current) => current.id === event.roomId);
+                    if (room) {
+                        room.archivedAt = event.archivedAt;
+                        room.isArchived = true;
+                    }
+                    this.exitUnavailableRoom('This room has been archived.');
+                    return;
+                }
+                case 'member.updated':
+                    this.upsertMember(event.member);
+                    return;
+                case 'member.removed': {
+                    this.members = this.members.filter((member) => member.userId !== event.userId);
+                    const room = this.rooms.find((current) => current.id === event.roomId);
+                    if (room) room.memberCount = event.memberCount;
+                    if (event.userId === this.selectedRoomUserId) {
+                        this.exitUnavailableRoom('You are no longer a member of this room.');
+                    }
+                    return;
+                }
+                case 'presence.updated':
+                    this.members = this.members.map((member) => member.userId === event.userId
+                        ? { ...member, isOnline: event.isOnline, lastSeen: event.lastSeen }
+                        : member);
+                    return;
+                case 'bonus_points.updated':
+                    this.bonusPointSettings = event.snapshot.settings;
+                    this.bonusPointRules = event.snapshot.rules;
+                    this.bonusPointBalances = event.snapshot.balances;
+                    return;
+                case 'roll_awards.updated':
+                    this.rollAwardsRealtimeSnapshot = event.snapshot;
+                    return;
+            }
+        },
+        upsertMember(member: RoomMemberDetails) {
+            const index = this.members.findIndex((current) => current.userId === member.userId);
+            if (index === -1) {
+                this.members = [...this.members, member];
+            } else {
+                this.members = this.members.map((current) => current.userId === member.userId
+                    ? { ...current, ...member }
+                    : current);
+            }
+            this.messages = this.messages.map((message) => message.userId === member.userId
+                ? {
+                    ...message,
+                    username: member.username,
+                    nickname: member.nickname,
+                    avatar: member.avatar
+                }
+                : message);
+        },
+        exitUnavailableRoom(message: string) {
+            this.setError(message);
+            this.stopLiveUpdates();
+            this.selectedRoomId = null;
+            this.selectedRoomUserId = null;
+            this.messages = [];
+            this.members = [];
         },
         bumpRoomActivity(roomId: string, activity: string) {
             const room = this.rooms.find((current) => current.id === roomId);
@@ -391,6 +546,7 @@ export const useRoomsStore = defineStore('rooms', {
             this.selectedRoomId = null;
             this.selectedRoomUserId = null;
             this.messages = [];
+            this.members = [];
             this.lastMessageAt = null;
         },
     },

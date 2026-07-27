@@ -162,7 +162,13 @@
     "disadvantageExample": "- \"-2d100\" cuenta como desventaja y conserva la peor tirada",
     "emptyTitle": "Selecciona o crea una sala",
     "emptyDescription": "Elige una sala de la lista izquierda o crea una nueva para empezar a chatear y tirar dados.",
-    "copyInviteLinkError": "No se pudo copiar el enlace de invitación"
+    "copyInviteLinkError": "No se pudo copiar el enlace de invitación",
+    "realtime": {
+      "connected": "En directo",
+      "connecting": "Conectando",
+      "reconnecting": "Reconectando",
+      "disconnected": "Sin conexión"
+    }
   },
   "messages": {
     "rolled": "{name} tiró {notation}",

@@ -193,3 +193,50 @@ export interface RoomRollAward {
     createdAt?: string;
     updatedAt?: string;
 }
+
+export type RoomRealtimeStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
+export type RoomRealtimeDetails = Omit<RoomDetails, 'isCreator'>;
+
+export interface RoomBonusPointSnapshot {
+    roomId: string;
+    settings: RoomBonusPointSettings;
+    rules: RoomBonusPointRule[];
+    balances: RoomBonusPointBalance[];
+}
+
+export interface RoomRollAwardsSnapshot {
+    roomId: string;
+    awards: RoomRollAward[];
+    enabled: boolean;
+    windowSize: number | null;
+}
+
+interface RoomRealtimeEventBase {
+    eventId: string;
+    roomId: string;
+    occurredAt: string;
+}
+
+export type RoomRealtimeEvent =
+    | (RoomRealtimeEventBase & { type: 'connection.ready' })
+    | (RoomRealtimeEventBase & { type: 'message.created'; message: RoomMessage })
+    | (RoomRealtimeEventBase & { type: 'message.updated'; message: RoomMessage })
+    | (RoomRealtimeEventBase & { type: 'room.updated'; room: RoomRealtimeDetails })
+    | (RoomRealtimeEventBase & { type: 'room.archived'; archivedAt: string })
+    | (RoomRealtimeEventBase & { type: 'member.updated'; member: RoomMemberDetails })
+    | (RoomRealtimeEventBase & { type: 'member.removed'; userId: string; memberCount: number })
+    | (RoomRealtimeEventBase & {
+        type: 'presence.updated';
+        userId: string;
+        isOnline: boolean;
+        lastSeen: string;
+    })
+    | (RoomRealtimeEventBase & { type: 'bonus_points.updated'; snapshot: RoomBonusPointSnapshot })
+    | (RoomRealtimeEventBase & { type: 'roll_awards.updated'; snapshot: RoomRollAwardsSnapshot });
+
+export interface RoomRealtimeAuthenticateMessage {
+    type: 'authenticate';
+    tokenType: string;
+    accessToken: string;
+}

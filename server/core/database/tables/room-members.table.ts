@@ -67,3 +67,11 @@ export async function removeMember(roomId: string, userId: string): Promise<void
         [roomId, userId]
     );
 }
+
+export async function listRoomIdsForMember(userId: string): Promise<string[]> {
+    const rows = await query<Array<{ room_id: string }>>(
+        'SELECT room_id FROM room_members WHERE user_id = ?',
+        [userId]
+    );
+    return rows.map((row) => row.room_id);
+}

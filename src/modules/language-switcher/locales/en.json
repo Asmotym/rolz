@@ -243,7 +243,13 @@
     "disadvantageExample": "- \"-2d100\" counts the roll as a disadvantage and keeps the worst roll",
     "emptyTitle": "Select or create a room",
     "emptyDescription": "Pick a room from the list on the left or create a new one to start chatting and rolling dice.",
-    "copyInviteLinkError": "Unable to copy invite link"
+    "copyInviteLinkError": "Unable to copy invite link",
+    "realtime": {
+      "connected": "Live",
+      "connecting": "Connecting",
+      "reconnecting": "Reconnecting",
+      "disconnected": "Offline"
+    }
   },
   "messages": {
     "rolled": "{name} rolled {notation}",

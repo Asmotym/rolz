@@ -4,6 +4,7 @@ import { getUser, insertUser, updateUser } from "../database/tables/users.table"
 import { createLogger } from "../utils/logger";
 import { normalizeTheme, type AppTheme } from "../types/theme.types";
 import { BadRequestError } from '../errors/http-errors';
+import { publishUserProfileUpdate } from '../../realtime/room-action-events';
 
 const logger = createLogger('DiscordHandler');
 const discordClient = new DiscordClient();
@@ -51,10 +52,15 @@ async function handleUserQuery(auth: DiscordAuth) {
         return { ...discordUser, theme, role: createdUser?.role ?? 'user' };
     } else {
         logger.info('User found in database, updating user info');
+        const profileChanged = existingUser.username !== discordUser.username
+            || existingUser.avatar !== discordUser.avatar;
         await updateUser(discordUser.id, {
             username: discordUser.username,
             avatar: discordUser.avatar,
         });
+        if (profileChanged) {
+            await publishUserProfileUpdate(discordUser.id);
+        }
         return { ...discordUser, theme: normalizeTheme(existingUser.theme), role: existingUser.role ?? 'user' };
     }
 }

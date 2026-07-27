@@ -2,6 +2,7 @@ import {
     insertRoom,
     listRooms,
     listUserRooms,
+    getRoomById,
     getRoomByInviteCode,
     updateRoomName,
     setRoomArchived,
@@ -45,7 +46,7 @@ import {
     NotFoundError
 } from '../core/errors/http-errors';
 import type { DatabaseRoomDiceCategory, DatabaseRoomMessage } from '../core/types/database.types';
-import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
+import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomBonusPointSnapshot, RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward, RoomRollAwardsSnapshot } from '../core/types/data.types';
 import { clampTotalToDiceFace, getDiceFaceInfo, isNaturalExtremeRoll } from '../core/utils/bonus-point-dice';
 import { createRoomId, generateInviteCode } from '../core/utils/id';
 import { hashPassword, verifyPassword } from '../core/utils/password';
@@ -235,6 +236,36 @@ export async function listRoomMembersForUser(params: { roomId: string; userId: s
 
     const rows = await listMembers(roomId);
     return rows.map(mapMemberRecord);
+}
+
+export async function getRoomMemberDetails(roomId: string, userId: string): Promise<RoomMemberDetails | null> {
+    const member = await getMember(roomId, userId);
+    return member ? mapMemberRecord(member) : null;
+}
+
+export async function getRoomDetailsForRealtime(roomId: string): Promise<RoomDetails> {
+    const room = await getRoomById(roomId);
+    if (!room) throw new NotFoundError('Room not found');
+    const memberCount = await countMembers(roomId);
+    return mapRoomToSummary({ ...room, member_count: memberCount });
+}
+
+export async function getRoomMemberCount(roomId: string): Promise<number> {
+    return countMembers(roomId);
+}
+
+export async function getRoomBonusPointSnapshot(roomId: string): Promise<RoomBonusPointSnapshot> {
+    return handleListBonusPoints({ roomId });
+}
+
+export async function getRoomRollAwardsSnapshot(roomId: string): Promise<RoomRollAwardsSnapshot> {
+    const result = await handleListRollAwards({ roomId });
+    return {
+        roomId,
+        awards: result.awards,
+        enabled: result.enabled,
+        windowSize: result.windowSize
+    };
 }
 
 async function handleCreateRoom(payload: { name: string; password?: string | null; userId: string }): Promise<RoomDetails> {
