@@ -7,9 +7,7 @@ import { cors } from './middlewares/cors';
 import { requireApiKeyForUntrustedOrigins } from './middlewares/api-key';
 import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/api-keys.service';
 import * as Sentry from '@sentry/node';
-import { DatabaseUnavailableError } from './core/database/errors';
 import { query } from './core/database/client';
-import { HttpError } from './core/errors/http-errors';
 import { ensureDatabaseSetup } from './core/database/schema';
 import { getUser } from './core/database/tables/users.table';
 import { updateUserTheme } from './core/database/tables/users.table';
@@ -35,16 +33,29 @@ import {
     setArticlePublication,
     updateArticle
 } from './services/articles.service';
+import {
+    addSafeBreadcrumb,
+    handleServerError,
+    requestCorrelationMiddleware,
+    sendErrorResponse,
+    setAuthenticatedUser,
+    type SafeSentryContext
+} from './observability/server-observability';
 
 const logger = createLogger('Server');
 const app = express();
 
+app.use(requestCorrelationMiddleware);
 app.use(cors);
 app.use(express.json({ limit: '1mb' }));
 
 function sendHealthResponse(res: Response, statusCode: number, payload: Record<string, unknown>) {
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(statusCode).json({ ...payload, timestamp: new Date().toISOString() });
+    return res.status(statusCode).json({
+        ...payload,
+        ...(statusCode >= 400 ? { requestId: res.locals.requestId as string | undefined } : {}),
+        timestamp: new Date().toISOString()
+    });
 }
 
 app.get('/health', (_req, res) => {
@@ -77,33 +88,19 @@ app.get('/ready', async (_req, res) => {
 
 app.use('/api', requireApiKeyForUntrustedOrigins);
 
-function respondWithServiceError(res: Response, error: unknown, context: string) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    const meta = error instanceof Error ? { stack: error.stack } : undefined;
-    if (error instanceof DatabaseUnavailableError) {
-        Sentry.captureException(error, { extra: { context } });
-        logger.error(`${context} - database unavailable: ${message}`, meta);
-        return res.status(503).json({ success: false, error: message });
-    }
-
-    if (error instanceof HttpError) {
-        if (error.status >= 500) {
-            Sentry.captureException(error, { extra: { context } });
-        }
-        const log = error.status >= 500 ? logger.error : logger.warn;
-        log(`${context}: ${message}`, meta);
-        return res.status(error.status).json({ success: false, error: message });
-    }
-
-    Sentry.captureException(error, { extra: { context } });
-    logger.error(`${context}: ${message}`, meta);
-    return res.status(400).json({ success: false, error: message });
+function respondWithServiceError(
+    res: Response,
+    error: unknown,
+    operation: string,
+    domainContext: SafeSentryContext = {}
+) {
+    return handleServerError(res.req, res, error, operation, domainContext);
 }
 
 function ensureSameUser(res: Response, userId: string): boolean {
     const apiKeyUserId = res.locals.apiKeyUserId as string | undefined;
     if (apiKeyUserId && apiKeyUserId !== userId) {
-        res.status(403).json({ success: false, error: 'API key does not belong to this user' });
+        sendErrorResponse(res, 403, 'API key does not belong to this user');
         return false;
     }
     return true;
@@ -115,10 +112,18 @@ async function readDiscordRequesterId(req: Request): Promise<string | null> {
         return null;
     }
 
+    addSafeBreadcrumb('http.client', 'Discord requester verification started', {
+        provider: 'discord',
+        endpoint: '/users/@me'
+    });
     const response = await fetch('https://discord.com/api/v10/users/@me', {
         headers: { Authorization: authHeader }
     });
     if (!response.ok) {
+        addSafeBreadcrumb('http.client', 'Discord requester verification failed', {
+            provider: 'discord',
+            status: response.status
+        });
         return null;
     }
     const user = await response.json() as { id?: unknown };
@@ -128,16 +133,17 @@ async function readDiscordRequesterId(req: Request): Promise<string | null> {
 async function requireRequesterId(req: Request, res: Response): Promise<string | null> {
     const userId = await readDiscordRequesterId(req);
     if (!userId) {
-        res.status(401).json({ success: false, error: 'Discord authentication is required' });
+        sendErrorResponse(res, 401, 'Discord authentication is required');
         return null;
     }
+    setAuthenticatedUser(res, userId);
     return userId;
 }
 
 app.get('/api/users/:userId/api-key', async (req, res) => {
     const { userId } = req.params;
     if (!userId) {
-        return res.status(400).json({ success: false, error: 'User id is required' });
+        return sendErrorResponse(res, 400, 'User id is required');
     }
 
     if (!ensureSameUser(res, userId)) {
@@ -155,14 +161,14 @@ app.get('/api/users/:userId/api-key', async (req, res) => {
             }
         });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to fetch API key');
+        respondWithServiceError(res, error, 'api_key.fetch');
     }
 });
 
 app.post('/api/users/:userId/api-key', async (req, res) => {
     const { userId } = req.params;
     if (!userId) {
-        return res.status(400).json({ success: false, error: 'User id is required' });
+        return sendErrorResponse(res, 400, 'User id is required');
     }
 
     if (!ensureSameUser(res, userId)) {
@@ -173,14 +179,14 @@ app.post('/api/users/:userId/api-key', async (req, res) => {
         const payload = await generateUserApiKey(userId);
         res.json({ success: true, data: payload });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to generate API key');
+        respondWithServiceError(res, error, 'api_key.generate');
     }
 });
 
 app.delete('/api/users/:userId/api-key', async (req, res) => {
     const { userId } = req.params;
     if (!userId) {
-        return res.status(400).json({ success: false, error: 'User id is required' });
+        return sendErrorResponse(res, 400, 'User id is required');
     }
 
     if (!ensureSameUser(res, userId)) {
@@ -191,14 +197,14 @@ app.delete('/api/users/:userId/api-key', async (req, res) => {
         await revokeUserApiKey(userId);
         res.json({ success: true, data: { apiKey: null } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to revoke API key');
+        respondWithServiceError(res, error, 'api_key.revoke');
     }
 });
 
 app.get('/api/users/:userId/preferences', async (req, res) => {
     const { userId } = req.params;
     if (!userId) {
-        return res.status(400).json({ success: false, error: 'User id is required' });
+        return sendErrorResponse(res, 400, 'User id is required');
     }
 
     if (!ensureSameUser(res, userId)) {
@@ -208,19 +214,19 @@ app.get('/api/users/:userId/preferences', async (req, res) => {
     try {
         const user = await getUser(userId);
         if (!user) {
-            return res.status(404).json({ success: false, error: 'User not found' });
+            return sendErrorResponse(res, 404, 'User not found');
         }
 
         res.json({ success: true, data: { theme: user.theme ?? 'dark' } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to fetch user preferences');
+        respondWithServiceError(res, error, 'user_preferences.fetch');
     }
 });
 
 app.patch('/api/users/:userId/preferences', async (req, res) => {
     const { userId } = req.params;
     if (!userId) {
-        return res.status(400).json({ success: false, error: 'User id is required' });
+        return sendErrorResponse(res, 400, 'User id is required');
     }
 
     if (!ensureSameUser(res, userId)) {
@@ -228,24 +234,24 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
     }
 
     if (!req.body || typeof req.body !== 'object') {
-        return res.status(400).json({ success: false, error: 'Request body is required' });
+        return sendErrorResponse(res, 400, 'Request body is required');
     }
 
     const theme = (req.body as { theme?: unknown }).theme;
     if (!isAppTheme(theme)) {
-        return res.status(400).json({ success: false, error: 'Invalid theme preference' });
+        return sendErrorResponse(res, 400, 'Invalid theme preference');
     }
 
     try {
         const user = await getUser(userId);
         if (!user) {
-            return res.status(404).json({ success: false, error: 'User not found' });
+            return sendErrorResponse(res, 404, 'User not found');
         }
 
         const savedTheme = await updateUserTheme(userId, theme);
         res.json({ success: true, data: { theme: savedTheme } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to update user preferences');
+        respondWithServiceError(res, error, 'user_preferences.update', { theme });
     }
 });
 
@@ -259,7 +265,7 @@ app.get('/api/articles', async (req, res) => {
         });
         res.json({ success: true, data: { articles } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to list public articles');
+        respondWithServiceError(res, error, 'article.list_public');
     }
 });
 
@@ -268,7 +274,7 @@ app.get('/api/articles/news', async (req, res) => {
         const articles = await listNewsArticles(req.query.limit);
         res.json({ success: true, data: { articles } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to list news articles');
+        respondWithServiceError(res, error, 'article.list_news');
     }
 });
 
@@ -277,7 +283,7 @@ app.get('/api/articles/tags', async (_req, res) => {
         const tags = await listTags();
         res.json({ success: true, data: { tags } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to list article tags');
+        respondWithServiceError(res, error, 'article_tag.list');
     }
 });
 
@@ -286,7 +292,7 @@ app.get('/api/articles/:slug', async (req, res) => {
         const article = await getPublicArticle(req.params.slug);
         res.json({ success: true, data: { article } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to fetch public article');
+        respondWithServiceError(res, error, 'article.fetch_public');
     }
 });
 
@@ -297,7 +303,7 @@ app.get('/api/admin/users', async (req, res) => {
         const users = await listAdminUsers(userId);
         res.json({ success: true, data: { users } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to list users');
+        respondWithServiceError(res, error, 'admin_user.list');
     }
 });
 
@@ -308,7 +314,7 @@ app.patch('/api/admin/users/:targetUserId/role', async (req, res) => {
         const user = await updateUserRole(userId, req.params.targetUserId, (req.body as { role?: unknown }).role);
         res.json({ success: true, data: { user } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to update user role');
+        respondWithServiceError(res, error, 'admin_user.update_role');
     }
 });
 
@@ -326,7 +332,7 @@ app.get('/api/admin/articles', async (req, res) => {
         });
         res.json({ success: true, data: { articles } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to list admin articles');
+        respondWithServiceError(res, error, 'article.list_admin');
     }
 });
 
@@ -337,7 +343,7 @@ app.get('/api/admin/articles/detail/:articleId', async (req, res) => {
         const article = await getAdminArticle(userId, req.params.articleId);
         res.json({ success: true, data: { article } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to fetch admin article');
+        respondWithServiceError(res, error, 'article.fetch_admin');
     }
 });
 
@@ -348,7 +354,7 @@ app.post('/api/admin/articles', async (req, res) => {
         const article = await createArticle(userId, req.body as { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown; status?: unknown; publishedAt?: unknown; draftId?: unknown });
         res.json({ success: true, data: { article } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to create article');
+        respondWithServiceError(res, error, 'article.create');
     }
 });
 
@@ -359,7 +365,7 @@ app.patch('/api/admin/articles/:articleId', async (req, res) => {
         const article = await updateArticle(userId, req.params.articleId, req.body as { title?: unknown; introduction?: unknown; markdownSource?: unknown; tagIds?: unknown });
         res.json({ success: true, data: { article } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to update article');
+        respondWithServiceError(res, error, 'article.update');
     }
 });
 
@@ -371,7 +377,7 @@ app.post('/api/admin/articles/:articleId/publication', async (req, res) => {
         const article = await setArticlePublication(userId, req.params.articleId, { published: body.published === true, publishedAt: body.publishedAt });
         res.json({ success: true, data: { article } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to update article publication');
+        respondWithServiceError(res, error, 'article.update_publication');
     }
 });
 
@@ -382,7 +388,7 @@ app.post('/api/admin/articles/:articleId/archive', async (req, res) => {
         const article = await archiveArticle(userId, req.params.articleId);
         res.json({ success: true, data: { article } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to archive article');
+        respondWithServiceError(res, error, 'article.archive');
     }
 });
 
@@ -394,7 +400,7 @@ app.post('/api/admin/articles/preview', async (req, res) => {
         const preview = previewMarkdown((req.body as { markdownSource?: unknown }).markdownSource);
         res.json({ success: true, data: preview });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to preview article');
+        respondWithServiceError(res, error, 'article.preview');
     }
 });
 
@@ -405,7 +411,7 @@ app.post('/api/admin/articles/tags', async (req, res) => {
         const tag = await createTag(userId, (req.body as { name?: unknown }).name);
         res.json({ success: true, data: { tag } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to create article tag');
+        respondWithServiceError(res, error, 'article_tag.create');
     }
 });
 
@@ -416,7 +422,7 @@ app.patch('/api/admin/articles/tags/:tagId', async (req, res) => {
         const tag = await renameTag(userId, req.params.tagId, (req.body as { name?: unknown }).name);
         res.json({ success: true, data: { tag } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to rename article tag');
+        respondWithServiceError(res, error, 'article_tag.rename');
     }
 });
 
@@ -427,7 +433,7 @@ app.delete('/api/admin/articles/tags/:tagId', async (req, res) => {
         await removeTag(userId, req.params.tagId);
         res.json({ success: true, data: { tagId: req.params.tagId } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to delete article tag');
+        respondWithServiceError(res, error, 'article_tag.delete');
     }
 });
 
@@ -438,7 +444,7 @@ app.get('/api/admin/articles/drafts', async (req, res) => {
         const drafts = await listOwnerDrafts(userId);
         res.json({ success: true, data: { drafts } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to list article drafts');
+        respondWithServiceError(res, error, 'article_draft.list');
     }
 });
 
@@ -449,7 +455,7 @@ app.post('/api/admin/articles/drafts', async (req, res) => {
         const draft = await saveDraft(userId, req.body as { id?: unknown; title?: unknown; introduction?: unknown; markdownSource?: unknown; selectedTagIds?: unknown });
         res.json({ success: true, data: { draft } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to save article draft');
+        respondWithServiceError(res, error, 'article_draft.save');
     }
 });
 
@@ -460,39 +466,48 @@ app.delete('/api/admin/articles/drafts/:draftId', async (req, res) => {
         await removeDraft(userId, req.params.draftId);
         res.json({ success: true, data: { draftId: req.params.draftId } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Failed to delete article draft');
+        respondWithServiceError(res, error, 'article_draft.delete');
     }
 });
 
 app.get('/api/rooms', async (_req, res) => {
     const userId = res.locals.apiKeyUserId as string | undefined;
     if (!userId) {
-        return res.status(401).json({ success: false, error: 'API key is required to list rooms' });
+        return sendErrorResponse(res, 401, 'API key is required to list rooms');
     }
 
     try {
         const rooms = await listRoomsForUser(userId);
         res.json({ success: true, data: { rooms } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Rooms listing failed');
+        respondWithServiceError(res, error, 'room.list_for_user');
     }
 });
 
 app.post('/api/rooms', async (req, res) => {
     if (!req.body || typeof req.body !== 'object') {
-        return res.status(400).json({ success: false, error: 'Request body is required' });
+        return sendErrorResponse(res, 400, 'Request body is required');
     }
 
     const payload = req.body as RoomsAction;
     if (!('action' in payload)) {
-        return res.status(400).json({ success: false, error: 'Missing action' });
+        return sendErrorResponse(res, 400, 'Missing action');
     }
 
     try {
+        addSafeBreadcrumb('room.action', 'Room action selected', {
+            action: payload.action,
+            roomId: 'payload' in payload && 'roomId' in payload.payload ? payload.payload.roomId : undefined,
+            userId: 'payload' in payload && 'userId' in payload.payload ? payload.payload.userId : undefined
+        });
         const data = await handleRoomsAction(payload);
         res.json({ success: true, data });
     } catch (error) {
-        respondWithServiceError(res, error, 'Rooms endpoint failed');
+        respondWithServiceError(res, error, `room.action.${payload.action}`, {
+            action: payload.action,
+            roomId: 'payload' in payload && 'roomId' in payload.payload ? payload.payload.roomId : undefined,
+            userId: 'payload' in payload && 'userId' in payload.payload ? payload.payload.userId : undefined
+        });
     }
 });
 
@@ -501,33 +516,34 @@ app.get('/api/rooms/:roomId/members', async (req, res) => {
     const userId = res.locals.apiKeyUserId as string | undefined;
 
     if (!userId) {
-        return res.status(401).json({ success: false, error: 'API key is required to list room members' });
+        return sendErrorResponse(res, 401, 'API key is required to list room members');
     }
     if (!roomId) {
-        return res.status(400).json({ success: false, error: 'Room id is required' });
+        return sendErrorResponse(res, 400, 'Room id is required');
     }
 
     try {
         const members = await listRoomMembersForUser({ roomId, userId });
         res.json({ success: true, data: { roomId, members } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Room members endpoint failed');
+        respondWithServiceError(res, error, 'room.members.list', { roomId, userId });
     }
 });
 
 app.post('/api/discord', async (req, res) => {
     if (!req.body || typeof req.body !== 'object') {
-        return res.status(400).json({ success: false, error: 'Request body is required' });
+        return sendErrorResponse(res, 400, 'Request body is required');
     }
 
     const body = req.body as DiscordQueryPayload;
     const queryType = body.queryType ?? 'user';
 
     try {
+        addSafeBreadcrumb('discord', 'Discord query selected', { queryType });
         const data = await handleDiscordQuery({ ...body, queryType });
         res.json({ success: true, data, queryType });
     } catch (error) {
-        respondWithServiceError(res, error, 'Discord endpoint failed');
+        respondWithServiceError(res, error, 'discord.query', { queryType });
     }
 });
 
@@ -537,32 +553,23 @@ app.get('/api/rooms/:roomId/dice-rolls', async (req, res) => {
     const since = typeof req.query.since === 'string' ? req.query.since : undefined;
 
     if (!roomId) {
-        return res.status(400).json({ success: false, error: 'Room id is required' });
+        return sendErrorResponse(res, 400, 'Room id is required');
     }
 
     try {
         const diceRolls = await listRoomDiceRolls({ roomId, limit, since });
         res.json({ success: true, data: { roomId, diceRolls } });
     } catch (error) {
-        respondWithServiceError(res, error, 'Dice rolls endpoint failed');
+        respondWithServiceError(res, error, 'room.dice_rolls.list', { roomId, limit, since });
     }
 });
 
-Sentry.setupExpressErrorHandler(app);
+// Keep Sentry's Express request isolation and normalized request metadata, while
+// the application-owned handler below remains the single error capture point.
+Sentry.setupExpressErrorHandler(app, { shouldHandleError: () => false });
 
-app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
-    if (error instanceof SyntaxError) {
-        logger.warn(`Invalid JSON payload: ${error.message}`);
-        return res.status(400).json({ success: false, error: 'Invalid JSON payload' });
-    }
-
-    if (error instanceof DatabaseUnavailableError) {
-        logger.error(`Database unavailable during request: ${error.message}`, { stack: error.stack });
-        return res.status(503).json({ success: false, error: error.message });
-    }
-
-    logger.error(`Unhandled error: ${error.message}`);
-    return res.status(500).json({ success: false, error: 'Internal server error' });
+app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
+    return handleServerError(req, res, error, 'http.unhandled');
 });
 
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 8888);
@@ -578,7 +585,17 @@ async function startServer() {
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error during startup';
         const meta = error instanceof Error ? { stack: error.stack } : undefined;
-        logger.error(`Failed to start server: ${message}`, meta);
+        const sentryEventId = Sentry.captureException(error, {
+            tags: { operation: 'server.startup' },
+            contexts: {
+                runtime: {
+                    environment: process.env.ENVIRONMENT ?? process.env.NODE_ENV,
+                    release: process.env.SENTRY_RELEASE
+                }
+            }
+        });
+        logger.error(`Failed to start server: ${message}`, { ...meta, sentryEventId });
+        await Sentry.flush(2_000);
         process.exit(1);
     }
 }

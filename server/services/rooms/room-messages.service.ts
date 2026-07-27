@@ -12,6 +12,7 @@ import { getDiceFaceInfo, getSelectedRawRoll } from '../../core/utils/bonus-poin
 import { mapBonusPointRuleRecord, mapMessageRecord } from './rooms.mappers';
 import { sanitizeDiceLimit } from './rooms.normalizers';
 import { requireRoom } from './rooms.shared';
+import { BadRequestError, NotFoundError } from '../../core/errors/http-errors';
 
 export async function handleListMessages(payload: {
     roomId: string;
@@ -20,7 +21,7 @@ export async function handleListMessages(payload: {
     since?: string;
     before?: string;
 }): Promise<RoomMessage[]> {
-    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
     await requireRoom(payload.roomId);
 
     if (payload.userId) {
@@ -36,7 +37,7 @@ export async function handleListMessages(payload: {
 }
 
 export async function listRoomDiceRolls(payload: { roomId: string; limit?: number; since?: string }): Promise<RoomMessage[]> {
-    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
     await requireRoom(payload.roomId);
 
     const limit = sanitizeDiceLimit(payload.limit);
@@ -45,19 +46,19 @@ export async function listRoomDiceRolls(payload: { roomId: string; limit?: numbe
 }
 
 export async function handleSendMessage(payload: { roomId: string; userId: string; content?: string; type: 'text' | 'dice'; dice?: { notation: string; total: number; rolls: number[] }; skipBonusPointRules?: boolean }): Promise<RoomMessage> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
     if (payload.type === 'text' && !payload.content?.trim()) {
-        throw new Error('Message content missing');
+        throw new BadRequestError('Message content missing');
     }
     if (payload.type === 'dice' && !payload.dice) {
-        throw new Error('Dice payload missing');
+        throw new BadRequestError('Dice payload missing');
     }
 
     const room = await requireRoom(payload.roomId);
 
     const author = await getUser(payload.userId);
-    if (!author) throw new Error('Unknown user');
+    if (!author) throw new NotFoundError('Unknown user');
 
     await upsertMember(payload.roomId, payload.userId);
 

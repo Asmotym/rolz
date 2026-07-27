@@ -5,6 +5,7 @@ export type DiscordAuth = {
     tokenType: string;
     accessToken: string;
     expiresIn: number;
+    expiresAt: number;
     scope: string;
     state: string;
 }

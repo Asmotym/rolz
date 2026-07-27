@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "core/*": ["src/core/*"],
+      "modules/*": ["src/modules/*"],
+      "netlify/*": ["server/*"],
+      "assets/*": ["src/assets/*"]
+    },
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true
+  }
+}

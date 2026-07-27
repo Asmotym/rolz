@@ -38,7 +38,12 @@ import {
     updateRoomRollAward
 } from '../core/database/tables/room-roll-awards.table';
 import { getUser } from '../core/database/tables/users.table';
-import { NotFoundError } from '../core/errors/http-errors';
+import {
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError
+} from '../core/errors/http-errors';
 import type { DatabaseRoomDiceCategory, DatabaseRoomMessage } from '../core/types/database.types';
 import type { RoomBonusPointBalance, RoomBonusPointRule, RoomBonusPointSettings, RoomCriticalRule, RoomDetails, RoomDice, RoomDiceCategory, RoomMemberDetails, RoomMessage, RoomRollAward } from '../core/types/data.types';
 import { clampTotalToDiceFace, getDiceFaceInfo, isNaturalExtremeRoll } from '../core/utils/bonus-point-dice';
@@ -204,7 +209,7 @@ export async function handleRoomsAction(payload: RoomsAction): Promise<RoomsActi
         case 'deleteRollAward':
             return { rollAwardId: await handleDeleteRollAward(payload.payload) };
         default:
-            throw new Error('Unknown action');
+            throw new BadRequestError('Unknown action');
     }
 }
 
@@ -215,17 +220,17 @@ export async function listRoomsForUser(userId: string): Promise<RoomDetails[]> {
 export async function listRoomMembersForUser(params: { roomId: string; userId: string }): Promise<RoomMemberDetails[]> {
     const { roomId, userId } = params;
     if (!roomId) {
-        throw new Error('Room id is required');
+        throw new BadRequestError('Room id is required');
     }
     if (!userId) {
-        throw new Error('User id is required');
+        throw new BadRequestError('User id is required');
     }
 
     await requireRoom(roomId);
 
     const member = await getMember(roomId, userId);
     if (!member) {
-        throw new Error('You are not a member of this room');
+        throw new ForbiddenError('You are not a member of this room');
     }
 
     const rows = await listMembers(roomId);
@@ -234,27 +239,27 @@ export async function listRoomMembersForUser(params: { roomId: string; userId: s
 
 async function handleCreateRoom(payload: { name: string; password?: string | null; userId: string }): Promise<RoomDetails> {
     if (!payload.name?.trim()) {
-        throw new Error('Room name is required');
+        throw new BadRequestError('Room name is required');
     }
     if (!payload.userId) {
-        throw new Error('User id is required');
+        throw new BadRequestError('User id is required');
     }
 
     const creator = await getUser(payload.userId);
     if (!creator) {
-        throw new Error('Unknown user');
+        throw new NotFoundError('Unknown user');
     }
 
     const inviteCode = await generateUniqueInviteCode();
     const roomId = createRoomId();
     const trimmedName = payload.name.trim();
     if (trimmedName.length > ROOM_NAME_MAX_LENGTH) {
-        throw new Error(`Room name is too long (max ${ROOM_NAME_MAX_LENGTH} characters)`);
+        throw new BadRequestError(`Room name is too long (max ${ROOM_NAME_MAX_LENGTH} characters)`);
     }
 
     const normalizedPassword = payload.password?.trim();
     if (normalizedPassword && normalizedPassword.length < 4) {
-        throw new Error('Password must be at least 4 characters long');
+        throw new BadRequestError('Password must be at least 4 characters long');
     }
 
     const passwordData = normalizedPassword ? hashPassword(normalizedPassword) : undefined;
@@ -275,20 +280,20 @@ async function handleCreateRoom(payload: { name: string; password?: string | nul
 }
 
 async function handleJoinRoom(payload: { inviteCode: string; password?: string | null; userId: string }): Promise<RoomDetails> {
-    if (!payload.inviteCode?.trim()) throw new Error('Invite code is required');
-    if (!payload.userId) throw new Error('User id is required');
+    if (!payload.inviteCode?.trim()) throw new BadRequestError('Invite code is required');
+    if (!payload.userId) throw new BadRequestError('User id is required');
 
     const room = await getRoomByInviteCode(payload.inviteCode.trim().toUpperCase());
     if (!room) throw new NotFoundError('Room not found');
     if (room.archived_at && room.created_by !== payload.userId) {
-        throw new Error('This room is no longer available');
+        throw new ConflictError('This room is no longer available');
     }
 
     if (room.password_hash) {
         const providedPassword = payload.password?.trim();
-        if (!providedPassword) throw new Error('Password required');
+        if (!providedPassword) throw new BadRequestError('Password required');
         const valid = verifyPassword(providedPassword, room.password_hash, room.password_salt);
-        if (!valid) throw new Error('Invalid password');
+        if (!valid) throw new ForbiddenError('Invalid password');
     }
 
     await upsertMember(room.id, payload.userId);
@@ -299,7 +304,7 @@ async function handleJoinRoom(payload: { inviteCode: string; password?: string |
 
 async function handleListUserRooms(payload: { userId: string }): Promise<RoomDetails[]> {
     if (!payload.userId) {
-        throw new Error('User id is required');
+        throw new BadRequestError('User id is required');
     }
 
     const rooms = await listUserRooms(payload.userId);
@@ -307,34 +312,34 @@ async function handleListUserRooms(payload: { userId: string }): Promise<RoomDet
 }
 
 async function handleLeaveRoom(payload: { roomId: string; userId: string }): Promise<void> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
 
     const room = await requireRoom(payload.roomId);
     if (room.created_by === payload.userId) {
-        throw new Error('Room creators cannot leave their own room');
+        throw new ConflictError('Room creators cannot leave their own room');
     }
 
     const member = await getMember(payload.roomId, payload.userId);
     if (!member) {
-        throw new Error('You are not a member of this room');
+        throw new ForbiddenError('You are not a member of this room');
     }
 
     await removeMember(payload.roomId, payload.userId);
 }
 
 async function handleArchiveRoom(payload: { roomId: string; userId: string }): Promise<RoomDetails> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
 
     const room = await requireRoom(payload.roomId);
     if (room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can delete this room');
+        throw new ForbiddenError('Only the room creator can delete this room');
     }
 
     const updated = await setRoomArchived(payload.roomId, true);
     if (!updated) {
-        throw new Error('Failed to delete room');
+        throw new globalThis.Error('Failed to delete room');
     }
 
     const memberCount = await countMembers(payload.roomId);
@@ -342,17 +347,17 @@ async function handleArchiveRoom(payload: { roomId: string; userId: string }): P
 }
 
 async function handleUnarchiveRoom(payload: { roomId: string; userId: string }): Promise<RoomDetails> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
 
     const room = await requireRoom(payload.roomId);
     if (room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can restore this room');
+        throw new ForbiddenError('Only the room creator can restore this room');
     }
 
     const updated = await setRoomArchived(payload.roomId, false);
     if (!updated) {
-        throw new Error('Failed to restore room');
+        throw new globalThis.Error('Failed to restore room');
     }
 
     const memberCount = await countMembers(payload.roomId);
@@ -360,7 +365,7 @@ async function handleUnarchiveRoom(payload: { roomId: string; userId: string }):
 }
 
 async function handleListMembers(payload: { roomId: string }): Promise<RoomMemberDetails[]> {
-    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
     await requireRoom(payload.roomId);
 
     const rows = await listMembers(payload.roomId);
@@ -368,8 +373,8 @@ async function handleListMembers(payload: { roomId: string }): Promise<RoomMembe
 }
 
 async function handleGetMember(payload: { roomId: string; userId: string }): Promise<RoomMemberDetails> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
 
     await requireRoom(payload.roomId);
 
@@ -378,42 +383,42 @@ async function handleGetMember(payload: { roomId: string; userId: string }): Pro
         await upsertMember(payload.roomId, payload.userId);
         member = await getMember(payload.roomId, payload.userId);
     }
-    if (!member) throw new Error('Member not found');
+    if (!member) throw new NotFoundError('Member not found');
 
     return mapMemberRecord(member);
 }
 
 async function handleUpdateRoom(payload: { roomId: string; userId: string; name: string }): Promise<RoomDetails> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
 
     const trimmedName = payload.name?.trim();
     if (!trimmedName) {
-        throw new Error('Room name is required');
+        throw new BadRequestError('Room name is required');
     }
     if (trimmedName.length > ROOM_NAME_MAX_LENGTH) {
-        throw new Error(`Room name is too long (max ${ROOM_NAME_MAX_LENGTH} characters)`);
+        throw new BadRequestError(`Room name is too long (max ${ROOM_NAME_MAX_LENGTH} characters)`);
     }
 
     const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can rename this room');
+        throw new ForbiddenError('Only the room creator can rename this room');
     }
 
     const updated = await updateRoomName(payload.roomId, trimmedName);
-    if (!updated) throw new Error('Failed to update room');
+    if (!updated) throw new globalThis.Error('Failed to update room');
 
     const memberCount = await countMembers(payload.roomId);
     return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
 }
 
 async function handleUpdateCriticals(payload: { roomId: string; userId: string; criticals: RoomCriticalRule[] }): Promise<RoomDetails> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
 
     const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can update criticals');
+        throw new ForbiddenError('Only the room creator can update criticals');
     }
 
     const criticals = normalizeRoomCriticals(payload.criticals);
@@ -421,14 +426,14 @@ async function handleUpdateCriticals(payload: { roomId: string; userId: string; 
         payload.roomId,
         criticals.length ? JSON.stringify(criticals) : null
     );
-    if (!updated) throw new Error('Failed to update criticals');
+    if (!updated) throw new globalThis.Error('Failed to update criticals');
 
     const memberCount = await countMembers(payload.roomId);
     return mapRoomToSummary({ ...updated, member_count: memberCount }, { currentUserId: payload.userId });
 }
 
 async function handleListBonusPoints(payload: { roomId: string }): Promise<{ roomId: string; settings: RoomBonusPointSettings; rules: RoomBonusPointRule[]; balances: RoomBonusPointBalance[] }> {
-    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
     const room = await requireRoom(payload.roomId);
     const rules = (await listRoomBonusPointRules(room.id)).map(mapBonusPointRuleRecord);
     const balances = (await listRoomBonusPointBalances(room.id)).map(mapBonusPointBalanceRecord);
@@ -446,11 +451,11 @@ async function handleListBonusPoints(payload: { roomId: string }): Promise<{ roo
 }
 
 async function handleUpdateBonusPointSettings(payload: { roomId: string; userId: string; enabled?: boolean; maxPointsPerUser?: number; allowExtremeSpend?: boolean }): Promise<RoomBonusPointSettings> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
     const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can update bonus point settings');
+        throw new ForbiddenError('Only the room creator can update bonus point settings');
     }
     const maxPointsPerUser = typeof payload.maxPointsPerUser === 'undefined'
         ? normalizeMappedBonusPointsMax(room.bonus_points_max)
@@ -460,7 +465,7 @@ async function handleUpdateBonusPointSettings(payload: { roomId: string; userId:
         maxPointsPerUser,
         allowExtremeSpend: payload.allowExtremeSpend,
     });
-    if (!updated) throw new Error('Failed to update bonus point settings');
+    if (!updated) throw new globalThis.Error('Failed to update bonus point settings');
     await capRoomBonusPointBalances(room.id, maxPointsPerUser);
     return {
         roomId: room.id,
@@ -496,10 +501,10 @@ async function handleCreateBonusPointRule(payload: { roomId: string; userId: str
 
 async function handleUpdateBonusPointRule(payload: { roomId: string; userId: string; ruleId: string; name: string; diceNotation: string; condition: RoomBonusPointRule['condition']; spendAdjustment: RoomBonusPointRule['spendAdjustment'] }): Promise<RoomBonusPointRule> {
     const room = await ensureCanManageBonusPoints(payload.roomId, payload.userId);
-    if (!payload.ruleId) throw new Error('Bonus point rule id missing');
+    if (!payload.ruleId) throw new BadRequestError('Bonus point rule id missing');
     const existingRule = await getRoomBonusPointRule(payload.ruleId);
     if (!existingRule || existingRule.room_id !== room.id) {
-        throw new Error('Bonus point rule not found');
+        throw new NotFoundError('Bonus point rule not found');
     }
     const normalized = normalizeBonusPointRulePayload(payload);
     const existing = (await listRoomBonusPointRules(room.id))
@@ -526,57 +531,57 @@ async function handleUpdateBonusPointRule(payload: { roomId: string; userId: str
 
 async function handleDeleteBonusPointRule(payload: { roomId: string; userId: string; ruleId: string }): Promise<string> {
     const room = await ensureCanManageBonusPoints(payload.roomId, payload.userId);
-    if (!payload.ruleId) throw new Error('Bonus point rule id missing');
+    if (!payload.ruleId) throw new BadRequestError('Bonus point rule id missing');
     const existing = await getRoomBonusPointRule(payload.ruleId);
     if (!existing || existing.room_id !== room.id) {
-        throw new Error('Bonus point rule not found');
+        throw new NotFoundError('Bonus point rule not found');
     }
     await deleteRoomBonusPointRule(payload.ruleId);
     return payload.ruleId;
 }
 
 async function handleUseBonusPointOnRoll(payload: { roomId: string; userId: string; messageId: string }): Promise<RoomMessage> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
-    if (!payload.messageId) throw new Error('Message id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
+    if (!payload.messageId) throw new BadRequestError('Message id missing');
 
     const room = await requireRoom(payload.roomId);
     if (!room.bonus_points_enabled) {
-        throw new Error('Bonus Points are disabled for this room.');
+        throw new ConflictError('Bonus Points are disabled for this room.');
     }
 
     const message = await getMessageById(payload.messageId);
     if (!message || message.room_id !== payload.roomId) {
-        throw new Error('Dice message not found');
+        throw new NotFoundError('Dice message not found');
     }
     if (message.type !== 'dice') {
-        throw new Error('Bonus points can only be used on dice rolls');
+        throw new ConflictError('Bonus points can only be used on dice rolls');
     }
     if (message.user_id !== payload.userId) {
-        throw new Error('You can only use bonus points on your own rolls');
+        throw new ForbiddenError('You can only use bonus points on your own rolls');
     }
 
     const balance = await getRoomBonusPointBalance(payload.roomId, payload.userId);
     if (balance < 1) {
-        throw new Error('Not enough bonus points available.');
+        throw new ConflictError('Not enough bonus points available.');
     }
 
     const diceInfo = getDiceFaceInfo(message.dice_notation);
     if (!diceInfo) {
-        throw new Error('Unable to determine dice bounds for this roll.');
+        throw new globalThis.Error('Unable to determine dice bounds for this roll.');
     }
 
     const spendRule = (await listRoomBonusPointRules(payload.roomId))
         .map(mapBonusPointRuleRecord)
         .find((rule) => rule.diceNotation === diceInfo.faceNotation);
     if (!spendRule) {
-        throw new Error('No bonus point rule is configured for this dice type.');
+        throw new ConflictError('No bonus point rule is configured for this dice type.');
     }
 
     const adjustment = getSignedBonusPointAdjustment(spendRule);
     const currentTotal = Number(message.dice_total ?? 0);
     if (!room.bonus_points_allow_extreme_spend && isNaturalExtremeRoll(message.dice_notation, parseMessageRolls(message.dice_rolls))) {
-        throw new Error('Bonus points cannot be used on natural minimum or maximum rolls.');
+        throw new ConflictError('Bonus points cannot be used on natural minimum or maximum rolls.');
     }
     const nextTotal = clampTotalToDiceFace(currentTotal + adjustment, diceInfo.sides);
     const previousAdjustment = Number(message.bonus_point_adjustment ?? 0);
@@ -601,10 +606,10 @@ async function handleUseBonusPointOnRoll(payload: { roomId: string; userId: stri
 
 async function handleUpdateBonusPointBalance(payload: { roomId: string; userId: string; targetUserId: string; points: number }): Promise<RoomBonusPointBalance> {
     const room = await ensureCanManageBonusPoints(payload.roomId, payload.userId);
-    if (!payload.targetUserId) throw new Error('Target user id missing');
+    if (!payload.targetUserId) throw new BadRequestError('Target user id missing');
     const member = await getMember(room.id, payload.targetUserId);
     if (!member) {
-        throw new Error('Target user is not a member of this room');
+        throw new NotFoundError('Target user is not a member of this room');
     }
 
     const maxPoints = normalizeMappedBonusPointsMax(room.bonus_points_max);
@@ -615,7 +620,7 @@ async function handleUpdateBonusPointBalance(payload: { roomId: string; userId: 
     const balances = (await listRoomBonusPointBalances(room.id)).map(mapBonusPointBalanceRecord);
     const updated = balances.find((balance) => balance.userId === payload.targetUserId);
     if (!updated) {
-        throw new Error('Failed to update bonus point balance');
+        throw new globalThis.Error('Failed to update bonus point balance');
     }
     return updated;
 }
@@ -626,11 +631,11 @@ function getSignedBonusPointAdjustment(rule: RoomBonusPointRule): number {
 }
 
 async function ensureCanManageBonusPoints(roomId: string, userId: string) {
-    if (!roomId) throw new Error('Room id missing');
-    if (!userId) throw new Error('User id missing');
+    if (!roomId) throw new BadRequestError('Room id missing');
+    if (!userId) throw new BadRequestError('User id missing');
     const room = await requireRoom(roomId);
     if (!room.created_by || room.created_by !== userId) {
-        throw new Error('Only the room creator can manage bonus points');
+        throw new ForbiddenError('Only the room creator can manage bonus points');
     }
     return room;
 }
@@ -638,7 +643,7 @@ async function ensureCanManageBonusPoints(roomId: string, userId: string) {
 function normalizeBonusPointBalanceValue(value: number): number {
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
-        throw new Error('Bonus point balance must be a whole number.');
+        throw new BadRequestError('Bonus point balance must be a whole number.');
     }
     return Math.max(0, parsed);
 }
@@ -669,14 +674,14 @@ function normalizeMappedBonusPointsMax(value?: number | string | null): number {
 }
 
 async function handleUpdateNickname(payload: { roomId: string; userId: string; nickname?: string | null }): Promise<RoomMemberDetails> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
 
     await requireRoom(payload.roomId);
 
     const normalizedNickname = payload.nickname?.trim() ?? '';
     if (normalizedNickname.length > NICKNAME_MAX_LENGTH) {
-        throw new Error(`Nickname is too long (max ${NICKNAME_MAX_LENGTH} characters)`);
+        throw new BadRequestError(`Nickname is too long (max ${NICKNAME_MAX_LENGTH} characters)`);
     }
 
     let member = await getMember(payload.roomId, payload.userId);
@@ -684,13 +689,13 @@ async function handleUpdateNickname(payload: { roomId: string; userId: string; n
         await upsertMember(payload.roomId, payload.userId);
         member = await getMember(payload.roomId, payload.userId);
     }
-    if (!member) throw new Error('Member not found');
+    if (!member) throw new NotFoundError('Member not found');
 
     const nicknameValue = normalizedNickname.length > 0 ? normalizedNickname : null;
     await updateMemberNickname(payload.roomId, payload.userId, nicknameValue);
 
     const refreshed = await getMember(payload.roomId, payload.userId);
-    if (!refreshed) throw new Error('Failed to update nickname');
+    if (!refreshed) throw new globalThis.Error('Failed to update nickname');
     return mapMemberRecord(refreshed);
 }
 
@@ -725,11 +730,11 @@ async function handleCreateRoomDice(payload: { roomId: string; userId: string; n
 }
 
 async function handleUpdateRoomDice(payload: { roomId: string; userId: string; diceId: string; notation: string; description?: string | null; categoryId?: string | null }): Promise<RoomDice> {
-    if (!payload.diceId) throw new Error('Dice id missing');
+    if (!payload.diceId) throw new BadRequestError('Dice id missing');
     const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
     const existing = await getRoomDice(payload.diceId);
     if (!existing || existing.room_id !== room.id || existing.created_by !== payload.userId) {
-        throw new Error('Dice not found');
+        throw new NotFoundError('Dice not found');
     }
     const categoryRecords = await ensureDiceCategoriesForUser(room.id, payload.userId);
     const requestedCategoryId = payload.categoryId ?? existing.category_id ?? undefined;
@@ -741,7 +746,7 @@ async function handleUpdateRoomDice(payload: { roomId: string; userId: string; d
         description,
         category_id: selectedCategory?.id ?? null
     });
-    if (!updated) throw new Error('Failed to update dice');
+    if (!updated) throw new globalThis.Error('Failed to update dice');
     const categoryMap = new Map(categoryRecords.map((record) => {
         const mapped = mapRoomDiceCategoryRecord(record);
         return [mapped.id, mapped] as const;
@@ -750,11 +755,11 @@ async function handleUpdateRoomDice(payload: { roomId: string; userId: string; d
 }
 
 async function handleDeleteRoomDice(payload: { roomId: string; userId: string; diceId: string }): Promise<void> {
-    if (!payload.diceId) throw new Error('Dice id missing');
+    if (!payload.diceId) throw new BadRequestError('Dice id missing');
     const { room } = await ensureRoomMembership(payload.roomId, payload.userId);
     const existing = await getRoomDice(payload.diceId);
     if (!existing || existing.room_id !== room.id || existing.created_by !== payload.userId) {
-        throw new Error('Dice not found');
+        throw new NotFoundError('Dice not found');
     }
     await deleteRoomDice(payload.diceId);
 }
@@ -775,7 +780,7 @@ async function handleCreateDiceCategory(payload: { roomId: string; userId: strin
 }
 
 async function handleListRollAwards(payload: { roomId: string }): Promise<{ awards: RoomRollAward[]; enabled: boolean; windowSize: number | null }> {
-    if (!payload.roomId) throw new Error('Room id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
     const room = await requireRoom(payload.roomId);
     const rows = await listRoomRollAwards(room.id);
     const awards = rows.map(mapRollAwardRecord);
@@ -787,17 +792,17 @@ async function handleListRollAwards(payload: { roomId: string }): Promise<{ awar
 }
 
 async function handleSetRollAwardsEnabled(payload: { roomId: string; userId: string; enabled: boolean; windowSize?: number | null }): Promise<{ roomId: string; enabled: boolean; windowSize: number | null }> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
     const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can update this setting');
+        throw new ForbiddenError('Only the room creator can update this setting');
     }
     const windowSize = normalizeRollAwardWindowSize(
         'windowSize' in payload ? payload.windowSize ?? null : room.roll_awards_window
     );
     const updated = await updateRollAwardsSettings(room.id, { enabled: payload.enabled, windowSize });
-    if (!updated) throw new Error('Failed to update setting');
+    if (!updated) throw new globalThis.Error('Failed to update setting');
     return {
         roomId: room.id,
         enabled: Boolean(updated.roll_awards_enabled),
@@ -806,14 +811,14 @@ async function handleSetRollAwardsEnabled(payload: { roomId: string; userId: str
 }
 
 async function handleCreateRollAward(payload: { roomId: string; userId: string; name: string; description?: string | null; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
     const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can create awards');
+        throw new ForbiddenError('Only the room creator can create awards');
     }
     if (!room.roll_awards_enabled) {
-        throw new Error('Enable Roll Awards before creating entries');
+        throw new ConflictError('Enable Roll Awards before creating entries');
     }
     const name = normalizeRollAwardName(payload.name);
     const description = normalizeRollAwardDescription(payload.description);
@@ -831,19 +836,19 @@ async function handleCreateRollAward(payload: { roomId: string; userId: string; 
 }
 
 async function handleUpdateRollAward(payload: { roomId: string; userId: string; awardId: string; name: string; description?: string | null; diceResults: number[]; diceNotation?: string | null; diceNotations?: string[] }): Promise<RoomRollAward> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
-    if (!payload.awardId) throw new Error('Award id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
+    if (!payload.awardId) throw new BadRequestError('Award id missing');
     const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can update awards');
+        throw new ForbiddenError('Only the room creator can update awards');
     }
     if (!room.roll_awards_enabled) {
-        throw new Error('Enable Roll Awards before editing entries');
+        throw new ConflictError('Enable Roll Awards before editing entries');
     }
     const existing = await getRoomRollAward(payload.awardId);
     if (!existing || existing.room_id !== room.id) {
-        throw new Error('Award not found');
+        throw new NotFoundError('Award not found');
     }
     const name = normalizeRollAwardName(payload.name);
     const description = normalizeRollAwardDescription(payload.description);
@@ -860,16 +865,16 @@ async function handleUpdateRollAward(payload: { roomId: string; userId: string; 
 }
 
 async function handleDeleteRollAward(payload: { roomId: string; userId: string; awardId: string }): Promise<string> {
-    if (!payload.roomId) throw new Error('Room id missing');
-    if (!payload.userId) throw new Error('User id missing');
-    if (!payload.awardId) throw new Error('Award id missing');
+    if (!payload.roomId) throw new BadRequestError('Room id missing');
+    if (!payload.userId) throw new BadRequestError('User id missing');
+    if (!payload.awardId) throw new BadRequestError('Award id missing');
     const room = await requireRoom(payload.roomId);
     if (!room.created_by || room.created_by !== payload.userId) {
-        throw new Error('Only the room creator can delete awards');
+        throw new ForbiddenError('Only the room creator can delete awards');
     }
     const existing = await getRoomRollAward(payload.awardId);
     if (!existing || existing.room_id !== room.id) {
-        throw new Error('Award not found');
+        throw new NotFoundError('Award not found');
     }
     await deleteRoomRollAward(payload.awardId);
     return payload.awardId;
@@ -885,18 +890,18 @@ async function generateUniqueInviteCode(): Promise<string> {
         const existing = await getRoomByInviteCode(code);
         if (!existing) return code;
     }
-    throw new Error('Failed to generate invite code, please retry');
+    throw new globalThis.Error('Failed to generate invite code, please retry');
 }
 
 async function ensureRoomMembership(roomId: string, userId: string) {
-    if (!roomId) throw new Error('Room id missing');
-    if (!userId) throw new Error('User id missing');
+    if (!roomId) throw new BadRequestError('Room id missing');
+    if (!userId) throw new BadRequestError('User id missing');
 
     const room = await requireRoom(roomId);
 
     const member = await getMember(roomId, userId);
     if (!member) {
-        throw new Error('You must join this room to manage dice');
+        throw new ForbiddenError('You must join this room to manage dice');
     }
 
     return { room, member };
@@ -933,7 +938,7 @@ function selectDiceCategory(categories: DatabaseRoomDiceCategory[], categoryId?:
     if (categoryId) {
         const match = categories.find((category) => category.id === categoryId);
         if (!match) {
-            throw new Error('Category not found');
+            throw new NotFoundError('Category not found');
         }
         return match;
     }

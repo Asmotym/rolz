@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import * as Sentry from '@sentry/node';
 import { DatabaseUnavailableError, isDatabaseConnectionError } from './errors';
 
 const connectionString = process.env.DATABASE_URL ?? process.env.NETLIFY_DATABASE_URL;
@@ -74,9 +75,8 @@ type QueryValues = NonNullable<Parameters<mysql.Pool['query']>[1]>;
 type ExecuteValues = NonNullable<Parameters<mysql.Pool['execute']>[1]>;
 
 function formatUnavailableMessage(): string {
-    const label = getDatabaseConnectionLabel();
     const hint = 'Ensure your MySQL server is running and the DATABASE_URL (or MYSQL_*) variables are correct.';
-    return label ? `Unable to connect to the database (${label}). ${hint}` : `Unable to connect to the database. ${hint}`;
+    return `Unable to connect to the database. ${hint}`;
 }
 
 async function withDatabaseHandling<T>(operation: () => Promise<T>): Promise<T> {
@@ -84,6 +84,16 @@ async function withDatabaseHandling<T>(operation: () => Promise<T>): Promise<T> 
         return await operation();
     } catch (error) {
         if (isDatabaseConnectionError(error)) {
+            const databaseError = error as NodeJS.ErrnoException & { sqlState?: unknown };
+            Sentry.addBreadcrumb({
+                category: 'database',
+                level: 'error',
+                message: 'Database dependency unavailable',
+                data: {
+                    code: databaseError.code,
+                    sqlState: typeof databaseError.sqlState === 'string' ? databaseError.sqlState : undefined
+                }
+            });
             throw new DatabaseUnavailableError(formatUnavailableMessage(), { cause: error });
         }
         throw error;

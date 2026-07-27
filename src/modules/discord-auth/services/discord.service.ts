@@ -1,15 +1,28 @@
 import type { DiscordAuth, DiscordUser } from "netlify/core/types/discord.types";
 import { getApiUrl, getRedirectUri } from "modules/discord-auth/utils/urls.utils";
 import { ref, type Ref } from 'vue';
-import { fetchUserTheme, getInitialTheme } from 'core/services/theme.service';
+import { getInitialTheme } from 'core/services/theme.service';
 import type { AppTheme } from 'netlify/core/types/theme.types';
 import { appStorage } from 'core/services/app-storage.service';
+import { createDiscordAuth, isDiscordAuthExpired } from './discord-auth.utils';
+
+class DiscordApiError extends Error {
+    constructor(
+        message: string,
+        readonly status: number
+    ) {
+        super(message);
+        this.name = 'DiscordApiError';
+    }
+}
 
 export class DiscordService {
-    private static readonly DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
+    private static readonly DISCORD_CLIENT_ID = import.meta.env?.VITE_DISCORD_CLIENT_ID ?? '';
     private static readonly DISCORD_API_URL = 'https://discord.com/api/v10';
     public user: Ref<DiscordUser | null> = ref(null);
     private static instance: DiscordService | null = null;
+    private loginPromise: Promise<DiscordUser | null> | null = null;
+    private initialized = false;
 
     public static getInstance(): DiscordService {
         if (!DiscordService.instance) {
@@ -19,40 +32,50 @@ export class DiscordService {
     }
 
     public async handleLogin(): Promise<DiscordUser | null> {
-        const savedUser = this.getUser();
-        if (savedUser !== null) {
-            this.storeUser(savedUser);
-            const auth = this.getAuth();
-            if (auth?.accessToken) {
-                try {
-                    await this.fetchUserInfo(auth);
-                } catch (error) {
-                    console.error('[DiscordAuth] Failed to refresh user info', error);
-                }
-            } else {
-                try {
-                    const theme = await fetchUserTheme(savedUser.id);
-                    this.updateStoredUserTheme(theme);
-                } catch (error) {
-                    console.error('[DiscordAuth] Failed to refresh user preferences', error);
-                }
-            }
-        } else {
-            const auth = this.getAuth();
-            if (auth && auth.accessToken) {
-                await this.fetchUserInfo(auth);
-            }
+        if (this.initialized) {
+            return this.user.value;
         }
-        
-        // Handle OAuth callback
-        if (window.location.hash.includes('token_type=')) {
-            await this.handleAuthCallback();
+        if (this.loginPromise) {
+            return this.loginPromise;
         }
 
-        return this.user.value;
+        this.loginPromise = this.initializeLogin().finally(() => {
+            this.initialized = true;
+            this.loginPromise = null;
+        });
+        return this.loginPromise;
+    }
+
+    private async initializeLogin(): Promise<DiscordUser | null> {
+        if (window.location.hash.includes('access_token=')) {
+            try {
+                return await this.handleAuthCallback();
+            } catch (error) {
+                console.error('[DiscordAuth] Failed to process OAuth callback', error);
+                return this.user.value;
+            }
+        }
+
+        const auth = this.getAuth();
+        if (!auth) {
+            this.removeUser();
+            return null;
+        }
+
+        const savedUser = this.getUser();
+        if (savedUser) this.storeUser(savedUser);
+
+        try {
+            return await this.fetchUserInfo(auth);
+        } catch (error) {
+            console.error('[DiscordAuth] Failed to refresh user info', error);
+            return this.user.value;
+        }
     }
 
     public login() {
+        this.clearSession();
+        this.initialized = false;
         const state = this.generateRandomString(32)
         this.storeOauthState(state)
 
@@ -68,41 +91,25 @@ export class DiscordService {
     }
 
     public logout() {
-        this.removeAuth();
-        this.removeUser();
-        this.removeOauthState();
+        this.clearSession();
+        this.initialized = false;
     }
 
-    public async handleAuthCallback() {
+    public async handleAuthCallback(): Promise<DiscordUser> {
         const urlParams = new URLSearchParams(window.location.hash.slice(1));
-
-        // retrieve url params from the discord redirect login
-        const tokenType = urlParams.get('token_type') || '';
-        const accessToken = urlParams.get('access_token') || '';
-        const expiresIn = Number(urlParams.get('expires_in') || 0);
-        const scope = urlParams.get('scope') || '';
-        const state = urlParams.get('state') || '';
-        const auth = {
-            tokenType,
-            accessToken,
-            expiresIn,
-            scope,
-            state,
-        }
-
-        // retrieve saved state
+        const auth = createDiscordAuth(urlParams);
         const savedState = this.getOauthState();
 
-        if (auth.state === savedState) {
-            // save auth to local storage
-            this.storeAuth(auth);
+        this.cleanOAuthFragment();
+        this.removeOauthState();
 
-            // clean up url
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            // retrieve user info
-            await this.fetchUserInfo(auth);
+        if (!auth || !savedState || auth.state !== savedState) {
+            this.clearSession();
+            throw new Error('[DiscordAuth] Invalid OAuth callback');
         }
+
+        this.storeAuth(auth);
+        return this.fetchUserInfo(auth);
     }
 
     public async fetchUserInfo(auth: DiscordAuth): Promise<DiscordUser> {
@@ -113,9 +120,15 @@ export class DiscordService {
             },
             body: JSON.stringify({ ...auth, queryType: 'user', theme: getInitialTheme() }),
         });
-        const data = await userInfo.json();
-        if (!data || !data.success) {
-            throw new Error('[DiscordAuth] Failed to fetch user info');
+        const data = await userInfo.json() as { success?: boolean; data?: DiscordUser; error?: string };
+        if (!userInfo.ok || !data?.success || !data.data) {
+            if (userInfo.status === 401 || userInfo.status === 403) {
+                this.clearSession();
+            }
+            throw new DiscordApiError(
+                data?.error ?? '[DiscordAuth] Failed to fetch user info',
+                userInfo.status
+            );
         }
 
         this.storeUser(data.data);
@@ -163,6 +176,20 @@ export class DiscordService {
         appStorage.removeDiscordOauthState();
     }
 
+    private clearSession() {
+        this.removeAuth();
+        this.removeUser();
+        this.removeOauthState();
+    }
+
+    private cleanOAuthFragment() {
+        window.history.replaceState(
+            {},
+            document.title,
+            `${window.location.pathname}${window.location.search}`
+        );
+    }
+
     public getUser(): DiscordUser | null {
         return appStorage.getDiscordUser();
     }
@@ -172,7 +199,14 @@ export class DiscordService {
     }
 
     public getAuth(): DiscordAuth | null {
-        return appStorage.getDiscordAuth();
+        const auth = appStorage.getDiscordAuth();
+        if (!auth) return null;
+        if (isDiscordAuthExpired(auth)) {
+            console.info('[DiscordAuth] Stored token expired; login is required again');
+            this.clearSession();
+            return null;
+        }
+        return auth;
     }
 
     public getOauthState(): string | null {

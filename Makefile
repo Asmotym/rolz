@@ -12,6 +12,9 @@ include $(ENV_FILE)
 export
 endif
 
+SENTRY_RELEASE := $(if $(strip $(SENTRY_RELEASE)),$(SENTRY_RELEASE),$(shell git rev-parse HEAD 2>/dev/null))
+export SENTRY_RELEASE
+
 FRONTEND_PORT ?= 5173
 MYSQL_PORT ?= 3306
 MYSQL_USER ?= rolz
@@ -50,6 +53,11 @@ deploy:
 
 prod-up:
 	@echo "Starting production services..."
+	@[[ "$(SENTRY_RELEASE)" =~ ^[0-9a-f]{40}$$ ]] || (echo "SENTRY_RELEASE must be the full 40-character Git SHA" >&2; exit 1)
+	@test -n "$(SENTRY_DSN)" || (echo "SENTRY_DSN is required" >&2; exit 1)
+	@test -n "$(SENTRY_ORG)" || (echo "SENTRY_ORG is required" >&2; exit 1)
+	@test -n "$(SENTRY_PROJECT)" || (echo "SENTRY_PROJECT is required" >&2; exit 1)
+	@test -n "$${SENTRY_AUTH_TOKEN:-}" || (echo "SENTRY_AUTH_TOKEN is required in the shell environment" >&2; exit 1)
 	$(PROD_COMPOSE_CMD) up -d --build $(PROD_SERVICES)
 
 prod-down:

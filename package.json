@@ -9,8 +9,10 @@
     "preview": "vite preview",
     "server:dev": "tsx server/index.ts",
     "server:typecheck": "tsc -p tsconfig.server.json --noEmit",
+    "server:test": "TSX_TSCONFIG_PATH=tsconfig.test.json tsx --test server/tests/*.test.ts src/tests/*.test.ts",
     "server:build": "npm run server:typecheck && tsup --config tsup.config.ts",
     "server:start": "node dist-server/index.js",
+    "server:sentry-check": "node dist-server/verify-sentry.js",
     "db:update": "tsx server/scripts/update-schema.ts"
   },
   "dependencies": {
@@ -31,6 +33,7 @@
     "vuetify": "^3.8.10"
   },
   "devDependencies": {
+    "@sentry/esbuild-plugin": "^5.4.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/node": "^22.13.5",

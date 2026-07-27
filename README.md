@@ -40,6 +40,22 @@ The API exposes unauthenticated root-level probes for monitoring tools:
 
 Use `/health` for frequent process liveness checks and `/ready` for deployment, load balancer, or dependency-aware readiness checks.
 
+### Sentry diagnostics
+
+Set `SENTRY_DSN` to enable server-side error reporting. Events include a generated request ID, stable operation name, authenticated user ID, safe route/domain identifiers, environment, release, and sampled trace context. Request bodies and credentials are never intentionally attached; authorization, cookies, API keys, passwords, tokens, and database URLs are scrubbed before sending. Expected 4xx errors remain in application logs, while 5xx and database availability failures are sent to Sentry.
+
+`SENTRY_TRACES_SAMPLE_RATE` accepts a number from `0` to `1` and defaults to `0.1` in production or `1.0` in development. Health and readiness probes are never sampled. Every response includes `X-Request-ID`, and JSON error responses also include `requestId`.
+
+Production source-map upload requires `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_RELEASE`, and `SENTRY_AUTH_TOKEN`. `make prod-up` derives `SENTRY_RELEASE` from the full Git commit SHA and fails if upload configuration is incomplete. Provide `SENTRY_AUTH_TOKEN` through the shell or deployment secret manager; do not store it in `.env`, because it is a build-only credential passed to Docker as a BuildKit secret.
+
+After a production build, send a deliberate synthetic event with:
+
+```bash
+SENTRY_DSN=... SENTRY_RELEASE=... npm run server:sentry-check
+```
+
+The command prints the event ID after Sentry acknowledges the event. Confirm that its stack frame resolves to `server/scripts/verify-sentry.ts` and that no secrets or request bodies appear in the event JSON.
+
 ## Production Builds
 
 - `npm run build` – Type-check and bundle the Vue client (output in `dist/`).

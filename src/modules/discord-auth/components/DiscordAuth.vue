@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
 import type { DiscordUser } from 'netlify/core/types/discord.types';
-import { ref, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -69,17 +69,15 @@ const { t } = useI18n();
 
 const router = useRouter();
 const discordService = DiscordService.getInstance();
-const user = ref<DiscordUser | null>(null)
+const user = computed<DiscordUser | null>(() => discordService.user.value)
 
 function logout() {
   discordService.logout();
-  user.value = null;
   router.push({ name: HomeRoutes.Base });
 }
 
 onMounted(async () => {
-  // Check if user is already logged in
-  user.value = await discordService.handleLogin();
+  await discordService.handleLogin();
 })
 </script>
 

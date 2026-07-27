@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { isTrustedFrontendHost } from "../core/config/origins";
 
 const ALLOWED_METHODS = ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'];
-const ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-API-Key'];
+const ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-API-Key', 'sentry-trace', 'baggage'];
 
 export function cors(request: Request, response: Response, next: NextFunction) {
     const origin = request.headers.origin || '';

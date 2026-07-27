@@ -2,8 +2,6 @@ services:
   mysql:
     image: mysql:8.0
     container_name: rolz-mysql
-    env_file:
-      - .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -28,6 +26,12 @@ services:
     build:
       context: .
       target: runner
+      args:
+        SENTRY_ORG: ${SENTRY_ORG}
+        SENTRY_PROJECT: ${SENTRY_PROJECT}
+        SENTRY_RELEASE: ${SENTRY_RELEASE}
+      secrets:
+        - sentry_auth_token
     image: rolz-all:latest
     container_name: rolz-stack
     depends_on:
@@ -43,6 +47,7 @@ services:
       MYSQL_PORT: 3306
       ROLZ_DEV_MODE: "false"
       NODE_ENV: production
+      ENVIRONMENT: production
       BACKEND_PORT: 4000
       FRONTEND_PORT: 5173
       FRONTEND_URL: https://rolz.asmotym.fr
@@ -51,6 +56,9 @@ services:
       VITE_API_DOCS_URL: https://docs.rolz.asmotym.fr
       DATABASE_URL: ${DATABASE_URL}
       DATABASE_SSL: "false"
+      SENTRY_RELEASE: ${SENTRY_RELEASE}
+      # The upload token is build-only and must never reach the running app.
+      SENTRY_AUTH_TOKEN: ""
     restart: unless-stopped
     networks:
       - proxy
@@ -75,6 +83,10 @@ services:
 
 volumes:
   mysql-data:
+
+secrets:
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
 
 networks:
   proxy:

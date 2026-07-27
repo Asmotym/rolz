@@ -8,6 +8,7 @@ import {
 } from '../core/database/tables/user-api-keys.table';
 import { decryptApiKey, encryptApiKey, generateApiKey, hashApiKey } from '../core/utils/api-key';
 import { createLogger } from '../core/utils/logger';
+import { BadRequestError, NotFoundError } from '../core/errors/http-errors';
 
 const logger = createLogger('ApiKeysService');
 
@@ -18,7 +19,7 @@ export interface UserApiKeyPayload {
 }
 
 export async function getUserApiKey(userId: string): Promise<UserApiKeyPayload | null> {
-    if (!userId) throw new Error('User id is required');
+    if (!userId) throw new BadRequestError('User id is required');
 
     const record = await getApiKeyForUser(userId);
     if (!record) {
@@ -34,16 +35,16 @@ export async function getUserApiKey(userId: string): Promise<UserApiKeyPayload |
         };
     } catch (error) {
         logger.error(`Failed to decrypt API key for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        throw new Error('Unable to retrieve API key');
+        throw new Error('Unable to retrieve API key', { cause: error });
     }
 }
 
 export async function generateUserApiKey(userId: string): Promise<UserApiKeyPayload> {
-    if (!userId) throw new Error('User id is required');
+    if (!userId) throw new BadRequestError('User id is required');
 
     const user = await getUser(userId);
     if (!user) {
-        throw new Error('Unknown user');
+        throw new NotFoundError('Unknown user');
     }
 
     const apiKey = generateApiKey();
@@ -66,7 +67,7 @@ export async function generateUserApiKey(userId: string): Promise<UserApiKeyPayl
 }
 
 export async function revokeUserApiKey(userId: string): Promise<void> {
-    if (!userId) throw new Error('User id is required');
+    if (!userId) throw new BadRequestError('User id is required');
 
     await deleteUserApiKey(userId);
     logger.info(`Revoked API key for user ${userId}`);

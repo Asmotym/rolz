@@ -87,6 +87,8 @@ function isDiscordAuth(value: unknown): value is DiscordAuth {
     typeof value.accessToken === 'string' &&
     typeof value.expiresIn === 'number' &&
     Number.isFinite(value.expiresIn) &&
+    typeof value.expiresAt === 'number' &&
+    Number.isFinite(value.expiresAt) &&
     typeof value.scope === 'string' &&
     typeof value.state === 'string'
   );

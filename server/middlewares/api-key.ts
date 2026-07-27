@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { isTrustedFrontendHost } from '../core/config/origins';
 import { recordApiKeyUsage, verifyApiKey } from '../services/api-keys.service';
+import { addSafeBreadcrumb, sendErrorResponse, setAuthenticatedUser } from '../observability/server-observability';
 
 function isRequestFromTrustedOrigin(req: Request): boolean {
     const origin = req.headers.origin as string | undefined;
@@ -36,16 +37,18 @@ export async function requireApiKeyForUntrustedOrigins(req: Request, res: Respon
 
     const apiKey = readApiKey(req);
     if (!apiKey) {
-        return res.status(401).json({ success: false, error: 'API key required for external requests' });
+        return sendErrorResponse(res, 401, 'API key required for external requests');
     }
 
     try {
         const match = await verifyApiKey(apiKey);
         if (!match) {
-            return res.status(403).json({ success: false, error: 'Invalid API key' });
+            addSafeBreadcrumb('auth', 'API key rejected');
+            return sendErrorResponse(res, 403, 'Invalid API key');
         }
 
         res.locals.apiKeyUserId = match.userId;
+        setAuthenticatedUser(res, match.userId);
         await recordApiKeyUsage(match.userId);
         next();
     } catch (error) {

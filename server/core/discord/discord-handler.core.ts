@@ -3,6 +3,7 @@ import { DiscordClient } from "./client";
 import { getUser, insertUser, updateUser } from "../database/tables/users.table";
 import { createLogger } from "../utils/logger";
 import { normalizeTheme, type AppTheme } from "../types/theme.types";
+import { BadRequestError } from '../errors/http-errors';
 
 const logger = createLogger('DiscordHandler');
 const discordClient = new DiscordClient();
@@ -22,19 +23,19 @@ export async function handleDiscordQuery(payload: DiscordQueryPayload) {
         case 'user':
             return handleUserQuery(payload);
         default:
-            throw new Error(`Unknown query type: ${queryType}`);
+            throw new BadRequestError(`Unknown query type: ${queryType}`);
     }
 }
 
 async function handleUserQuery(auth: DiscordAuth) {
     if (!auth.tokenType || !auth.accessToken) {
-        throw new Error('Missing Discord authentication tokens');
+        throw new BadRequestError('Missing Discord authentication tokens');
     }
 
     logger.info('Fetching Discord user info');
 
     const discordUser = await discordClient.getUserInfo(auth);
-    logger.success(`Retrieved Discord user: ${logger.highlight(discordUser.username)} (${logger.highlight(discordUser.id)})`);
+    logger.success(`Retrieved Discord user ${logger.highlight(discordUser.id)}`);
 
     const existingUser = await getUser(discordUser.id);
     if (existingUser === undefined) {
