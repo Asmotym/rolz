@@ -130,4 +130,10 @@ function joinRoom() {
   position: sticky;
   top: 20px;
 }
+
+@media (max-width: 959px) {
+  .rooms-sidebar {
+    position: static;
+  }
+}
 </style>

@@ -103,6 +103,16 @@
                 @keyup.enter="sendMessage"
                 :disabled="sending"
               >
+                <template #prepend-inner>
+                  <v-btn
+                    icon="mdi-help-circle-outline"
+                    variant="text"
+                    size="small"
+                    :title="t('chat.dicePrefixHelpTitle')"
+                    :aria-label="t('chat.dicePrefixHelpTitle')"
+                    @click.stop="dicePrefixHelpDialog = true"
+                  />
+                </template>
                 <template #append-inner>
                   <v-btn
                     icon="mdi-send"
@@ -122,12 +132,16 @@
                 class="mt-n2 mb-2"
                 :disabled="sending"
               />
-              <div class="text-caption text-medium-emphasis d-flex flex-column">
-                <span>{{ t('chat.dicePrefixHelp') }}</span>
-                <span>{{ t('chat.examples') }}</span>
-                <span class="ml-4">{{ t('chat.advantageExample') }}</span>
-                <span class="ml-4">{{ t('chat.disadvantageExample') }}</span>
-              </div>
+              <v-btn
+                class="mobile-tools-toggle"
+                variant="tonal"
+                color="primary"
+                prepend-icon="mdi-dice-multiple-outline"
+                block
+                @click="mobileToolsOpen = true"
+              >
+                {{ t('chat.roomToolsTitle') }}
+              </v-btn>
             </div>
           </div>
 
@@ -144,7 +158,7 @@
             <span class="resize-grip" />
           </div>
 
-          <div class="dice-section">
+          <div v-if="mdAndUp" class="dice-section">
             <v-card flat class="dice-panel-card" color="transparent">
               <v-tabs
                 v-model="diceSidebarTab"
@@ -184,6 +198,81 @@
       </v-card-text>
     </template>
   </v-card>
+  <v-bottom-sheet
+    v-if="!mdAndUp"
+    v-model="mobileToolsOpen"
+    content-class="mobile-tools-bottom-sheet"
+  >
+    <v-card class="mobile-tools-sheet" rounded="t-xl">
+      <div class="bottom-sheet-grab-handle" aria-hidden="true" />
+      <v-card-title class="d-flex align-center justify-space-between">
+        <span>{{ t('chat.roomToolsTitle') }}</span>
+        <v-btn
+          icon="mdi-close"
+          variant="text"
+          size="small"
+          :title="t('common.close')"
+          :aria-label="t('common.close')"
+          @click="closeMobileTools"
+        />
+      </v-card-title>
+      <v-divider />
+      <v-tabs
+        v-model="diceSidebarTab"
+        density="comfortable"
+        color="primary"
+        grow
+        class="mobile-tools-tabs"
+      >
+        <v-tab value="dices">{{ t('roomSettings.tabs.dices') }}</v-tab>
+        <v-tab value="rollAwards">{{ t('roomSettings.tabs.rollAwards') }}</v-tab>
+      </v-tabs>
+      <v-card-text class="mobile-tools-content">
+        <v-window v-model="diceSidebarTab">
+          <v-window-item value="dices">
+            <RoomDicePanel :current-user="currentUser" @manage-dice="openDiceSettings" />
+          </v-window-item>
+          <v-window-item value="rollAwards">
+            <RoomRollAwardsPanel
+              :room="room"
+              :messages="messages"
+              :current-user="currentUser"
+              @manage-awards="openRollAwardsSettings"
+            />
+          </v-window-item>
+        </v-window>
+      </v-card-text>
+    </v-card>
+  </v-bottom-sheet>
+  <v-dialog v-model="dicePrefixHelpDialog" max-width="520">
+    <v-card>
+      <v-card-title class="d-flex align-center justify-space-between">
+        <span>{{ t('chat.dicePrefixHelpTitle') }}</span>
+        <v-btn
+          icon="mdi-close"
+          variant="text"
+          size="small"
+          :title="t('common.close')"
+          :aria-label="t('common.close')"
+          @click="dicePrefixHelpDialog = false"
+        />
+      </v-card-title>
+      <v-divider />
+      <v-card-text class="dice-prefix-help-content">
+        <p>{{ t('chat.dicePrefixHelp') }}</p>
+        <div>
+          <strong>{{ t('chat.examples') }}</strong>
+          <div>{{ t('chat.advantageExample') }}</div>
+          <div>{{ t('chat.disadvantageExample') }}</div>
+        </div>
+      </v-card-text>
+      <v-card-actions class="justify-end">
+        <v-btn variant="text" @click="dicePrefixHelpDialog = false">
+          {{ t('common.close') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
   <RoomSettingsDialog
     v-model:open="settingsDialog"
     :room="room"
@@ -196,6 +285,7 @@
 import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useDisplay } from 'vuetify';
 import type { RoomDetails, RoomMessage } from 'netlify/core/types/data.types';
 import type { DiscordUser } from 'netlify/core/types/discord.types';
 import { RoomDiceManagerKey, useRoomDiceManager } from 'core/composables/useRoomDiceManager';
@@ -232,6 +322,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const { mdAndUp } = useDisplay();
 const roomsStore = useRoomsStore();
 const realtimeIndicator = computed(() => {
   switch (roomsStore.realtimeStatus) {
@@ -262,6 +353,8 @@ const chatWidth = ref(loadInitialWidth());
 const isResizing = ref(false);
 const layoutBounds = ref<{ left: number; width: number } | null>(null);
 const settingsDialog = ref(false);
+const dicePrefixHelpDialog = ref(false);
+const mobileToolsOpen = ref(false);
 const settingsPanelTab = ref<SettingsTab>('room');
 const diceSidebarTab = ref<'dices' | 'rollAwards'>('dices');
 const pendingLoadDone = ref<InfiniteScrollDone | null>(null);
@@ -341,6 +434,8 @@ function resetRoomState() {
   hasLoadedOlder.value = false;
   resetInfiniteScroll();
   showInviteCode.value = false;
+  dicePrefixHelpDialog.value = false;
+  mobileToolsOpen.value = false;
   if (!props.room) {
     settingsDialog.value = false;
     return;
@@ -475,6 +570,7 @@ function toggleInviteVisibility() {
 
 function openSettingsPanel(tab: SettingsTab = 'room') {
   if (!props.room || !props.currentUser) return;
+  mobileToolsOpen.value = false;
   settingsPanelTab.value = tab;
   settingsDialog.value = true;
 }
@@ -485,6 +581,11 @@ function openDiceSettings() {
 
 function openRollAwardsSettings() {
   openSettingsPanel('rollAwards');
+}
+
+function closeMobileTools() {
+  mobileToolsOpen.value = false;
+  focusMessageInput();
 }
 
 function persistChatWidth(value: number) {
@@ -612,6 +713,11 @@ onUnmounted(() => {
   height: 100%;
 }
 
+.dice-prefix-help-content {
+  display: grid;
+  gap: 16px;
+}
+
 .chat-layout {
   --chat-panel-width: 65%;
   --dice-panel-width: 35%;
@@ -658,6 +764,37 @@ onUnmounted(() => {
   background-color: transparent;
   display: flex;
   flex-direction: column;
+}
+
+.mobile-tools-toggle {
+  display: none;
+}
+
+.mobile-tools-sheet {
+  display: flex;
+  flex-direction: column;
+  height: min(85dvh, 760px);
+  overflow: hidden;
+}
+
+.bottom-sheet-grab-handle {
+  width: 40px;
+  height: 4px;
+  flex: 0 0 auto;
+  margin: 8px auto 0;
+  border-radius: 999px;
+  background: rgb(var(--v-theme-on-surface), 0.3);
+}
+
+.mobile-tools-sheet > .v-card-title,
+.mobile-tools-tabs {
+  flex: 0 0 auto;
+}
+
+.mobile-tools-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .resize-handle {
@@ -716,12 +853,21 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 960px) {
-  .chat-section {
-    height: 80%;
+@media (max-width: 959px) {
+  .chat-layout {
+    gap: 0;
   }
+
+  .chat-section {
+    height: 100%;
+  }
+
   .dice-section {
-    overflow: auto;
+    display: none;
+  }
+
+  .mobile-tools-toggle {
+    display: flex;
   }
 }
 </style>

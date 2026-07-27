@@ -1,6 +1,10 @@
 <template>
     <HeaderComponent />
-    <v-container v-if="userLoggedIn" class="py-6 home-container">
+    <v-container
+      v-if="userLoggedIn"
+      class="py-6 home-container"
+      :class="{ 'home-container--dashboard': isConnectedDashboard }"
+    >
         <v-row v-if="isConnectedDashboard" class="home-dashboard" align="stretch">
           <v-col cols="12" md="4" class="dashboard-column">
             <RoomsBoard dashboard />
@@ -124,5 +128,25 @@ const isConnectedDashboard = computed(() => !route.params.roomId);
 .login-panel {
   min-height: 0;
   padding-block: 24px;
+}
+
+@media (max-width: 959px) {
+  .home-container--dashboard {
+    height: auto;
+    max-height: none;
+  }
+
+  .home-dashboard {
+    height: auto;
+  }
+
+  .dashboard-column {
+    height: auto;
+  }
+
+  .dashboard-scroll-column {
+    overflow-y: visible;
+    padding-right: 12px;
+  }
 }
 </style>
