@@ -33,7 +33,15 @@
       "api": "API"
     },
     "general": {
-      "placeholder": "Esta sección está en progreso."
+      "profileTitle": "Perfil de Discord",
+      "avatarAlt": "Avatar de Discord de {name}",
+      "usernameLabel": "Nombre de usuario",
+      "discordIdLabel": "ID de Discord",
+      "showDiscordId": "Mostrar ID de Discord",
+      "hideDiscordId": "Ocultar ID de Discord",
+      "copyDiscordId": "Copiar ID de Discord",
+      "copySuccess": "ID de Discord copiado al portapapeles.",
+      "copyError": "No se pudo copiar el ID de Discord. Cópialo manualmente."
     },
     "api": {
       "description": "Genera una clave API personal para integrar Rolz con tus scripts, paneles o bots.",

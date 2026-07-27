@@ -117,7 +117,15 @@
       "api": "API"
     },
     "general": {
-      "placeholder": "This section is in progress."
+      "profileTitle": "Discord profile",
+      "avatarAlt": "{name}'s Discord avatar",
+      "usernameLabel": "User name",
+      "discordIdLabel": "Discord ID",
+      "showDiscordId": "Show Discord ID",
+      "hideDiscordId": "Hide Discord ID",
+      "copyDiscordId": "Copy Discord ID",
+      "copySuccess": "Discord ID copied to clipboard.",
+      "copyError": "Unable to copy the Discord ID. Please copy it manually."
     },
     "api": {
       "description": "Generate a personal API key to integrate Rolz with custom scripts, dashboards, or bots.",

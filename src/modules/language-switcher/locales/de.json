@@ -33,7 +33,15 @@
       "api": "API"
     },
     "general": {
-      "placeholder": "Dieser Bereich befindet sich noch in Arbeit."
+      "profileTitle": "Discord-Profil",
+      "avatarAlt": "Discord-Avatar von {name}",
+      "usernameLabel": "Benutzername",
+      "discordIdLabel": "Discord-ID",
+      "showDiscordId": "Discord-ID anzeigen",
+      "hideDiscordId": "Discord-ID ausblenden",
+      "copyDiscordId": "Discord-ID kopieren",
+      "copySuccess": "Discord-ID wurde in die Zwischenablage kopiert.",
+      "copyError": "Discord-ID konnte nicht kopiert werden. Bitte manuell kopieren."
     },
     "api": {
       "description": "Erstelle einen persönlichen API-Schlüssel, um Rolz in eigene Skripte, Dashboards oder Bots einzubinden.",

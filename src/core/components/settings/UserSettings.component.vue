@@ -9,11 +9,7 @@
       <v-divider />
       <v-window v-model="activeTab">
         <v-window-item value="general">
-          <section class="pa-6">
-            <p class="text-medium-emphasis mb-0">
-              {{ t('settings.general.placeholder') }}
-            </p>
-          </section>
+          <GeneralSettingsPanel />
         </v-window-item>
         <v-window-item value="rooms">
           <RoomsSettingsPanel />
@@ -29,6 +25,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import GeneralSettingsPanel from './GeneralSettingsPanel.component.vue';
 import RoomsSettingsPanel from './RoomsSettingsPanel.component.vue';
 import ApiSettingsPanel from './ApiSettingsPanel.component.vue';
 
