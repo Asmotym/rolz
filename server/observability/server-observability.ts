@@ -64,7 +64,7 @@ function readSafeQuery(req: Request): Record<string, unknown> {
     );
 }
 
-function readSafeParams(req: Request): Record<string, string> {
+function readSafeParams(req: Request): Record<string, string | string[]> {
     return Object.fromEntries(
         Object.entries(req.params).filter(([key]) => key === 'slug' || key.endsWith('Id'))
     );
