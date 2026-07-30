@@ -105,9 +105,12 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-const latestDiceMessageId = computed(() => {
+const latestCurrentUserDiceMessageId = computed(() => {
   const sorted = [...props.messages]
-    .filter((message) => message.type === 'dice')
+    .filter((message) => (
+      message.type === 'dice' &&
+      message.userId === props.currentUserId
+    ))
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const latest = sorted[sorted.length - 1];
   return latest?.id ?? null;
@@ -135,7 +138,7 @@ function canUseBonusPointOnMessage(message: RoomMessage) {
     message.type === 'dice' &&
     !message.bonusPointRulesSkipped &&
     message.userId === props.currentUserId &&
-    message.id === latestDiceMessageId.value &&
+    message.id === latestCurrentUserDiceMessageId.value &&
     Boolean(rule) &&
     (props.allowExtremeBonusPointSpend || !isNaturalExtremeRoll(message.diceNotation, message.diceRolls));
 }
