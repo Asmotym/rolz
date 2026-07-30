@@ -4,8 +4,10 @@ import { APP_STORAGE_KEY } from '../core/services/app-storage.service';
 import { DiscordService } from '../modules/discord-auth/services/discord.service';
 import {
     createDiscordAuth,
+    createDiscordAuthFromTokenResponse,
     isDiscordAuthExpired
 } from '../modules/discord-auth/services/discord-auth.utils';
+import { apiRequest } from '../core/services/api.service';
 
 class MemoryStorage {
     private values = new Map<string, string>();
@@ -37,6 +39,7 @@ class MemoryStorage {
 
 const storage = new MemoryStorage();
 const location = {
+    origin: 'http://localhost',
     hash: '',
     pathname: '/',
     search: '',
@@ -90,6 +93,7 @@ beforeEach(() => {
     location.hash = '';
     location.pathname = '/';
     location.search = '';
+    location.href = 'http://localhost/';
     Object.defineProperty(globalThis, 'window', {
         configurable: true,
         value: {
@@ -99,6 +103,7 @@ beforeEach(() => {
                 replaceState: (_state: unknown, _title: string, url: string) => {
                     location.href = url;
                     location.hash = '';
+                    location.search = new URL(url, location.origin).search;
                 }
             },
             matchMedia: () => ({ matches: true })
@@ -129,6 +134,16 @@ test('OAuth parameters produce an absolute expiry and reject invalid token types
 
     params.set('token_type', 'Bot');
     assert.equal(createDiscordAuth(params, 1_000), null);
+
+    const refreshed = createDiscordAuthFromTokenResponse({
+        token_type: 'Bearer',
+        access_token: 'refreshed-access',
+        refresh_token: 'rotated-refresh',
+        expires_in: 1800,
+        scope: 'identify'
+    }, 'oauth-state', 1_000);
+    assert.equal(refreshed?.refreshToken, 'rotated-refresh');
+    assert.equal(refreshed?.expiresAt, 1_801_000);
 });
 
 test('expired stored authentication is cleared without calling the API', async () => {
@@ -177,15 +192,35 @@ test('concurrent initialization makes one request and clears a rejected token', 
     assert.equal(state.discord.user, null);
 });
 
-test('OAuth callback uses the fresh token before any stored token', async () => {
+test('OAuth callback exchanges the code and uses the fresh token', async () => {
     setStoredState(validAuth({ accessToken: 'old-token' }), validUser());
     const state = JSON.parse(storage.getItem(APP_STORAGE_KEY)!) as ReturnType<typeof storedState>;
     state.discord.oauthState = 'fresh-state';
     storage.setItem(APP_STORAGE_KEY, JSON.stringify(state));
-    location.hash = '#token_type=Bearer&access_token=fresh-token&expires_in=3600&scope=identify&state=fresh-state';
+    location.search = '?code=discord-code&state=fresh-state';
 
     let sentToken: string | undefined;
-    globalThis.fetch = async (_input, init) => {
+    globalThis.fetch = async (input, init) => {
+        if (String(input).endsWith('/discord/oauth/token')) {
+            assert.deepEqual(JSON.parse(String(init?.body)), {
+                grantType: 'authorization_code',
+                code: 'discord-code',
+                redirectUri: 'http://localhost'
+            });
+            return new Response(JSON.stringify({
+                success: true,
+                data: {
+                    token_type: 'Bearer',
+                    access_token: 'fresh-token',
+                    refresh_token: 'fresh-refresh-token',
+                    expires_in: 3600,
+                    scope: 'identify'
+                }
+            }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' }
+            });
+        }
         sentToken = JSON.parse(String(init?.body)).accessToken;
         return new Response(JSON.stringify({
             success: true,
@@ -202,6 +237,59 @@ test('OAuth callback uses the fresh token before any stored token', async () => 
     assert.equal(sentToken, 'fresh-token');
     assert.equal(user?.id, 'user-123');
     assert.equal(updated.discord.auth?.accessToken, 'fresh-token');
+    assert.equal(updated.discord.auth?.refreshToken, 'fresh-refresh-token');
     assert.equal(typeof updated.discord.auth?.expiresAt, 'number');
-    assert.equal(location.hash, '');
+    assert.equal(location.search, '');
+});
+
+test('an unauthorized API request refreshes the token and retries once', async () => {
+    setStoredState(validAuth({ refreshToken: 'stored-refresh' }), validUser());
+    const requestedTokens: string[] = [];
+
+    globalThis.fetch = async (input, init) => {
+        if (String(input).endsWith('/discord/oauth/token')) {
+            assert.deepEqual(JSON.parse(String(init?.body)), {
+                grantType: 'refresh_token',
+                refreshToken: 'stored-refresh'
+            });
+            return new Response(JSON.stringify({
+                success: true,
+                data: {
+                    token_type: 'Bearer',
+                    access_token: 'refreshed-token',
+                    refresh_token: 'rotated-refresh',
+                    expires_in: 3600,
+                    scope: 'identify'
+                }
+            }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' }
+            });
+        }
+
+        requestedTokens.push(new Headers(init?.headers).get('Authorization') ?? '');
+        if (requestedTokens.length === 1) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: 'Discord authentication is required'
+            }), {
+                status: 401,
+                headers: { 'content-type': 'application/json' }
+            });
+        }
+        return new Response(JSON.stringify({
+            success: true,
+            data: { drafts: [] }
+        }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' }
+        });
+    };
+
+    const result = await apiRequest<{ drafts: unknown[] }>('/admin/articles/drafts');
+    const updated = JSON.parse(storage.getItem(APP_STORAGE_KEY)!) as ReturnType<typeof storedState>;
+
+    assert.deepEqual(result, { drafts: [] });
+    assert.deepEqual(requestedTokens, ['Bearer stored-token', 'Bearer refreshed-token']);
+    assert.equal(updated.discord.auth?.refreshToken, 'rotated-refresh');
 });

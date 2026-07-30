@@ -6,10 +6,14 @@ import {
   applyTheme,
   getAppliedTheme,
   getInitialTheme,
+  getStoredTheme,
   saveTheme,
-  saveUserTheme,
 } from 'core/services/theme.service';
-import { normalizeTheme, type AppTheme } from 'netlify/core/types/theme.types';
+import {
+  fetchUserPreferences,
+  saveUserPreferences,
+} from 'core/services/preferences.service';
+import type { AppTheme } from 'netlify/core/types/theme.types';
 
 export function useAppTheme() {
   const vuetifyTheme = useTheme();
@@ -30,13 +34,37 @@ export function useAppTheme() {
   }
 
   function initializeThemeSync(): void {
-    setLocalTheme(getInitialTheme());
+    applyTheme(vuetifyTheme, getInitialTheme());
 
     watch(
-      () => discordService.user.value?.theme,
-      (theme) => {
-        if (!theme) return;
-        setLocalTheme(normalizeTheme(theme));
+      () => [
+        discordService.user.value?.id,
+        discordService.user.value?.theme,
+      ] as const,
+      async ([userId, databaseTheme]) => {
+        if (!userId) return;
+
+        const localTheme = getStoredTheme();
+        if (localTheme) {
+          applyTheme(vuetifyTheme, localTheme);
+          if (databaseTheme !== localTheme) {
+            try {
+              const saved = await saveUserPreferences(userId, { theme: localTheme });
+              discordService.updateStoredUserPreferences({ theme: saved.theme });
+            } catch (error) {
+              console.error(t('theme.saveError'), error);
+            }
+          }
+          return;
+        }
+
+        try {
+          const databasePreferences = await fetchUserPreferences(userId);
+          const latestLocalTheme = getStoredTheme();
+          setLocalTheme(latestLocalTheme ?? databasePreferences.theme);
+        } catch (error) {
+          console.error(t('theme.saveError'), error);
+        }
       },
       { immediate: true }
     );
@@ -49,8 +77,8 @@ export function useAppTheme() {
     if (!user) return;
 
     try {
-      const savedTheme = await saveUserTheme(user.id, theme);
-      discordService.updateStoredUserTheme(savedTheme);
+      const saved = await saveUserPreferences(user.id, { theme });
+      discordService.updateStoredUserPreferences({ theme: saved.theme });
     } catch (error) {
       console.error(t('theme.saveError'), error);
     }

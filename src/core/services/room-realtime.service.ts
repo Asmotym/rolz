@@ -1,4 +1,5 @@
 import type { RoomRealtimeEvent, RoomRealtimeStatus } from 'netlify/core/types/data.types';
+import type { DiscordAuth } from 'netlify/core/types/discord.types';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import { getRealtimeUrl } from 'modules/discord-auth/utils/urls.utils';
 
@@ -50,9 +51,16 @@ export class RoomRealtimeService {
     const socket = new WebSocket(getRealtimeUrl(this.roomId));
     this.socket = socket;
 
-    socket.addEventListener('open', () => {
+    socket.addEventListener('open', async () => {
       if (socket !== this.socket || generation !== this.generation) return;
-      const authentication = DiscordService.getInstance().getAuth();
+      let authentication: DiscordAuth | null;
+      try {
+        authentication = await DiscordService.getInstance().getValidAuth();
+      } catch {
+        socket.close(4001, 'Authentication refresh failed');
+        return;
+      }
+      if (socket !== this.socket || generation !== this.generation) return;
       if (!authentication) {
         socket.close(4001, 'Authentication unavailable');
         return;
@@ -125,4 +133,3 @@ function parseRoomEvent(value: unknown): RoomRealtimeEvent | null {
     return null;
   }
 }
-

@@ -8,16 +8,25 @@ interface ApiResponse<T> {
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const headers = new Headers(options.headers);
-  if (!headers.has('Content-Type') && options.body) {
-    headers.set('Content-Type', 'application/json');
-  }
-  const auth = DiscordService.getInstance().getAuth();
-  if (auth?.accessToken) {
-    headers.set('Authorization', `${auth.tokenType || 'Bearer'} ${auth.accessToken}`);
-  }
+  const discordService = DiscordService.getInstance();
+  let auth = await discordService.getValidAuth();
 
-  const response = await fetch(getApiUrl(path), { ...options, headers });
+  const send = (accessToken?: string, tokenType = 'Bearer') => {
+    const headers = new Headers(options.headers);
+    if (!headers.has('Content-Type') && options.body) {
+      headers.set('Content-Type', 'application/json');
+    }
+    if (accessToken) {
+      headers.set('Authorization', `${tokenType} ${accessToken}`);
+    }
+    return fetch(getApiUrl(path), { ...options, headers });
+  };
+
+  let response = await send(auth?.accessToken, auth?.tokenType);
+  if (response.status === 401 && auth?.refreshToken) {
+    auth = await discordService.refreshAuth(true);
+    response = await send(auth.accessToken, auth.tokenType);
+  }
   const text = await response.text();
   const payload = text ? JSON.parse(text) as ApiResponse<T> : null;
 

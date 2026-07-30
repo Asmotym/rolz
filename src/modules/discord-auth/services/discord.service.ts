@@ -2,9 +2,15 @@ import type { DiscordAuth, DiscordUser } from "netlify/core/types/discord.types"
 import { getApiUrl, getRedirectUri } from "modules/discord-auth/utils/urls.utils";
 import { ref, type Ref } from 'vue';
 import { getInitialTheme } from 'core/services/theme.service';
+import { getInitialLocale } from 'core/services/locale.service';
 import type { AppTheme } from 'netlify/core/types/theme.types';
+import type { AppLocale } from 'netlify/core/types/locale.types';
 import { appStorage } from 'core/services/app-storage.service';
-import { createDiscordAuth, isDiscordAuthExpired } from './discord-auth.utils';
+import {
+    createDiscordAuthFromTokenResponse,
+    isDiscordAuthExpired,
+    type DiscordTokenResponse
+} from './discord-auth.utils';
 
 class DiscordApiError extends Error {
     constructor(
@@ -22,6 +28,7 @@ export class DiscordService {
     public user: Ref<DiscordUser | null> = ref(null);
     private static instance: DiscordService | null = null;
     private loginPromise: Promise<DiscordUser | null> | null = null;
+    private refreshPromise: Promise<DiscordAuth> | null = null;
     private initialized = false;
 
     public static getInstance(): DiscordService {
@@ -47,7 +54,8 @@ export class DiscordService {
     }
 
     private async initializeLogin(): Promise<DiscordUser | null> {
-        if (window.location.hash.includes('access_token=')) {
+        const callbackParams = new URLSearchParams(window.location.search);
+        if (callbackParams.has('code') || callbackParams.has('error')) {
             try {
                 return await this.handleAuthCallback();
             } catch (error) {
@@ -56,10 +64,18 @@ export class DiscordService {
             }
         }
 
-        const auth = this.getAuth();
+        let auth = appStorage.getDiscordAuth();
         if (!auth) {
             this.removeUser();
             return null;
+        }
+        if (isDiscordAuthExpired(auth)) {
+            try {
+                auth = await this.refreshAuth();
+            } catch (error) {
+                console.error('[DiscordAuth] Failed to refresh expired authentication', error);
+                return null;
+            }
         }
 
         const savedUser = this.getUser();
@@ -82,7 +98,7 @@ export class DiscordService {
         const params = new URLSearchParams({
             client_id: DiscordService.DISCORD_CLIENT_ID,
             redirect_uri: getRedirectUri(),
-            response_type: 'token',
+            response_type: 'code',
             scope: 'identify email',
             state: state
         })
@@ -96,20 +112,94 @@ export class DiscordService {
     }
 
     public async handleAuthCallback(): Promise<DiscordUser> {
-        const urlParams = new URLSearchParams(window.location.hash.slice(1));
-        const auth = createDiscordAuth(urlParams);
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
         const savedState = this.getOauthState();
+        const returnedState = urlParams.get('state');
+        const oauthError = urlParams.get('error');
 
-        this.cleanOAuthFragment();
+        this.cleanOAuthCallback();
         this.removeOauthState();
 
-        if (!auth || !savedState || auth.state !== savedState) {
+        if (oauthError || !code || !savedState || returnedState !== savedState) {
             this.clearSession();
-            throw new Error('[DiscordAuth] Invalid OAuth callback');
+            throw new Error(oauthError
+                ? `[DiscordAuth] Discord authorization failed: ${oauthError}`
+                : '[DiscordAuth] Invalid OAuth callback');
         }
 
+        const token = await this.requestToken({
+            grantType: 'authorization_code',
+            code,
+            redirectUri: getRedirectUri()
+        });
+        const auth = createDiscordAuthFromTokenResponse(token, savedState);
+        if (!auth) {
+            this.clearSession();
+            throw new Error('[DiscordAuth] Invalid token response');
+        }
         this.storeAuth(auth);
         return this.fetchUserInfo(auth);
+    }
+
+    public async getValidAuth(): Promise<DiscordAuth | null> {
+        const auth = appStorage.getDiscordAuth();
+        if (!auth) return null;
+        if (!isDiscordAuthExpired(auth)) return auth;
+        if (!auth.refreshToken) {
+            this.clearSession();
+            return null;
+        }
+        return this.refreshAuth();
+    }
+
+    public async refreshAuth(force = false): Promise<DiscordAuth> {
+        const auth = appStorage.getDiscordAuth();
+        if (!auth?.refreshToken) {
+            this.clearSession();
+            throw new Error('[DiscordAuth] No refresh token is available');
+        }
+        if (!force && !isDiscordAuthExpired(auth)) return auth;
+        if (this.refreshPromise) return this.refreshPromise;
+
+        this.refreshPromise = this.requestToken({
+            grantType: 'refresh_token',
+            refreshToken: auth.refreshToken
+        }).then((token) => {
+            const refreshed = createDiscordAuthFromTokenResponse(token, auth.state);
+            if (!refreshed) {
+                throw new Error('[DiscordAuth] Invalid refresh response');
+            }
+            this.storeAuth(refreshed);
+            return refreshed;
+        }).catch((error) => {
+            this.clearSession();
+            throw error;
+        }).finally(() => {
+            this.refreshPromise = null;
+        });
+
+        return this.refreshPromise;
+    }
+
+    private async requestToken(payload: Record<string, string>): Promise<DiscordTokenResponse> {
+        const response = await fetch(getApiUrl('/discord/oauth/token'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json() as {
+            success?: boolean;
+            data?: DiscordTokenResponse;
+            error?: string;
+        };
+        if (!response.ok || !data.success || !data.data) {
+            throw new DiscordApiError(
+                data.error ?? '[DiscordAuth] Failed to exchange Discord token',
+                response.status
+            );
+        }
+        return data.data;
     }
 
     public async fetchUserInfo(auth: DiscordAuth): Promise<DiscordUser> {
@@ -118,7 +208,12 @@ export class DiscordService {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ ...auth, queryType: 'user', theme: getInitialTheme() }),
+            body: JSON.stringify({
+                ...auth,
+                queryType: 'user',
+                theme: getInitialTheme(),
+                locale: getInitialLocale()
+            }),
         });
         const data = await userInfo.json() as { success?: boolean; data?: DiscordUser; error?: string };
         if (!userInfo.ok || !data?.success || !data.data) {
@@ -149,10 +244,13 @@ export class DiscordService {
         this.user.value = user;
     }
 
-    public updateStoredUserTheme(theme: AppTheme) {
+    public updateStoredUserPreferences(preferences: {
+        theme?: AppTheme;
+        locale?: AppLocale;
+    }) {
         const user = this.user.value;
         if (!user) return;
-        this.storeUser({ ...user, theme });
+        this.storeUser({ ...user, ...preferences });
     }
 
     protected storeAuth(auth: DiscordAuth) {
@@ -182,11 +280,17 @@ export class DiscordService {
         this.removeOauthState();
     }
 
-    private cleanOAuthFragment() {
+    private cleanOAuthCallback() {
+        const search = new URLSearchParams(window.location.search);
+        search.delete('code');
+        search.delete('state');
+        search.delete('error');
+        search.delete('error_description');
+        const remainingQuery = search.toString();
         window.history.replaceState(
             {},
             document.title,
-            `${window.location.pathname}${window.location.search}`
+            `${window.location.pathname}${remainingQuery ? `?${remainingQuery}` : ''}`
         );
     }
 
@@ -202,8 +306,7 @@ export class DiscordService {
         const auth = appStorage.getDiscordAuth();
         if (!auth) return null;
         if (isDiscordAuthExpired(auth)) {
-            console.info('[DiscordAuth] Stored token expired; login is required again');
-            this.clearSession();
+            console.info('[DiscordAuth] Stored token expired; refresh is required');
             return null;
         }
         return auth;

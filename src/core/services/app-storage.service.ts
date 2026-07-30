@@ -1,6 +1,7 @@
 import type { DiscordAuth, DiscordUser } from 'netlify/core/types/discord.types';
 import type { UserRole } from 'netlify/core/types/data.types';
 import { isAppTheme, type AppTheme } from 'netlify/core/types/theme.types';
+import { isAppLocale, type AppLocale } from 'netlify/core/types/locale.types';
 
 export const APP_STORAGE_KEY = 'rolz_global_state';
 
@@ -20,7 +21,7 @@ const LEGACY_STORAGE_KEYS = [
   LEGACY_CHAT_WIDTH_KEY,
 ];
 
-export type StoredLocale = 'en' | 'es' | 'fr' | 'de';
+export type StoredLocale = AppLocale;
 
 interface AppStorageState {
   version: typeof APP_STORAGE_VERSION;
@@ -72,10 +73,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isStoredLocale(value: unknown): value is StoredLocale {
-  return value === 'en' || value === 'es' || value === 'fr' || value === 'de';
-}
-
 function isUserRole(value: unknown): value is UserRole {
   return value === 'owner' || value === 'admin' || value === 'user';
 }
@@ -85,6 +82,7 @@ function isDiscordAuth(value: unknown): value is DiscordAuth {
   return (
     typeof value.tokenType === 'string' &&
     typeof value.accessToken === 'string' &&
+    (value.refreshToken === undefined || typeof value.refreshToken === 'string') &&
     typeof value.expiresIn === 'number' &&
     Number.isFinite(value.expiresIn) &&
     typeof value.expiresAt === 'number' &&
@@ -101,6 +99,7 @@ function isDiscordUser(value: unknown): value is DiscordUser {
     typeof value.username === 'string' &&
     typeof value.avatar === 'string' &&
     (value.theme === undefined || isAppTheme(value.theme)) &&
+    (value.locale === undefined || isAppLocale(value.locale)) &&
     (value.role === undefined || isUserRole(value.role))
   );
 }
@@ -118,7 +117,7 @@ function normalizeState(value: unknown): AppStorageState | null {
 
   const state = createDefaultState();
   state.theme = isAppTheme(value.theme) ? value.theme : null;
-  state.locale = isStoredLocale(value.locale) ? value.locale : null;
+  state.locale = isAppLocale(value.locale) ? value.locale : null;
 
   if (isRecord(value.discord)) {
     state.discord.user = isDiscordUser(value.discord.user) ? value.discord.user : null;
@@ -152,7 +151,7 @@ function migrateLegacyState(storage: Storage): AppStorageState {
   const oauthState = storage.getItem(LEGACY_DISCORD_OAUTH_STATE_KEY);
 
   state.theme = isAppTheme(theme) ? theme : null;
-  state.locale = isStoredLocale(locale) ? locale : null;
+  state.locale = isAppLocale(locale) ? locale : null;
   state.discord.user = isDiscordUser(discordUser) ? discordUser : null;
   state.discord.auth = isDiscordAuth(discordAuth) ? discordAuth : null;
   state.discord.oauthState = typeof oauthState === 'string' ? oauthState : null;

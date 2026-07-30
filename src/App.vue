@@ -12,7 +12,9 @@
 <script setup lang="ts">
 import { useAppTheme } from 'core/composables/useAppTheme';
 import AppNotifications from 'core/components/AppNotifications.component.vue';
+import { initializeLocaleSync } from 'modules/language-switcher/plugins/i18n.plugin';
 
 const { initializeThemeSync } = useAppTheme();
 initializeThemeSync();
+initializeLocaleSync();
 </script>

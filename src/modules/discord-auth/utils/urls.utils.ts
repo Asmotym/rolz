@@ -21,7 +21,7 @@ export const getRedirectUri = (): string => {
   }
   
   // Dynamic redirect URI
-  return `${location.origin}`
+  return window.location.origin
 }
 
 export const getApiUrl = (endpoint: string): string => {

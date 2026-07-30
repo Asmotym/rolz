@@ -3,6 +3,7 @@ import { DiscordClient } from "./client";
 import { getUser, insertUser, updateUser } from "../database/tables/users.table";
 import { createLogger } from "../utils/logger";
 import { normalizeTheme, type AppTheme } from "../types/theme.types";
+import { normalizeLocale, type AppLocale } from "../types/locale.types";
 import { BadRequestError } from '../errors/http-errors';
 import { publishUserProfileUpdate } from '../../realtime/room-action-events';
 
@@ -14,6 +15,7 @@ export type DiscordQueryType = 'user';
 export type DiscordQueryPayload = DiscordAuth & {
     queryType?: DiscordQueryType;
     theme?: AppTheme;
+    locale?: AppLocale;
 };
 
 export async function handleDiscordQuery(payload: DiscordQueryPayload) {
@@ -42,14 +44,16 @@ async function handleUserQuery(auth: DiscordAuth) {
     if (existingUser === undefined) {
         logger.info('User not found in database, creating new user');
         const theme = normalizeTheme((auth as DiscordQueryPayload).theme);
+        const locale = normalizeLocale((auth as DiscordQueryPayload).locale);
         await insertUser({
             discord_user_id: discordUser.id,
             username: discordUser.username,
             avatar: discordUser.avatar,
             theme,
+            locale,
         });
         const createdUser = await getUser(discordUser.id);
-        return { ...discordUser, theme, role: createdUser?.role ?? 'user' };
+        return { ...discordUser, theme, locale, role: createdUser?.role ?? 'user' };
     } else {
         logger.info('User found in database, updating user info');
         const profileChanged = existingUser.username !== discordUser.username
@@ -61,6 +65,11 @@ async function handleUserQuery(auth: DiscordAuth) {
         if (profileChanged) {
             await publishUserProfileUpdate(discordUser.id);
         }
-        return { ...discordUser, theme: normalizeTheme(existingUser.theme), role: existingUser.role ?? 'user' };
+        return {
+            ...discordUser,
+            theme: normalizeTheme(existingUser.theme),
+            locale: normalizeLocale(existingUser.locale),
+            role: existingUser.role ?? 'user'
+        };
     }
 }

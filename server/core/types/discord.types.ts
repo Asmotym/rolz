@@ -1,9 +1,11 @@
 import type { AppTheme } from './theme.types';
+import type { AppLocale } from './locale.types';
 import type { UserRole } from './data.types';
 
 export type DiscordAuth = {
     tokenType: string;
     accessToken: string;
+    refreshToken?: string;
     expiresIn: number;
     expiresAt: number;
     scope: string;
@@ -15,5 +17,6 @@ export interface DiscordUser {
     username: string;
     avatar: string;
     theme?: AppTheme;
+    locale?: AppLocale;
     role?: UserRole;
 }

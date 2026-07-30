@@ -24,6 +24,11 @@ Fill in the `.env` file with:
 - `VITE_REALTIME_URL` – Optional WebSocket base URL override; by default it is derived from `VITE_BACKEND_URL`
 - `VITE_PUBLIC_API_BASE_URL` – Public API base URL displayed in Settings → API (dev default: `http://localhost:4000/api`, production: `https://api.rolz.asmotym.fr`)
 - `VITE_API_DOCS_URL` – URL opened from Settings → API for the API documentation portal (default dev value: `http://localhost:6060`)
+- `VITE_DISCORD_CLIENT_ID` – Discord OAuth application ID embedded in the client
+- `VITE_DISCORD_REDIRECT_URI` – OAuth callback URL registered in the Discord developer portal
+- `DISCORD_CLIENT_ID` – Discord OAuth application ID used by the API (defaults to `VITE_DISCORD_CLIENT_ID`)
+- `DISCORD_CLIENT_SECRET` – Discord OAuth secret used only by the API for code exchange and token refresh
+- `DISCORD_REDIRECT_URI` – Server-side copy of the registered callback URL (defaults to `VITE_DISCORD_REDIRECT_URI`)
 
 ## Development
 

@@ -10,9 +10,9 @@ import { generateUserApiKey, getUserApiKey, revokeUserApiKey } from './services/
 import * as Sentry from '@sentry/node';
 import { query } from './core/database/client';
 import { ensureDatabaseSetup } from './core/database/schema';
-import { getUser } from './core/database/tables/users.table';
-import { updateUserTheme } from './core/database/tables/users.table';
+import { getUser, updateUserPreferences } from './core/database/tables/users.table';
 import { isAppTheme } from './core/types/theme.types';
+import { isAppLocale } from './core/types/locale.types';
 import { listAdminUsers, updateUserRole } from './services/admin.service';
 import { requireAdmin } from './services/roles.service';
 import {
@@ -143,6 +143,25 @@ async function requireRequesterId(req: Request, res: Response): Promise<string |
     return userId;
 }
 
+async function ensureAuthenticatedSameUser(
+    req: Request,
+    res: Response,
+    userId: string
+): Promise<boolean> {
+    const apiKeyUserId = res.locals.apiKeyUserId as string | undefined;
+    if (apiKeyUserId) {
+        return ensureSameUser(res, userId);
+    }
+
+    const requesterId = await requireRequesterId(req, res);
+    if (!requesterId) return false;
+    if (requesterId !== userId) {
+        sendErrorResponse(res, 403, 'Cannot access another user\'s preferences');
+        return false;
+    }
+    return true;
+}
+
 app.get('/api/users/:userId/api-key', async (req, res) => {
     const { userId } = req.params;
     if (!userId) {
@@ -210,7 +229,7 @@ app.get('/api/users/:userId/preferences', async (req, res) => {
         return sendErrorResponse(res, 400, 'User id is required');
     }
 
-    if (!ensureSameUser(res, userId)) {
+    if (!(await ensureAuthenticatedSameUser(req, res, userId))) {
         return;
     }
 
@@ -220,7 +239,13 @@ app.get('/api/users/:userId/preferences', async (req, res) => {
             return sendErrorResponse(res, 404, 'User not found');
         }
 
-        res.json({ success: true, data: { theme: user.theme ?? 'dark' } });
+        res.json({
+            success: true,
+            data: {
+                theme: user.theme ?? 'dark',
+                locale: user.locale ?? 'en'
+            }
+        });
     } catch (error) {
         respondWithServiceError(res, error, 'user_preferences.fetch');
     }
@@ -232,7 +257,7 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
         return sendErrorResponse(res, 400, 'User id is required');
     }
 
-    if (!ensureSameUser(res, userId)) {
+    if (!(await ensureAuthenticatedSameUser(req, res, userId))) {
         return;
     }
 
@@ -240,9 +265,17 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
         return sendErrorResponse(res, 400, 'Request body is required');
     }
 
-    const theme = (req.body as { theme?: unknown }).theme;
-    if (!isAppTheme(theme)) {
+    const body = req.body as { theme?: unknown; locale?: unknown };
+    const hasTheme = Object.prototype.hasOwnProperty.call(body, 'theme');
+    const hasLocale = Object.prototype.hasOwnProperty.call(body, 'locale');
+    if (!hasTheme && !hasLocale) {
+        return sendErrorResponse(res, 400, 'At least one preference is required');
+    }
+    if (hasTheme && !isAppTheme(body.theme)) {
         return sendErrorResponse(res, 400, 'Invalid theme preference');
+    }
+    if (hasLocale && !isAppLocale(body.locale)) {
+        return sendErrorResponse(res, 400, 'Invalid locale preference');
     }
 
     try {
@@ -251,10 +284,19 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
             return sendErrorResponse(res, 404, 'User not found');
         }
 
-        const savedTheme = await updateUserTheme(userId, theme);
-        res.json({ success: true, data: { theme: savedTheme } });
+        const preferences = await updateUserPreferences(userId, {
+            ...(hasTheme ? { theme: body.theme as 'dark' | 'light' } : {}),
+            ...(hasLocale ? { locale: body.locale as 'en' | 'es' | 'fr' | 'de' } : {})
+        });
+        if (!preferences) {
+            return sendErrorResponse(res, 404, 'User not found');
+        }
+        res.json({ success: true, data: preferences });
     } catch (error) {
-        respondWithServiceError(res, error, 'user_preferences.update', { theme });
+        respondWithServiceError(res, error, 'user_preferences.update', {
+            theme: hasTheme ? body.theme as string : undefined,
+            locale: hasLocale ? body.locale as string : undefined
+        });
     }
 });
 
@@ -531,6 +573,99 @@ app.get('/api/rooms/:roomId/members', async (req, res) => {
         res.json({ success: true, data: { roomId, members } });
     } catch (error) {
         respondWithServiceError(res, error, 'room.members.list', { roomId, userId });
+    }
+});
+
+app.post('/api/discord/oauth/token', async (req, res) => {
+    const clientId = (
+        process.env.DISCORD_CLIENT_ID
+        ?? process.env.VITE_DISCORD_CLIENT_ID
+    )?.trim();
+    const clientSecret = process.env.DISCORD_CLIENT_SECRET?.trim();
+    const configuredRedirectUri = (
+        process.env.DISCORD_REDIRECT_URI
+        ?? process.env.VITE_DISCORD_REDIRECT_URI
+    )?.trim();
+    const body = (req.body && typeof req.body === 'object' ? req.body : {}) as {
+        grantType?: unknown;
+        code?: unknown;
+        refreshToken?: unknown;
+        redirectUri?: unknown;
+    };
+
+    if (!clientId || !clientSecret) {
+        return sendErrorResponse(res, 503, 'Discord OAuth is not configured');
+    }
+
+    const params = new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret
+    });
+    if (body.grantType === 'authorization_code') {
+        if (
+            typeof body.code !== 'string'
+            || !body.code
+            || typeof body.redirectUri !== 'string'
+            || !body.redirectUri
+            || (configuredRedirectUri && body.redirectUri !== configuredRedirectUri)
+        ) {
+            return sendErrorResponse(res, 400, 'Invalid Discord authorization request');
+        }
+        params.set('grant_type', 'authorization_code');
+        params.set('code', body.code);
+        params.set('redirect_uri', body.redirectUri);
+    } else if (body.grantType === 'refresh_token') {
+        if (typeof body.refreshToken !== 'string' || !body.refreshToken) {
+            return sendErrorResponse(res, 400, 'A Discord refresh token is required');
+        }
+        params.set('grant_type', 'refresh_token');
+        params.set('refresh_token', body.refreshToken);
+    } else {
+        return sendErrorResponse(res, 400, 'Unsupported Discord OAuth grant');
+    }
+
+    try {
+        const tokenResponse = await fetch('https://discord.com/api/v10/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+        const token = await tokenResponse.json() as {
+            token_type?: unknown;
+            access_token?: unknown;
+            refresh_token?: unknown;
+            expires_in?: unknown;
+            scope?: unknown;
+        };
+        if (
+            !tokenResponse.ok
+            || typeof token.token_type !== 'string'
+            || typeof token.access_token !== 'string'
+            || typeof token.refresh_token !== 'string'
+            || typeof token.expires_in !== 'number'
+        ) {
+            addSafeBreadcrumb('http.client', 'Discord token exchange failed', {
+                provider: 'discord',
+                status: tokenResponse.status,
+                grantType: body.grantType
+            });
+            return sendErrorResponse(res, 401, 'Discord authentication could not be refreshed');
+        }
+        res.setHeader('Cache-Control', 'no-store');
+        return res.json({
+            success: true,
+            data: {
+                token_type: token.token_type,
+                access_token: token.access_token,
+                refresh_token: token.refresh_token,
+                expires_in: token.expires_in,
+                scope: typeof token.scope === 'string' ? token.scope : ''
+            }
+        });
+    } catch (error) {
+        return respondWithServiceError(res, error, 'discord.oauth.token', {
+            grantType: typeof body.grantType === 'string' ? body.grantType : undefined
+        });
     }
 });
 

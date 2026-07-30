@@ -30,6 +30,12 @@ services:
         SENTRY_ORG: ${SENTRY_ORG}
         SENTRY_PROJECT: ${SENTRY_PROJECT}
         SENTRY_RELEASE: ${SENTRY_RELEASE}
+        VITE_BACKEND_URL: https://api.rolz.asmotym.fr
+        VITE_PUBLIC_API_BASE_URL: https://api.rolz.asmotym.fr/api
+        VITE_API_DOCS_URL: https://docs.rolz.asmotym.fr
+        VITE_DISCORD_CLIENT_ID: ${VITE_DISCORD_CLIENT_ID}
+        VITE_DISCORD_REDIRECT_URI: ${VITE_DISCORD_REDIRECT_URI}
+        VITE_REALTIME_URL: ${VITE_REALTIME_URL:-}
       secrets:
         - sentry_auth_token
     image: rolz-all:latest
