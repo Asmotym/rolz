@@ -135,14 +135,20 @@
         />
       </v-col>
       <v-col v-if="previewVisible" cols="12" md="6" class="markdown-body-col">
-        <div class="preview" v-html="previewHtml"></div>
+        <div class="preview" v-stable-html="previewHtml"></div>
       </v-col>
     </v-row>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, type ComponentPublicInstance } from 'vue';
+import {
+  computed,
+  nextTick,
+  ref,
+  type ComponentPublicInstance,
+  type Directive,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Renderer, marked } from 'marked';
 import { hljs } from 'core/utils/markdown-highlight';
@@ -202,6 +208,48 @@ const markdownTextarea = ref<ComponentPublicInstance | null>(null);
 const previewVisible = ref(true);
 const selectedTextColor = ref('#93c5fd');
 const SAFE_COLOR_STYLE = /^color:\s*(?:#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})|rgb\(\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(?:25[0-5]|2[0-4]\d|1?\d?\d)\s*\))\s*;?$/;
+
+function updateStableHtml(element: HTMLElement, html: string) {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+
+  const currentImages = new Map<string, HTMLImageElement[]>();
+  for (const image of Array.from(element.querySelectorAll('img'))) {
+    const images = currentImages.get(image.src) ?? [];
+    images.push(image);
+    currentImages.set(image.src, images);
+  }
+
+  for (const nextImage of Array.from(template.content.querySelectorAll('img'))) {
+    const currentImage = currentImages.get(nextImage.src)?.shift();
+    if (!currentImage) continue;
+
+    for (const attribute of Array.from(currentImage.attributes)) {
+      if (attribute.name !== 'src' && !nextImage.hasAttribute(attribute.name)) {
+        currentImage.removeAttribute(attribute.name);
+      }
+    }
+    for (const attribute of Array.from(nextImage.attributes)) {
+      if (attribute.name !== 'src') {
+        currentImage.setAttribute(attribute.name, attribute.value);
+      }
+    }
+    nextImage.replaceWith(currentImage);
+  }
+
+  element.replaceChildren(template.content);
+}
+
+const vStableHtml: Directive<HTMLElement, string> = {
+  mounted(element, binding) {
+    updateStableHtml(element, binding.value);
+  },
+  updated(element, binding) {
+    if (binding.value !== binding.oldValue) {
+      updateStableHtml(element, binding.value);
+    }
+  },
+};
 
 function escapeHtml(value: string): string {
   return value
