@@ -67,7 +67,6 @@ const vutify = createVuetify({
     },
     defaults: {
         VBtn: {
-            rounded: 'lg',
             elevation: 0,
         },
 
@@ -135,6 +134,10 @@ const vutify = createVuetify({
 
         VTooltip: {
             location: 'top',
+        },
+
+        VExpansionPanels: {
+            bgColor: 'surface-variant',
         },
     },
 })

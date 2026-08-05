@@ -804,7 +804,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: col-resize;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(var(--v-theme-on-surface), 0.12);
   border-radius: 4px;
 }
 
@@ -812,13 +812,13 @@ onUnmounted(() => {
   width: 4px;
   height: 48px;
   border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.6);
+  background-color: rgba(var(--v-theme-on-surface), 0.42);
   transition: background-color 0.2s ease;
 }
 
 .resize-handle:hover .resize-grip,
 .chat-layout.is-resizing .resize-grip {
-  background-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(var(--v-theme-on-surface), 0.56);
 }
 
 .dice-section-content {

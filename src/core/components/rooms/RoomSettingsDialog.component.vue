@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="open" max-width="520">
+  <v-dialog v-model="open" max-width="640">
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">
         <span>{{ t('roomSettings.title') }}</span>
@@ -1455,7 +1455,7 @@ onUnmounted(() => {
 }
 
 .roll-awards-list-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.18);
   margin-bottom: 12px;
   padding-bottom: 12px;
 }
@@ -1481,7 +1481,7 @@ onUnmounted(() => {
 }
 
 .critical-rule-form {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--v-theme-outline), 0.18);
   border-radius: 12px;
   padding: 16px;
 }
@@ -1493,7 +1493,7 @@ onUnmounted(() => {
 }
 
 .critical-rule-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.18);
   margin-bottom: 12px;
   padding-bottom: 12px;
 }

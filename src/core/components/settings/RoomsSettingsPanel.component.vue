@@ -95,7 +95,7 @@
             </v-btn>
             <v-btn
               v-if="room.isCreator"
-              color="red"
+              color="error"
               size="small"
               variant="text"
               :loading="deletingRoomId === room.id"
@@ -126,7 +126,7 @@
               {{ formatDate(room.archivedAt) }}
             </div>
           </div>
-          <v-chip color="grey" size="small" variant="flat">
+          <v-chip size="small" variant="tonal">
             {{ t('settings.rooms.archivedLabel') }}
           </v-chip>
         </v-card-title>
@@ -160,7 +160,7 @@
             {{ t('common.cancel') }}
           </v-btn>
           <v-btn
-            color="red"
+            color="error"
             variant="flat"
             :loading="deletingRoomId === archiveDialogRoom?.id"
             :disabled="!archiveDialogRoom"

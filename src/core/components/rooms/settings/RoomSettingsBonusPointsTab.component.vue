@@ -80,7 +80,7 @@
         </div>
 
       <v-expansion-panels v-if="context.bonusPointsEnabled.value" v-model="context.bonusPointsPanelsOpen.value" variant="accordion">
-        <v-expansion-panel value="create" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
+        <v-expansion-panel value="create">
           <v-expansion-panel-title>
             {{ context.editingBonusRuleId.value ? context.t('bonusPoints.form.editTitle') : context.t('bonusPoints.form.createTitle') }}
           </v-expansion-panel-title>
@@ -174,7 +174,7 @@
           </v-expansion-panel-text>
         </v-expansion-panel>
 
-        <v-expansion-panel value="list" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
+        <v-expansion-panel value="list">
           <v-expansion-panel-title>
             <div class="d-flex align-center justify-space-between w-100 pr-4">
               <span>{{ context.t('bonusPoints.form.savedRules') }}</span>
@@ -298,18 +298,16 @@
 </template>
 
 <script setup lang="ts">
-import { useExpansionPanelTheme } from 'core/composables/useExpansionPanelTheme';
 
 defineProps<{
   context: any;
 }>();
 
-const { expansionPanelColor, expansionPanelBgColor } = useExpansionPanelTheme();
 </script>
 
 <style scoped>
 .bonus-points-form {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--v-theme-outline), 0.18);
   border-radius: 12px;
   padding: 16px;
 }
@@ -322,7 +320,7 @@ const { expansionPanelColor, expansionPanelBgColor } = useExpansionPanelTheme();
 }
 
 .bonus-rule-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.18);
   margin-bottom: 12px;
   padding-bottom: 12px;
 }
@@ -334,7 +332,7 @@ const { expansionPanelColor, expansionPanelBgColor } = useExpansionPanelTheme();
 }
 
 .bonus-balance-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.18);
   padding-bottom: 8px;
 }
 

@@ -27,7 +27,7 @@
       </div>
       <div v-else class="dice-message pa-3">
         <div class="d-flex align-center gap-2 mb-1">
-          <v-icon color="amber" class="mr-2">mdi-dice-multiple</v-icon>
+          <v-icon color="accent" class="mr-2">mdi-dice-multiple</v-icon>
           <span v-if="message.content" class="font-weight-medium">
             {{ t('messages.rolledWithDescription', {
               name: formatDisplayName(message.username, message.nickname, t('common.someone')),
@@ -161,11 +161,11 @@ function canUseBonusPointOnMessage(message: RoomMessage) {
 }
 
 .message-row.is-self .message-content {
-  --message-bg: rgba(103, 80, 164, 0.1);
+  --message-bg: rgba(var(--v-theme-primary), 0.1);
 }
 
 .message-content {
-  background-color: var(--message-bg, rgba(255, 255, 255, 0.05));
+  background-color: var(--message-bg, rgba(var(--v-theme-surface-variant), 0.45));
   border: 1px solid var(--message-border-color, transparent);
   border-radius: 12px;
   padding: 12px;
@@ -180,7 +180,7 @@ function canUseBonusPointOnMessage(message: RoomMessage) {
 }
 
 .dice-message {
-  background-color: var(--dice-message-bg, rgba(255, 193, 7, 0.08));
+  background-color: var(--dice-message-bg, rgba(var(--v-theme-accent), 0.08));
   border-radius: 12px;
 }
 </style>

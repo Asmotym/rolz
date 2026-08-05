@@ -217,7 +217,7 @@ function getMemberBonusPoints(userId: string): number {
 }
 
 .members-popover__item:not(:last-child) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.14);
 }
 
 .members-popover__name {
@@ -233,8 +233,8 @@ function getMemberBonusPoints(userId: string): number {
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 999px;
-  background-color: rgba(76, 175, 80, 0.15);
-  color: var(--v-theme-success, #4caf50);
+  background-color: rgba(var(--v-theme-success), 0.15);
+  color: rgb(var(--v-theme-success));
   font-weight: 600;
 }
 

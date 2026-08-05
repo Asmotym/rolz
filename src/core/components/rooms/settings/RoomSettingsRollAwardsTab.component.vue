@@ -160,7 +160,7 @@
       </v-alert>
       <template v-else>
         <v-expansion-panels v-model="context.rollAwardsPanelsOpen.value" variant="accordion">
-          <v-expansion-panel value="create" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
+          <v-expansion-panel value="create">
             <v-expansion-panel-title>{{ context.t('rollAwards.form.createTitle') }}</v-expansion-panel-title>
             <v-expansion-panel-text>
               <div class="text-caption text-medium-emphasis mb-3">
@@ -285,7 +285,7 @@
               </div>
             </v-expansion-panel-text>
           </v-expansion-panel>
-          <v-expansion-panel value="list" :color="expansionPanelColor" :bg-color="expansionPanelBgColor">
+          <v-expansion-panel value="list">
             <v-expansion-panel-title>
               <span>{{ context.t('rollAwards.form.existing') }}</span>
               <v-chip class="ml-2">{{ context.rollAwardsManager.awards.value.length }}</v-chip>
@@ -362,18 +362,16 @@
 </template>
 
 <script setup lang="ts">
-import { useExpansionPanelTheme } from 'core/composables/useExpansionPanelTheme';
 
 defineProps<{
   context: any;
 }>();
 
-const { expansionPanelColor, expansionPanelBgColor } = useExpansionPanelTheme();
 </script>
 
 <style scoped>
 .roll-awards-list-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--v-theme-outline), 0.18);
   margin-bottom: 12px;
   padding-bottom: 12px;
 }
