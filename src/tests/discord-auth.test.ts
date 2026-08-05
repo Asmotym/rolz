@@ -111,7 +111,7 @@ beforeEach(() => {
     });
     Object.defineProperty(globalThis, 'document', {
         configurable: true,
-        value: { title: 'Rolz' }
+        value: { title: 'Aventyr' }
     });
 });
 

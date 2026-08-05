@@ -1,7 +1,7 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: rolz-mysql
+    container_name: aventyr-mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -15,14 +15,14 @@ services:
     restart: unless-stopped
     networks:
       - proxy
-      - rolz-internal
+      - aventyr-internal
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 20
 
-  rolz:
+  aventyr:
     build:
       context: .
       target: runner
@@ -30,16 +30,16 @@ services:
         SENTRY_ORG: ${SENTRY_ORG}
         SENTRY_PROJECT: ${SENTRY_PROJECT}
         SENTRY_RELEASE: ${SENTRY_RELEASE}
-        VITE_BACKEND_URL: https://api.rolz.asmotym.fr
-        VITE_PUBLIC_API_BASE_URL: https://api.rolz.asmotym.fr/api
-        VITE_API_DOCS_URL: https://docs.rolz.asmotym.fr
+        VITE_BACKEND_URL: https://api.aventyr.io
+        VITE_PUBLIC_API_BASE_URL: https://api.aventyr.io/api
+        VITE_API_DOCS_URL: https://docs.aventyr.io
         VITE_DISCORD_CLIENT_ID: ${VITE_DISCORD_CLIENT_ID}
         VITE_DISCORD_REDIRECT_URI: ${VITE_DISCORD_REDIRECT_URI}
         VITE_REALTIME_URL: ${VITE_REALTIME_URL:-}
       secrets:
         - sentry_auth_token
-    image: rolz-all:latest
-    container_name: rolz-stack
+    image: aventyr-all:latest
+    container_name: aventyr-stack
     depends_on:
       mysql:
         condition: service_healthy
@@ -51,15 +51,15 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_PORT: 3306
-      ROLZ_DEV_MODE: "false"
+      AVENTYR_DEV_MODE: "false"
       NODE_ENV: production
       ENVIRONMENT: production
       BACKEND_PORT: 4000
       FRONTEND_PORT: 5173
-      FRONTEND_URL: https://rolz.asmotym.fr
-      VITE_BACKEND_URL: https://api.rolz.asmotym.fr
-      VITE_PUBLIC_API_BASE_URL: https://api.rolz.asmotym.fr/api
-      VITE_API_DOCS_URL: https://docs.rolz.asmotym.fr
+      FRONTEND_URL: https://aventyr.io
+      VITE_BACKEND_URL: https://api.aventyr.io
+      VITE_PUBLIC_API_BASE_URL: https://api.aventyr.io/api
+      VITE_API_DOCS_URL: https://docs.aventyr.io
       DATABASE_URL: ${DATABASE_URL}
       DATABASE_SSL: "false"
       SENTRY_RELEASE: ${SENTRY_RELEASE}
@@ -68,21 +68,21 @@ services:
     restart: unless-stopped
     networks:
       - proxy
-      - rolz-internal
+      - aventyr-internal
 
   api-docs:
     image: swaggerapi/swagger-ui:latest
-    container_name: rolz-api-docs
+    container_name: aventyr-api-docs
     environment:
       PORT: 6000
-      API_DOCS_BASE_URL: https://api.rolz.asmotym.fr/api
-      SWAGGER_JSON: /tmp/rolz-api.yaml
+      API_DOCS_BASE_URL: https://api.aventyr.io/api
+      SWAGGER_JSON: /tmp/aventyr-api.yaml
     command:
       - sh
       - -c
-      - sed "s|__API_BASE_URL__|$${API_DOCS_BASE_URL}|g" /openapi/rolz-api.template.yaml > /tmp/rolz-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
+      - sed "s|__API_BASE_URL__|$${API_DOCS_BASE_URL}|g" /openapi/aventyr-api.template.yaml > /tmp/aventyr-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
     volumes:
-      - ./docs/openapi.template.yaml:/openapi/rolz-api.template.yaml:ro
+      - ./docs/openapi.template.yaml:/openapi/aventyr-api.template.yaml:ro
     restart: unless-stopped
     networks:
       - proxy
@@ -97,5 +97,5 @@ secrets:
 networks:
   proxy:
     external: true
-  rolz-internal:
-    name: rolz-internal
+  aventyr-internal:
+    name: aventyr-internal

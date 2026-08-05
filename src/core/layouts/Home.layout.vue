@@ -39,10 +39,10 @@
           :title="t('home.not_logged_in_title')"
           :subtitle="t('home.not_logged_in_message')"
         >
-        <!-- Prepend Rolz icon -->
+        <!-- Prepend Aventyr icon -->
         <template v-slot:prepend>
           <img
-            src="/rolz-d100.svg"
+            src="/aventyr-d100.svg"
             :alt="t('common.logoAlt')"
             class="header-logo"
           />

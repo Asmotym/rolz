@@ -1,9 +1,9 @@
 {
   "common": {
-    "title": "Rolz",
+    "title": "Aventyr",
     "disconnect": "Abmelden",
     "cancel": "Abbrechen",
-    "logoAlt": "Rolz-d100-Symbol",
+    "logoAlt": "Aventyr-d100-Symbol",
     "openStatusPage": "Statusseite öffnen",
     "reportIssue": "Fehler melden oder Funktion anfragen",
     "openNavigationMenu": "Navigationsmenü öffnen",
@@ -22,7 +22,7 @@
     "settings": "Einstellungen"
   },
   "home": {
-    "not_logged_in_title": "Willkommen bei Rolz!",
+    "not_logged_in_title": "Willkommen bei Aventyr!",
     "not_logged_in_message": "Das einfache und leistungsstarke Tool für RPG-Würfe.",
     "not_logged_in_text_intro": "Mit diesem Tool kannst du Räume erstellen oder beitreten, mit voll funktionsfähigem Chat und Würfelfunktion.",
     "not_logged_in_text_login": "Du musst angemeldet sein, um es zu nutzen. Klicke unten auf den Button und melde dich mit deinem Discord-Konto an."
@@ -45,7 +45,7 @@
       "copyError": "Discord-ID konnte nicht kopiert werden. Bitte manuell kopieren."
     },
     "api": {
-      "description": "Erstelle einen persönlichen API-Schlüssel, um Rolz in eigene Skripte, Dashboards oder Bots einzubinden.",
+      "description": "Erstelle einen persönlichen API-Schlüssel, um Aventyr in eigene Skripte, Dashboards oder Bots einzubinden.",
       "apiKeyLabel": "API-Schlüssel",
       "emptyPlaceholder": "Noch kein Schlüssel",
       "emptyState": "Erzeuge einen Schlüssel, um die API zu verwenden.",

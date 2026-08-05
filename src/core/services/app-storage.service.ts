@@ -3,7 +3,8 @@ import type { UserRole } from 'netlify/core/types/data.types';
 import { isAppTheme, type AppTheme } from 'netlify/core/types/theme.types';
 import { isAppLocale, type AppLocale } from 'netlify/core/types/locale.types';
 
-export const APP_STORAGE_KEY = 'rolz_global_state';
+export const APP_STORAGE_KEY = 'aventyr_global_state';
+const LEGACY_APP_STORAGE_KEY = 'rolz_global_state';
 
 const APP_STORAGE_VERSION = 1;
 const LEGACY_THEME_KEY = 'rolz_theme';
@@ -13,6 +14,7 @@ const LEGACY_DISCORD_AUTH_KEY = 'discord_auth';
 const LEGACY_DISCORD_OAUTH_STATE_KEY = 'discord_oauth_state';
 const LEGACY_CHAT_WIDTH_KEY = 'rolz-room-chat-width';
 const LEGACY_STORAGE_KEYS = [
+  LEGACY_APP_STORAGE_KEY,
   LEGACY_THEME_KEY,
   LEGACY_LOCALE_KEY,
   LEGACY_DISCORD_USER_KEY,
@@ -178,10 +180,15 @@ function readState(): AppStorageState {
   const parsedState = rawState ? parseStoredState(rawState) : null;
 
   if (parsedState?.state) {
+    removeLegacyKeys(storage);
     return parsedState.state;
   }
 
-  const nextState = parsedState?.corrupt ? createDefaultState() : migrateLegacyState(storage);
+  const rawLegacyState = rawState ? null : storage.getItem(LEGACY_APP_STORAGE_KEY);
+  const parsedLegacyState = rawLegacyState ? parseStoredState(rawLegacyState) : null;
+  const nextState = parsedState?.corrupt || parsedLegacyState?.corrupt
+    ? createDefaultState()
+    : parsedLegacyState?.state ?? migrateLegacyState(storage);
   writeState(storage, nextState);
   removeLegacyKeys(storage);
   return nextState;

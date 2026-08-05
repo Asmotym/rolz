@@ -11,9 +11,9 @@ fi
 
 MYSQL_PORT="${MYSQL_PORT:-3306}"
 MYSQL_HOST="${MYSQL_HOST:-mysql}"
-MYSQL_USER_NAME="${MYSQL_USER:-rolz}"
-MYSQL_USER_PASSWORD="${MYSQL_PASSWORD:-rolz}"
-MYSQL_DATABASE_NAME="${MYSQL_DATABASE:-rolz}"
+MYSQL_USER_NAME="${MYSQL_USER:-aventyr}"
+MYSQL_USER_PASSWORD="${MYSQL_PASSWORD:-aventyr}"
+MYSQL_DATABASE_NAME="${MYSQL_DATABASE:-aventyr}"
 backend_pid=""
 frontend_pid=""
 
@@ -26,8 +26,8 @@ is_truthy() {
 }
 
 DEV_MODE=false
-if is_truthy "${ROLZ_DEV_MODE:-}"; then
-  DEV_MODE=true
+if [[ -n "${AVENTYR_DEV_MODE:-}" ]]; then
+  is_truthy "$AVENTYR_DEV_MODE" && DEV_MODE=true
 elif [[ "${NODE_ENV:-}" != "" ]] && [[ "${NODE_ENV,,}" == "development" ]]; then
   DEV_MODE=true
 fi

@@ -4,7 +4,7 @@
       <v-app-bar-title class="header-brand ml-2">
         <div class="main-title">
           <img
-            src="/rolz-d100.svg"
+            src="/aventyr-d100.svg"
             :alt="t('common.logoAlt')"
             class="header-logo"
           />
@@ -165,6 +165,7 @@ import DiscordAuth from 'modules/discord-auth/components/DiscordAuth.vue';
 import { useCurrentUserRole } from 'core/composables/useCurrentUserRole';
 
 const STATUS_LINK = 'https://uptime.asmotym.fr/status/all';
+// Keep this legacy permalink until the external Notion page is renamed.
 const BUG_REPORT_LINK = 'https://asmotym.notion.site/Rolz-Issues-Reporting-2c31392001c0804f84cefb9726da1bdf';
 
 const { t } = useI18n();

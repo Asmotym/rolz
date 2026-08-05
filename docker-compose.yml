@@ -1,14 +1,14 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: rolz-mysql
+    container_name: aventyr-mysql
     env_file:
       - .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-rolz}
-      MYSQL_USER: ${MYSQL_USER:-rolz}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rolz}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-aventyr}
+      MYSQL_USER: ${MYSQL_USER:-aventyr}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-aventyr}
       MYSQL_TCP_PORT: ${MYSQL_PORT:-3306}
     ports:
       - "${MYSQL_PORT:-3306}:3306"
@@ -31,7 +31,7 @@ services:
     ports:
       - "8080:80"
 
-  rolz:
+  aventyr:
     build:
       context: .
       target: runner
@@ -42,29 +42,29 @@ services:
         VITE_DISCORD_CLIENT_ID: ${VITE_DISCORD_CLIENT_ID}
         VITE_DISCORD_REDIRECT_URI: ${VITE_DISCORD_REDIRECT_URI:-http://localhost:5173}
         VITE_REALTIME_URL: ${VITE_REALTIME_URL:-}
-    image: rolz-all:latest
-    container_name: rolz-stack
+    image: aventyr-all:latest
+    container_name: aventyr-stack
     depends_on:
       - mysql
     env_file:
       - .env
     environment:
-      MYSQL_USER: ${MYSQL_USER:-rolz}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rolz}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-rolz}
+      MYSQL_USER: ${MYSQL_USER:-aventyr}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-aventyr}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-aventyr}
       MYSQL_PORT: ${MYSQL_PORT:-3306}
-      ROLZ_DEV_MODE: ${ROLZ_DEV_MODE:-true}
+      AVENTYR_DEV_MODE: ${AVENTYR_DEV_MODE:-true}
       BACKEND_PORT: ${BACKEND_PORT:-4000}
       FRONTEND_PORT: ${FRONTEND_PORT:-5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
-      VITE_PUBLIC_API_BASE_URL: ${VITE_PUBLIC_API_BASE_URL:-https://api.rolz.asmotym.fr}
+      VITE_PUBLIC_API_BASE_URL: ${VITE_PUBLIC_API_BASE_URL:-https://api.aventyr.io/api}
       VITE_API_DOCS_URL: ${VITE_API_DOCS_URL:-http://localhost:6060}
-      DATABASE_URL: ${DATABASE_URL:-mysql://rolz:rolz@mysql:3306/rolz}
+      DATABASE_URL: ${DATABASE_URL:-mysql://aventyr:aventyr@mysql:3306/aventyr}
       DATABASE_SSL: ${DATABASE_SSL:-false}
-      VIRTUAL_HOST: rolz.asmotym.fr
+      VIRTUAL_HOST: aventyr.io
       VIRTUAL_PORT: 5173
-      LETSENCRYPT_HOST: rolz.asmotym.fr
+      LETSENCRYPT_HOST: aventyr.io
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
@@ -90,23 +90,23 @@ services:
 
   api-docs:
     image: swaggerapi/swagger-ui:latest
-    container_name: rolz-api-docs
+    container_name: aventyr-api-docs
     environment:
       PORT: 6000
-      API_DOCS_BASE_URL: ${API_DOCS_BASE_URL:-https://api.rolz.asmotym.fr}
-      SWAGGER_JSON: /tmp/rolz-api.yaml
-      VIRTUAL_HOST: docs.rolz.asmotym.fr
+      API_DOCS_BASE_URL: ${API_DOCS_BASE_URL:-https://api.aventyr.io/api}
+      SWAGGER_JSON: /tmp/aventyr-api.yaml
+      VIRTUAL_HOST: docs.aventyr.io
       VIRTUAL_PORT: 6000
-      LETSENCRYPT_HOST: docs.rolz.asmotym.fr
+      LETSENCRYPT_HOST: docs.aventyr.io
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
     command:
       - sh
       - -c
-      - sed "s|__API_BASE_URL__|$${API_DOCS_BASE_URL}|g" /openapi/rolz-api.template.yaml > /tmp/rolz-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
+      - sed "s|__API_BASE_URL__|$${API_DOCS_BASE_URL}|g" /openapi/aventyr-api.template.yaml > /tmp/aventyr-api.yaml && /docker-entrypoint.sh nginx -g 'daemon off;'
     ports:
       - "${API_DOCS_HOST_PORT:-6060}:6000"
     volumes:
-      - ./docs/openapi.template.yaml:/openapi/rolz-api.template.yaml:ro
+      - ./docs/openapi.template.yaml:/openapi/aventyr-api.template.yaml:ro
     restart: unless-stopped
 
 volumes:

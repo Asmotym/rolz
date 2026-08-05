@@ -7,7 +7,7 @@ test('sanitizeForSentry redacts credentials, bounds values, and handles circular
         Authorization: 'Bearer very-secret-token',
         nested: {
             password: 'hunter2',
-            database_url: 'mysql://user:pass@db.example/rolz',
+            database_url: 'mysql://user:pass@db.example/aventyr',
             safeId: 'room-123'
         },
         long: 'x'.repeat(700),

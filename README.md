@@ -1,4 +1,4 @@
-# Rolz
+# Aventyr
 
 Vue 3 + Vite front-end with a standalone Express API that manages rooms, Discord authentication, and MySQL-backed persistence.
 
@@ -22,7 +22,7 @@ Fill in the `.env` file with:
 - `FRONTEND_URL` – Comma-separated origins that should be allowed to call the API  
 - `VITE_BACKEND_URL` – Base URL the Vue app uses when talking to the API
 - `VITE_REALTIME_URL` – Optional WebSocket base URL override; by default it is derived from `VITE_BACKEND_URL`
-- `VITE_PUBLIC_API_BASE_URL` – Public API base URL displayed in Settings → API (dev default: `http://localhost:4000/api`, production: `https://api.rolz.asmotym.fr`)
+- `VITE_PUBLIC_API_BASE_URL` – Public API base URL displayed in Settings → API (dev default: `http://localhost:4000/api`, production: `https://api.aventyr.io/api`)
 - `VITE_API_DOCS_URL` – URL opened from Settings → API for the API documentation portal (default dev value: `http://localhost:6060`)
 - `VITE_DISCORD_CLIENT_ID` – Discord OAuth application ID embedded in the client
 - `VITE_DISCORD_REDIRECT_URI` – OAuth callback URL registered in the Discord developer portal
@@ -88,21 +88,29 @@ heartbeat can keep active room connections alive.
 To run the frontend, backend, and an embedded MySQL instance inside a single container:
 
 ```bash
-docker build -t rolz-all .
+docker build -t aventyr-all .
 docker run --rm -it \
   -p 5173:5173 \
   -p 4000:4000 \
   -p 3306:3306 \
-  rolz-all
+  aventyr-all
 ```
 
 Environment variables such as `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, `BACKEND_PORT`, and `FRONTEND_PORT` can be overridden at `docker run` time. Set `DATABASE_SSL=false` for the bundled MySQL instance; hosted providers should use `true`. Persistent database storage can be mapped by binding `/var/lib/mysql` to a local volume.
 
 ### Live reload inside Docker
 
-`docker compose up --build` now gives you a full dev stack without rebuilding the image for every edit. The compose file bind-mounts the source tree and sets `ROLZ_DEV_MODE=true` so the entrypoint runs `npm run server:dev` and `npm run dev -- --host 0.0.0.0`. Any change under `server/`, `src/`, or the Vite/TypeScript configs is picked up instantly. If you want the previous production-style behavior, set `ROLZ_DEV_MODE=false` (or unset it) before starting Compose.
+`docker compose up --build` now gives you a full dev stack without rebuilding the image for every edit. The compose file bind-mounts the source tree and sets `AVENTYR_DEV_MODE=true` so the entrypoint runs `npm run server:dev` and `npm run dev -- --host 0.0.0.0`. Any change under `server/`, `src/`, or the Vite/TypeScript configs is picked up instantly. If you want the previous production-style behavior, set `AVENTYR_DEV_MODE=false`. `ROLZ_DEV_MODE` remains a deprecated fallback for existing automation.
 
-The API documentation portal listens on port `6000` inside the container for reverse-proxy routing, but it is published locally at `http://localhost:6060` by default because browsers block direct navigation to port `6000`. Override `API_DOCS_HOST_PORT` to publish Swagger UI on another local port, and set `VITE_API_DOCS_URL` to the URL the frontend should open from Settings → API. Swagger renders its server URL from `API_DOCS_BASE_URL`; use `http://localhost:4000/api` for local development and omit the variable, or set it to `https://api.rolz.asmotym.fr`, in production.
+The API documentation portal listens on port `6000` inside the container for reverse-proxy routing, but it is published locally at `http://localhost:6060` by default because browsers block direct navigation to port `6000`. Override `API_DOCS_HOST_PORT` to publish Swagger UI on another local port, and set `VITE_API_DOCS_URL` to the URL the frontend should open from Settings → API. Swagger renders its server URL from `API_DOCS_BASE_URL`; use `http://localhost:4000/api` for local development and omit the variable, or set it to `https://api.aventyr.io/api`, in production.
+
+Existing production installations may keep their current MySQL database/user, Compose volume, and deployment directory by retaining those values in `.env`. `docker/backup-db.sh` now derives the environment file from the repository location and accepts `BACKUP_DIR`, `ENV_FILE`, and `MYSQL_CONTAINER` overrides, so an existing `/opt/stacks/rolz` deployment does not need to move during the rename.
+
+### Aventyr production cutover
+
+Before updating the checkout, stop the running production stack with its current Compose file so the former service and container names do not remain as orphans. Provision DNS, certificates, and reverse-proxy routes for `aventyr.io`, `api.aventyr.io`, and `docs.aventyr.io`; old-domain redirects, if wanted, belong in that external proxy layer. Keep the existing `MYSQL_*` and `DATABASE_URL` values to reuse production data, update the Discord OAuth application and redirect environment variables for `https://aventyr.io`, then deploy the renamed Compose stack.
+
+After deployment, verify `https://api.aventyr.io/health`, `https://api.aventyr.io/ready`, Discord login, room WebSocket upgrades, an existing API key, and that `https://docs.aventyr.io` sends example requests to `https://api.aventyr.io/api`.
 
 ### Make targets
 

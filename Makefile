@@ -3,8 +3,8 @@ SHELL := /bin/bash
 COMPOSE ?= docker compose
 COMPOSE_FILE ?= docker-compose.yml
 PROD_COMPOSE_FILE ?= docker-compose.prod.yml
-SERVICES ?= rolz api-docs phpmyadmin
-PROD_SERVICES ?= rolz api-docs
+SERVICES ?= aventyr api-docs phpmyadmin
+PROD_SERVICES ?= aventyr api-docs
 ENV_FILE ?= .env
 SENTRY_AUTH_TOKEN_FILE ?= .secrets/sentry-auth-token
 SENTRY_AUTH_TOKEN_FROM_ENV := $(strip $(SENTRY_AUTH_TOKEN))
@@ -23,16 +23,16 @@ export SENTRY_RELEASE
 
 FRONTEND_PORT ?= 5173
 MYSQL_PORT ?= 3306
-MYSQL_USER ?= rolz
-MYSQL_PASSWORD ?= rolz
-MYSQL_DATABASE ?= rolz
+MYSQL_USER ?= aventyr
+MYSQL_PASSWORD ?= aventyr
+MYSQL_DATABASE ?= aventyr
 WATCH_DATABASE_URL ?= mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@127.0.0.1:$(MYSQL_PORT)/$(MYSQL_DATABASE)
 
 ENV_FILE_FLAG := $(shell test -f $(ENV_FILE) && echo "--env-file $(ENV_FILE)")
 COMPOSE_CMD := $(COMPOSE) -f $(COMPOSE_FILE) $(ENV_FILE_FLAG)
 PROD_COMPOSE_CMD := $(COMPOSE) -f $(PROD_COMPOSE_FILE) $(ENV_FILE_FLAG)
 
-.PHONY: build run up update update-repo prune-images stop logs clean shell down deploy prod-preflight prod-up prod-down prod-logs
+.PHONY: build run up up-aventyr update update-repo prune-images stop logs clean shell down deploy prod-preflight prod-up prod-down prod-logs
 
 build:
 	$(COMPOSE_CMD) build $(SERVICE)
@@ -87,8 +87,8 @@ up-api-docs:
 up-phpmyadmin:
 	$(COMPOSE_CMD) up -d --build phpmyadmin
 
-up-rolz:
-	$(COMPOSE_CMD) up -d --build rolz
+up-aventyr:
+	$(COMPOSE_CMD) up -d --build aventyr
 
 stop:
 	-$(COMPOSE_CMD) stop $(SERVICE)

@@ -1,9 +1,9 @@
 {
   "common": {
-    "title": "Rolz",
+    "title": "Aventyr",
     "disconnect": "Logout",
     "cancel": "Cancel",
-    "logoAlt": "Rolz d100 icon",
+    "logoAlt": "Aventyr d100 icon",
     "openStatusPage": "Open status page",
     "reportIssue": "Report bug or request feature",
     "openNavigationMenu": "Open navigation menu",
@@ -25,7 +25,7 @@
     "administration": "Administration"
   },
   "home": {
-    "not_logged_in_title": "Welcome to Rolz!",
+    "not_logged_in_title": "Welcome to Aventyr!",
     "not_logged_in_message": "The simple and powerful RPG dice rolling tool.",
     "not_logged_in_text_intro": "This tool lets you create or join rooms with fully functional chat and dice rolling.",
     "not_logged_in_text_login": "You must be connected to use it. Click the button below to connect with your Discord account.",
@@ -129,7 +129,7 @@
       "copyError": "Unable to copy the Discord ID. Please copy it manually."
     },
     "api": {
-      "description": "Generate a personal API key to integrate Rolz with custom scripts, dashboards, or bots.",
+      "description": "Generate a personal API key to integrate Aventyr with custom scripts, dashboards, or bots.",
       "apiKeyLabel": "API Key",
       "emptyPlaceholder": "No key generated yet",
       "emptyState": "Generate a key to start using the API.",

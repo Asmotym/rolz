@@ -36,7 +36,7 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-db_name="${MYSQL_DATABASE:-rolz}"
+db_name="${MYSQL_DATABASE:-aventyr}"
 db_host="${MYSQL_HOST:-mysql}"
 db_port="${MYSQL_PORT:-3306}"
 

@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host,
       port,
-      allowedHosts: env.ENVIRONMENT === 'development' ? [url] : ['rolz.asmotym.fr', 'staging.rolz.asmotym.fr']
+      allowedHosts: env.ENVIRONMENT === 'development' ? [url] : ['aventyr.io']
     },
     resolve: {
       alias: {
@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     preview: {
-      allowedHosts: ['rolz.asmotym.fr', 'staging.rolz.asmotym.fr']
+      allowedHosts: ['aventyr.io']
     }
   };
 });

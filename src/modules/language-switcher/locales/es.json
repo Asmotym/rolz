@@ -1,9 +1,9 @@
 {
   "common": {
-    "title": "Rolz",
+    "title": "Aventyr",
     "disconnect": "Cerrar sesión",
     "cancel": "Cancelar",
-    "logoAlt": "Icono d100 de Rolz",
+    "logoAlt": "Icono d100 de Aventyr",
     "openStatusPage": "Abrir página de estado",
     "reportIssue": "Informar de un error o pedir una función",
     "openNavigationMenu": "Abrir el menú de navegación",
@@ -22,7 +22,7 @@
     "settings": "Configuración"
   },
   "home": {
-    "not_logged_in_title": "¡Bienvenido a Rolz!",
+    "not_logged_in_title": "¡Bienvenido a Aventyr!",
     "not_logged_in_message": "La herramienta sencilla y potente para tirar dados de rol.",
     "not_logged_in_text_intro": "Esta herramienta te permite crear o unirte a salas con un chat totalmente funcional y tiradas de dados.",
     "not_logged_in_text_login": "Debes estar conectado para usarla. Pulsa el botón de abajo para conectarte con tu cuenta de Discord."
@@ -45,7 +45,7 @@
       "copyError": "No se pudo copiar el ID de Discord. Cópialo manualmente."
     },
     "api": {
-      "description": "Genera una clave API personal para integrar Rolz con tus scripts, paneles o bots.",
+      "description": "Genera una clave API personal para integrar Aventyr con tus scripts, paneles o bots.",
       "apiKeyLabel": "Clave API",
       "emptyPlaceholder": "Aún no hay clave",
       "emptyState": "Genera una clave para empezar a usar la API.",

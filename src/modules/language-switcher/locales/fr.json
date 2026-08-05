@@ -1,9 +1,9 @@
 {
   "common": {
-    "title": "Rolz",
+    "title": "Aventyr",
     "disconnect": "Se déconnecter",
     "cancel": "Annuler",
-    "logoAlt": "Icône d100 de Rolz",
+    "logoAlt": "Icône d100 d’Aventyr",
     "openStatusPage": "Ouvrir la page de statut",
     "reportIssue": "Signaler un bug ou demander une fonctionnalité",
     "openNavigationMenu": "Ouvrir le menu de navigation",
@@ -22,7 +22,7 @@
     "settings": "Paramètres"
   },
   "home": {
-    "not_logged_in_title": "Bienvenue sur Rolz !",
+    "not_logged_in_title": "Bienvenue sur Aventyr !",
     "not_logged_in_message": "L'outil simple et puissant pour lancer vos dés de JDR.",
     "not_logged_in_text_intro": "Cet outil vous permet de créer ou de rejoindre des salles avec un chat entièrement fonctionnel et des lancers de dés intégrés.",
     "not_logged_in_text_login": "Vous devez être connecté pour l'utiliser. Cliquez sur le bouton ci-dessous pour vous connecter avec votre compte Discord."
@@ -45,7 +45,7 @@
       "copyError": "Impossible de copier l’identifiant Discord. Copiez-le manuellement."
     },
     "api": {
-      "description": "Générez une clé API personnelle pour intégrer Rolz avec vos scripts, tableaux de bord ou bots.",
+      "description": "Générez une clé API personnelle pour intégrer Aventyr avec vos scripts, tableaux de bord ou bots.",
       "apiKeyLabel": "Clé API",
       "emptyPlaceholder": "Aucune clé générée",
       "emptyState": "Générez une clé pour commencer à utiliser l'API.",
