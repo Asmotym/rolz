@@ -1,4 +1,4 @@
-import type { AppTheme } from './theme.types';
+import type { AppTheme, AppThemeStyle } from './theme.types';
 import type { AppLocale } from './locale.types';
 import type { ArticleStatus, UserRole } from './data.types';
 
@@ -7,6 +7,7 @@ export interface DatabaseUser {
     username: string;
     avatar: string;
     theme?: AppTheme;
+    theme_style?: AppThemeStyle;
     locale?: AppLocale;
     role?: UserRole;
     rights_update?: boolean;

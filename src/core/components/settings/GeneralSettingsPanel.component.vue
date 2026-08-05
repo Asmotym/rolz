@@ -11,17 +11,6 @@
       {{ feedback.message }}
     </v-alert>
 
-    <v-alert
-      v-if="roomsStore.errorMessage"
-      type="error"
-      variant="tonal"
-      class="mb-4"
-      closable
-      @click:close="roomsStore.setError(null)"
-    >
-      {{ roomsStore.errorMessage }}
-    </v-alert>
-
     <v-card variant="tonal" class="profile-card mb-6">
       <v-card-title class="text-h6">
         {{ t('settings.general.profileTitle') }}
@@ -86,23 +75,74 @@
       </v-card-text>
     </v-card>
 
-    <RoomsList
-      :rooms="activeRooms"
-      :selected-room-id="roomsStore.selectedRoomId"
-      :loading="roomsStore.loadingRooms"
-      @select="openRoom"
-    />
+    <v-card variant="tonal" class="theme-card">
+      <v-card-title class="text-h6">
+        {{ t('settings.general.themeTitle') }}
+      </v-card-title>
+      <v-card-text>
+        <p class="text-body-2 text-medium-emphasis mb-4">
+          {{ t('settings.general.themeDescription') }}
+        </p>
+        <v-select
+          class="theme-select"
+          :model-value="currentThemeStyle"
+          :items="themeOptions"
+          :label="t('settings.general.themeLabel')"
+          :loading="savingTheme"
+          item-title="title"
+          item-value="value"
+          hide-details="auto"
+          @update:model-value="changeThemeStyle"
+        >
+          <template #selection="{ item }">
+            <span class="theme-selection-label">{{ item.title }}</span>
+            <div class="theme-color-preview theme-color-preview--selection" aria-hidden="true">
+              <span
+                v-for="(color, index) in item.raw.colors"
+                :key="index"
+                class="theme-color-preview__stripe"
+                :style="{ backgroundColor: color }"
+              />
+            </div>
+          </template>
+
+          <template #item="{ props: itemProps, item }">
+            <v-list-item v-bind="itemProps" class="theme-option">
+              <div class="theme-color-preview theme-color-preview--option" aria-hidden="true">
+                <span
+                  v-for="(color, index) in item.raw.colors"
+                  :key="index"
+                  class="theme-color-preview__stripe"
+                  :style="{ backgroundColor: color }"
+                />
+              </div>
+            </v-list-item>
+          </template>
+        </v-select>
+      </v-card-text>
+    </v-card>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { isNavigationFailure, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import RoomsList from 'core/components/rooms/RoomsList.component.vue';
-import { HomeRoutes } from 'core/routes';
-import { useRoomsStore } from 'core/stores/rooms.store';
+import { useAppTheme } from 'core/composables/useAppTheme';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
+import { APP_THEME_STYLES, type AppThemeStyle } from 'netlify/core/types/theme.types';
+import type { ThemeDefinition } from 'vuetify';
+import {
+  aventyrDark,
+  aventyrLight,
+  arcaneDark,
+  arcaneLight,
+  explorerDark,
+  explorerLight,
+  kingdomDark,
+  kingdomLight,
+  campfireDark,
+  campfireLight,
+} from '../../../themes';
 
 type FeedbackState = {
   type: 'success' | 'error';
@@ -110,15 +150,29 @@ type FeedbackState = {
 } | null;
 
 const { t } = useI18n();
-const router = useRouter();
-const roomsStore = useRoomsStore();
 const discordService = DiscordService.getInstance();
+const { currentTheme, currentThemeStyle, setThemeStyle } = useAppTheme();
 
 const currentUser = computed(() => discordService.user.value);
-const activeRooms = computed(() => roomsStore.rooms.filter((room) => !room.isArchived));
 const showDiscordId = ref(false);
 const copying = ref(false);
+const savingTheme = ref(false);
 const feedback = ref<FeedbackState>(null);
+const themeDefinitions: Record<AppThemeStyle, { dark: ThemeDefinition; light: ThemeDefinition }> = {
+  aventyr: { dark: aventyrDark, light: aventyrLight },
+  arcane: { dark: arcaneDark, light: arcaneLight },
+  explorer: { dark: explorerDark, light: explorerLight },
+  kingdom: { dark: kingdomDark, light: kingdomLight },
+  campfire: { dark: campfireDark, light: campfireLight },
+};
+const themeOptions = computed(() => APP_THEME_STYLES.map((value) => {
+  const colors = themeDefinitions[value][currentTheme.value].colors!;
+  return {
+    title: value.charAt(0).toUpperCase() + value.slice(1),
+    value,
+    colors: [colors.primary, colors.secondary, colors.accent],
+  };
+}));
 
 async function copyDiscordId() {
   const discordId = currentUser.value?.id;
@@ -158,26 +212,21 @@ async function copyDiscordId() {
   }
 }
 
-function openRoom(roomId: string) {
-  router.push({ name: HomeRoutes.Room, params: { roomId } }).catch((error) => {
-    if (!isNavigationFailure(error)) {
-      console.error(error);
-    }
-  });
+async function changeThemeStyle(themeStyle: AppThemeStyle) {
+  savingTheme.value = true;
+  try {
+    await setThemeStyle(themeStyle);
+  } finally {
+    savingTheme.value = false;
+  }
 }
 
 watch(
   () => currentUser.value?.id,
-  async (userId) => {
+  () => {
     showDiscordId.value = false;
     feedback.value = null;
-    try {
-      await roomsStore.fetchRooms(userId ?? null);
-    } catch (error) {
-      console.error(error);
-    }
   },
-  { immediate: true }
 );
 </script>
 
@@ -200,6 +249,60 @@ watch(
   flex: 1 1 auto;
   min-width: 0;
   max-width: 640px;
+}
+
+.theme-select :deep(.v-field) {
+  position: relative;
+}
+
+.theme-selection-label {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-color-preview {
+  display: flex;
+  overflow: hidden;
+  pointer-events: none;
+  clip-path: polygon(
+    14px 0,
+    100% 0,
+    calc(100% - 14px) 100%,
+    0 100%
+  );
+}
+
+.theme-color-preview__stripe {
+  flex: 1 0 42%;
+  height: 100%;
+  margin-inline: -3%;
+  transform: skewX(-15deg);
+}
+
+.theme-color-preview--selection {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 40px;
+  width: min(34%, 180px);
+}
+
+.theme-option {
+  position: relative;
+  overflow: hidden;
+  min-height: 52px;
+}
+
+.theme-option :deep(.v-list-item__content) {
+  position: static;
+  z-index: 1;
+  padding-inline-end: min(38%, 190px);
+}
+
+.theme-color-preview--option {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 20px;
+  width: min(36%, 180px);
 }
 
 @media (max-width: 600px) {

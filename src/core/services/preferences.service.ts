@@ -1,9 +1,10 @@
 import { apiRequest } from 'core/services/api.service';
 import type { AppLocale } from 'netlify/core/types/locale.types';
-import type { AppTheme } from 'netlify/core/types/theme.types';
+import type { AppTheme, AppThemeStyle } from 'netlify/core/types/theme.types';
 
 export interface UserPreferences {
   theme: AppTheme;
+  themeStyle: AppThemeStyle;
   locale: AppLocale;
 }
 

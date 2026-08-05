@@ -42,7 +42,10 @@
       "hideDiscordId": "Masquer l’identifiant Discord",
       "copyDiscordId": "Copier l’identifiant Discord",
       "copySuccess": "Identifiant Discord copié dans le presse-papiers.",
-      "copyError": "Impossible de copier l’identifiant Discord. Copiez-le manuellement."
+      "copyError": "Impossible de copier l’identifiant Discord. Copiez-le manuellement.",
+      "themeTitle": "Apparence",
+      "themeLabel": "Thème",
+      "themeDescription": "Choisissez le style visuel d’Aventyr. Votre réglage clair ou sombre reste inchangé."
     },
     "api": {
       "description": "Générez une clé API personnelle pour intégrer Aventyr avec vos scripts, tableaux de bord ou bots.",

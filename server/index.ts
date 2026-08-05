@@ -11,7 +11,7 @@ import * as Sentry from '@sentry/node';
 import { query } from './core/database/client';
 import { ensureDatabaseSetup } from './core/database/schema';
 import { getUser, updateUserPreferences } from './core/database/tables/users.table';
-import { isAppTheme } from './core/types/theme.types';
+import { isAppTheme, isAppThemeStyle, type AppTheme, type AppThemeStyle } from './core/types/theme.types';
 import { isAppLocale } from './core/types/locale.types';
 import { listAdminUsers, updateUserRole } from './services/admin.service';
 import { requireAdmin } from './services/roles.service';
@@ -243,6 +243,7 @@ app.get('/api/users/:userId/preferences', async (req, res) => {
             success: true,
             data: {
                 theme: user.theme ?? 'dark',
+                themeStyle: user.theme_style ?? 'aventyr',
                 locale: user.locale ?? 'en'
             }
         });
@@ -265,14 +266,18 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
         return sendErrorResponse(res, 400, 'Request body is required');
     }
 
-    const body = req.body as { theme?: unknown; locale?: unknown };
+    const body = req.body as { theme?: unknown; themeStyle?: unknown; locale?: unknown };
     const hasTheme = Object.prototype.hasOwnProperty.call(body, 'theme');
+    const hasThemeStyle = Object.prototype.hasOwnProperty.call(body, 'themeStyle');
     const hasLocale = Object.prototype.hasOwnProperty.call(body, 'locale');
-    if (!hasTheme && !hasLocale) {
+    if (!hasTheme && !hasThemeStyle && !hasLocale) {
         return sendErrorResponse(res, 400, 'At least one preference is required');
     }
     if (hasTheme && !isAppTheme(body.theme)) {
         return sendErrorResponse(res, 400, 'Invalid theme preference');
+    }
+    if (hasThemeStyle && !isAppThemeStyle(body.themeStyle)) {
+        return sendErrorResponse(res, 400, 'Invalid theme style preference');
     }
     if (hasLocale && !isAppLocale(body.locale)) {
         return sendErrorResponse(res, 400, 'Invalid locale preference');
@@ -285,7 +290,8 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
         }
 
         const preferences = await updateUserPreferences(userId, {
-            ...(hasTheme ? { theme: body.theme as 'dark' | 'light' } : {}),
+            ...(hasTheme ? { theme: body.theme as AppTheme } : {}),
+            ...(hasThemeStyle ? { themeStyle: body.themeStyle as AppThemeStyle } : {}),
             ...(hasLocale ? { locale: body.locale as 'en' | 'es' | 'fr' | 'de' } : {})
         });
         if (!preferences) {
@@ -295,6 +301,7 @@ app.patch('/api/users/:userId/preferences', async (req, res) => {
     } catch (error) {
         respondWithServiceError(res, error, 'user_preferences.update', {
             theme: hasTheme ? body.theme as string : undefined,
+            themeStyle: hasThemeStyle ? body.themeStyle as string : undefined,
             locale: hasLocale ? body.locale as string : undefined
         });
     }

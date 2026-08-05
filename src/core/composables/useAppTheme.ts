@@ -5,15 +5,19 @@ import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import {
   applyTheme,
   getAppliedTheme,
+  getAppliedThemeStyle,
   getInitialTheme,
+  getInitialThemeStyle,
   getStoredTheme,
+  getStoredThemeStyle,
   saveTheme,
+  saveThemeStyle,
 } from 'core/services/theme.service';
 import {
   fetchUserPreferences,
   saveUserPreferences,
 } from 'core/services/preferences.service';
-import type { AppTheme } from 'netlify/core/types/theme.types';
+import type { AppTheme, AppThemeStyle } from 'netlify/core/types/theme.types';
 
 export function useAppTheme() {
   const vuetifyTheme = useTheme();
@@ -21,6 +25,7 @@ export function useAppTheme() {
   const { t } = useI18n();
 
   const currentTheme = computed(() => getAppliedTheme(vuetifyTheme));
+  const currentThemeStyle = computed(() => getAppliedThemeStyle(vuetifyTheme));
   const nextTheme = computed<AppTheme>(() => currentTheme.value === 'dark' ? 'light' : 'dark');
   const switchTitle = computed(() => (
     nextTheme.value === 'dark'
@@ -29,28 +34,39 @@ export function useAppTheme() {
   ));
 
   function setLocalTheme(theme: AppTheme): void {
-    applyTheme(vuetifyTheme, theme);
+    applyTheme(vuetifyTheme, theme, currentThemeStyle.value);
     saveTheme(theme);
   }
 
+  function setLocalThemeStyle(themeStyle: AppThemeStyle): void {
+    applyTheme(vuetifyTheme, currentTheme.value, themeStyle);
+    saveThemeStyle(themeStyle);
+  }
+
   function initializeThemeSync(): void {
-    applyTheme(vuetifyTheme, getInitialTheme());
+    applyTheme(vuetifyTheme, getInitialTheme(), getInitialThemeStyle());
 
     watch(
       () => [
         discordService.user.value?.id,
         discordService.user.value?.theme,
+        discordService.user.value?.themeStyle,
       ] as const,
-      async ([userId, databaseTheme]) => {
+      async ([userId, databaseTheme, databaseThemeStyle]) => {
         if (!userId) return;
 
         const localTheme = getStoredTheme();
+        const localThemeStyle = getStoredThemeStyle();
         if (localTheme) {
-          applyTheme(vuetifyTheme, localTheme);
+          const resolvedThemeStyle = databaseThemeStyle ?? localThemeStyle ?? getInitialThemeStyle();
+          applyTheme(vuetifyTheme, localTheme, resolvedThemeStyle);
+          saveThemeStyle(resolvedThemeStyle);
           if (databaseTheme !== localTheme) {
             try {
               const saved = await saveUserPreferences(userId, { theme: localTheme });
-              discordService.updateStoredUserPreferences({ theme: saved.theme });
+              discordService.updateStoredUserPreferences({
+                theme: saved.theme,
+              });
             } catch (error) {
               console.error(t('theme.saveError'), error);
             }
@@ -61,7 +77,11 @@ export function useAppTheme() {
         try {
           const databasePreferences = await fetchUserPreferences(userId);
           const latestLocalTheme = getStoredTheme();
-          setLocalTheme(latestLocalTheme ?? databasePreferences.theme);
+          const resolvedTheme = latestLocalTheme ?? databasePreferences.theme;
+          const resolvedThemeStyle = databasePreferences.themeStyle;
+          applyTheme(vuetifyTheme, resolvedTheme, resolvedThemeStyle);
+          saveTheme(resolvedTheme);
+          saveThemeStyle(resolvedThemeStyle);
         } catch (error) {
           console.error(t('theme.saveError'), error);
         }
@@ -84,16 +104,32 @@ export function useAppTheme() {
     }
   }
 
+  async function setThemeStyle(themeStyle: AppThemeStyle): Promise<void> {
+    setLocalThemeStyle(themeStyle);
+
+    const user = discordService.user.value;
+    if (!user) return;
+
+    try {
+      const saved = await saveUserPreferences(user.id, { themeStyle });
+      discordService.updateStoredUserPreferences({ themeStyle: saved.themeStyle });
+    } catch (error) {
+      console.error(t('theme.saveError'), error);
+    }
+  }
+
   async function toggleTheme(): Promise<void> {
     await setTheme(nextTheme.value);
   }
 
   return {
     currentTheme,
+    currentThemeStyle,
     nextTheme,
     switchTitle,
     initializeThemeSync,
     setTheme,
+    setThemeStyle,
     toggleTheme,
   };
 }

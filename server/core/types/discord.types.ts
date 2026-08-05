@@ -1,4 +1,4 @@
-import type { AppTheme } from './theme.types';
+import type { AppTheme, AppThemeStyle } from './theme.types';
 import type { AppLocale } from './locale.types';
 import type { UserRole } from './data.types';
 
@@ -17,6 +17,7 @@ export interface DiscordUser {
     username: string;
     avatar: string;
     theme?: AppTheme;
+    themeStyle?: AppThemeStyle;
     locale?: AppLocale;
     role?: UserRole;
 }

@@ -126,7 +126,10 @@
       "hideDiscordId": "Hide Discord ID",
       "copyDiscordId": "Copy Discord ID",
       "copySuccess": "Discord ID copied to clipboard.",
-      "copyError": "Unable to copy the Discord ID. Please copy it manually."
+      "copyError": "Unable to copy the Discord ID. Please copy it manually.",
+      "themeTitle": "Appearance",
+      "themeLabel": "Theme",
+      "themeDescription": "Choose the visual style used across Aventyr. Your light or dark mode setting stays unchanged."
     },
     "api": {
       "description": "Generate a personal API key to integrate Aventyr with custom scripts, dashboards, or bots.",

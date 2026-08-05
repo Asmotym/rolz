@@ -78,6 +78,7 @@ async function createTables(): Promise<void> {
             username VARCHAR(191) NOT NULL,
             avatar TEXT NOT NULL,
             theme VARCHAR(16) NOT NULL DEFAULT 'dark',
+            theme_style VARCHAR(16) NOT NULL DEFAULT 'aventyr',
             locale VARCHAR(8) NOT NULL DEFAULT 'en',
             role VARCHAR(16) NOT NULL DEFAULT 'user',
             rights_update TINYINT(1) DEFAULT 0,
@@ -368,6 +369,15 @@ async function ensureAllColumnsCreated(): Promise<void> {
         await query(`
             ALTER TABLE users
             ADD COLUMN locale VARCHAR(8) NOT NULL DEFAULT 'en' AFTER theme
+        `);
+    }
+
+    if (!(await columnExists('users', 'theme_style'))) {
+        logger.info('Creating missing "theme_style" column in "users" table...');
+
+        await query(`
+            ALTER TABLE users
+            ADD COLUMN theme_style VARCHAR(16) NOT NULL DEFAULT 'aventyr' AFTER theme
         `);
     }
 

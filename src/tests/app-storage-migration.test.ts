@@ -88,3 +88,11 @@ test('a valid Aventyr state takes precedence and cleans up stale Rolz state', ()
   assert.equal(appStorage.getTheme(), 'light');
   assert.equal(storage.getItem('rolz_global_state'), null);
 });
+
+test('stores the selected theme style alongside the light or dark preference', () => {
+  appStorage.setTheme('light');
+  appStorage.setThemeStyle('explorer');
+
+  assert.equal(appStorage.getTheme(), 'light');
+  assert.equal(appStorage.getThemeStyle(), 'explorer');
+});

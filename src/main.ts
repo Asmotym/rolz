@@ -9,7 +9,8 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import i18n from 'modules/language-switcher/plugins/i18n.plugin'
 import store from 'core/plugins/store.plugin'
-import { getInitialTheme } from 'core/services/theme.service'
+import { getInitialVuetifyTheme } from 'core/services/theme.service'
+import * as themes from './themes'
 
 const vutify = createVuetify({
     components,
@@ -18,8 +19,124 @@ const vutify = createVuetify({
         defaultSet: 'mdi',
     },
     theme: {
-        defaultTheme: getInitialTheme(),
-    }
+        defaultTheme: getInitialVuetifyTheme(),
+        themes: {
+            aventyrDark: themes.aventyrDark,
+            aventyrLight: themes.aventyrLight,
+            arcaneDark: themes.arcaneDark,
+            arcaneLight: themes.arcaneLight,
+            explorerDark: themes.explorerDark,
+            explorerLight: themes.explorerLight,
+            kingdomDark: themes.kingdomDark,
+            kingdomLight: themes.kingdomLight,
+            campfireDark: themes.campfireDark,
+            campfireLight: themes.campfireLight,
+        },
+        /*
+        * Vuetify will generate:
+        *
+        * bg-primary-lighten-1
+        * bg-primary-darken-1
+        * text-accent-lighten-2
+        * text-success-darken-2
+        * etc.
+        */
+        variations: {
+            colors: [
+                'primary',
+                'secondary',
+                'accent',
+                'success',
+                'warning',
+                'error',
+                'info',
+
+                'arcane',
+                'mana',
+                'forest',
+                'moss',
+                'royal',
+                'crown',
+                'ember',
+                'flame',
+            ],
+
+            lighten: 2,
+            darken: 2,
+        },
+    },
+    defaults: {
+        VBtn: {
+            rounded: 'lg',
+            elevation: 0,
+        },
+
+        VCard: {
+            rounded: 'lg',
+            elevation: 1,
+        },
+
+        VDialog: {
+            maxWidth: 700,
+        },
+
+        VMenu: {
+            offset: 8,
+        },
+
+        VTextField: {
+            variant: 'outlined',
+            density: 'comfortable',
+            color: 'primary',
+        },
+
+        VTextarea: {
+            variant: 'outlined',
+            density: 'comfortable',
+            color: 'primary',
+        },
+
+        VSelect: {
+            variant: 'outlined',
+            density: 'comfortable',
+            color: 'primary',
+        },
+
+        VAutocomplete: {
+            variant: 'outlined',
+            density: 'comfortable',
+            color: 'primary',
+        },
+
+        VCheckbox: {
+            color: 'primary',
+        },
+
+        VRadio: {
+            color: 'primary',
+        },
+
+        VSwitch: {
+            color: 'primary',
+            inset: true,
+        },
+
+        VSlider: {
+            color: 'primary',
+        },
+
+        VProgressCircular: {
+            color: 'primary',
+        },
+
+        VProgressLinear: {
+            color: 'primary',
+        },
+
+        VTooltip: {
+            location: 'top',
+        },
+    },
 })
 
 const app = createApp(App)

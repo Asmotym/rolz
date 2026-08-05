@@ -42,7 +42,10 @@
       "hideDiscordId": "Discord-ID ausblenden",
       "copyDiscordId": "Discord-ID kopieren",
       "copySuccess": "Discord-ID wurde in die Zwischenablage kopiert.",
-      "copyError": "Discord-ID konnte nicht kopiert werden. Bitte manuell kopieren."
+      "copyError": "Discord-ID konnte nicht kopiert werden. Bitte manuell kopieren.",
+      "themeTitle": "Darstellung",
+      "themeLabel": "Theme",
+      "themeDescription": "Wähle den visuellen Stil von Aventyr. Deine Hell- oder Dunkelmodus-Einstellung bleibt unverändert."
     },
     "api": {
       "description": "Erstelle einen persönlichen API-Schlüssel, um Aventyr in eigene Skripte, Dashboards oder Bots einzubinden.",

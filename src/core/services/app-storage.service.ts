@@ -1,6 +1,11 @@
 import type { DiscordAuth, DiscordUser } from 'netlify/core/types/discord.types';
 import type { UserRole } from 'netlify/core/types/data.types';
-import { isAppTheme, type AppTheme } from 'netlify/core/types/theme.types';
+import {
+  isAppTheme,
+  isAppThemeStyle,
+  type AppTheme,
+  type AppThemeStyle,
+} from 'netlify/core/types/theme.types';
 import { isAppLocale, type AppLocale } from 'netlify/core/types/locale.types';
 
 export const APP_STORAGE_KEY = 'aventyr_global_state';
@@ -28,6 +33,7 @@ export type StoredLocale = AppLocale;
 interface AppStorageState {
   version: typeof APP_STORAGE_VERSION;
   theme: AppTheme | null;
+  themeStyle: AppThemeStyle | null;
   locale: StoredLocale | null;
   discord: {
     user: DiscordUser | null;
@@ -45,6 +51,7 @@ function createDefaultState(): AppStorageState {
   return {
     version: APP_STORAGE_VERSION,
     theme: null,
+    themeStyle: null,
     locale: null,
     discord: {
       user: null,
@@ -101,6 +108,7 @@ function isDiscordUser(value: unknown): value is DiscordUser {
     typeof value.username === 'string' &&
     typeof value.avatar === 'string' &&
     (value.theme === undefined || isAppTheme(value.theme)) &&
+    (value.themeStyle === undefined || isAppThemeStyle(value.themeStyle)) &&
     (value.locale === undefined || isAppLocale(value.locale)) &&
     (value.role === undefined || isUserRole(value.role))
   );
@@ -119,6 +127,7 @@ function normalizeState(value: unknown): AppStorageState | null {
 
   const state = createDefaultState();
   state.theme = isAppTheme(value.theme) ? value.theme : null;
+  state.themeStyle = isAppThemeStyle(value.themeStyle) ? value.themeStyle : null;
   state.locale = isAppLocale(value.locale) ? value.locale : null;
 
   if (isRecord(value.discord)) {
@@ -208,6 +217,12 @@ export const appStorage = {
   },
   setTheme(theme: AppTheme): void {
     updateState((state) => ({ ...state, theme }));
+  },
+  getThemeStyle(): AppThemeStyle | null {
+    return readState().themeStyle;
+  },
+  setThemeStyle(themeStyle: AppThemeStyle): void {
+    updateState((state) => ({ ...state, themeStyle }));
   },
   getLocale(): StoredLocale | null {
     return readState().locale;

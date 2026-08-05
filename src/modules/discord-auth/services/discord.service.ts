@@ -1,9 +1,9 @@
 import type { DiscordAuth, DiscordUser } from "netlify/core/types/discord.types";
 import { getApiUrl, getRedirectUri } from "modules/discord-auth/utils/urls.utils";
 import { ref, type Ref } from 'vue';
-import { getInitialTheme } from 'core/services/theme.service';
+import { getInitialTheme, getInitialThemeStyle } from 'core/services/theme.service';
 import { getInitialLocale } from 'core/services/locale.service';
-import type { AppTheme } from 'netlify/core/types/theme.types';
+import type { AppTheme, AppThemeStyle } from 'netlify/core/types/theme.types';
 import type { AppLocale } from 'netlify/core/types/locale.types';
 import { appStorage } from 'core/services/app-storage.service';
 import {
@@ -212,6 +212,7 @@ export class DiscordService {
                 ...auth,
                 queryType: 'user',
                 theme: getInitialTheme(),
+                themeStyle: getInitialThemeStyle(),
                 locale: getInitialLocale()
             }),
         });
@@ -246,6 +247,7 @@ export class DiscordService {
 
     public updateStoredUserPreferences(preferences: {
         theme?: AppTheme;
+        themeStyle?: AppThemeStyle;
         locale?: AppLocale;
     }) {
         const user = this.user.value;

@@ -1,4 +1,11 @@
-import { isAppTheme, normalizeTheme, type AppTheme } from 'netlify/core/types/theme.types';
+import {
+  isAppTheme,
+  isAppThemeStyle,
+  normalizeTheme,
+  normalizeThemeStyle,
+  type AppTheme,
+  type AppThemeStyle,
+} from 'netlify/core/types/theme.types';
 import { appStorage } from 'core/services/app-storage.service';
 
 type ThemeTarget = {
@@ -17,6 +24,13 @@ export function getStoredTheme(): AppTheme | null {
   return isAppTheme(storedTheme) ? storedTheme : null;
 }
 
+export function getStoredThemeStyle(): AppThemeStyle | null {
+  if (typeof window === 'undefined') return null;
+
+  const storedThemeStyle = appStorage.getThemeStyle();
+  return isAppThemeStyle(storedThemeStyle) ? storedThemeStyle : null;
+}
+
 export function detectPreferredTheme(): AppTheme {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return 'dark';
@@ -29,15 +43,44 @@ export function getInitialTheme(): AppTheme {
   return getStoredTheme() ?? detectPreferredTheme();
 }
 
+export function getInitialThemeStyle(): AppThemeStyle {
+  return getStoredThemeStyle() ?? 'aventyr';
+}
+
+export function getVuetifyThemeName(style: AppThemeStyle, theme: AppTheme): string {
+  return `${style}${theme === 'dark' ? 'Dark' : 'Light'}`;
+}
+
+export function getInitialVuetifyTheme(): string {
+  return getVuetifyThemeName(getInitialThemeStyle(), getInitialTheme());
+}
+
 export function saveTheme(theme: AppTheme): void {
   if (typeof window === 'undefined') return;
   appStorage.setTheme(theme);
 }
 
-export function applyTheme(themeTarget: ThemeTarget, theme: AppTheme): void {
-  themeTarget.change(theme);
+export function saveThemeStyle(themeStyle: AppThemeStyle): void {
+  if (typeof window === 'undefined') return;
+  appStorage.setThemeStyle(themeStyle);
+}
+
+export function applyTheme(
+  themeTarget: ThemeTarget,
+  theme: AppTheme,
+  style: AppThemeStyle = getAppliedThemeStyle(themeTarget)
+): void {
+  themeTarget.change(getVuetifyThemeName(style, theme));
 }
 
 export function getAppliedTheme(themeTarget: ThemeTarget): AppTheme {
-  return normalizeTheme(themeTarget.global.name.value, getInitialTheme());
+  const name = themeTarget.global.name.value;
+  if (name.endsWith('Dark')) return 'dark';
+  if (name.endsWith('Light')) return 'light';
+  return normalizeTheme(name, getInitialTheme());
+}
+
+export function getAppliedThemeStyle(themeTarget: ThemeTarget): AppThemeStyle {
+  const name = themeTarget.global.name.value.replace(/(?:Dark|Light)$/, '');
+  return normalizeThemeStyle(name, getInitialThemeStyle());
 }
