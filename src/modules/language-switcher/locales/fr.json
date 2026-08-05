@@ -193,6 +193,19 @@
       "disconnected": "Hors ligne"
     }
   },
+  "roomDevTools": {
+    "open": "Ouvrir les outils de test de salle",
+    "title": "Outils de test de salle",
+    "devOnly": "Développement uniquement. Ces actions créent de vrais messages dans la salle au nom d’un autre membre.",
+    "noOtherMembers": "Ajoutez un autre membre à cette salle pour tester les interactions.",
+    "actAs": "Agir en tant que membre",
+    "messageTitle": "Envoyer un message",
+    "messageLabel": "Message",
+    "sendMessage": "Envoyer en tant que membre",
+    "diceTitle": "Lancer des dés",
+    "rollDice": "Lancer en tant que membre",
+    "invalidDice": "Saisissez une notation de dé valide, par exemple 1d20+3."
+  },
   "messages": {
     "rolled": "{name} a lancé {notation}",
     "rolledWithDescription": "{name} a lancé {notation} ({description})",

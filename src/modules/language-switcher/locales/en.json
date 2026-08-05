@@ -274,6 +274,19 @@
       "disconnected": "Offline"
     }
   },
+  "roomDevTools": {
+    "open": "Open room test tools",
+    "title": "Room test tools",
+    "devOnly": "Development only. These actions create real room messages while acting as another member.",
+    "noOtherMembers": "Add another member to this room before testing interactions.",
+    "actAs": "Act as member",
+    "messageTitle": "Send a message",
+    "messageLabel": "Message",
+    "sendMessage": "Send as member",
+    "diceTitle": "Roll dice",
+    "rollDice": "Roll as member",
+    "invalidDice": "Enter a valid dice notation, such as 1d20+3."
+  },
   "messages": {
     "rolled": "{name} rolled {notation}",
     "rolledWithDescription": "{name} rolled {notation} ({description})",

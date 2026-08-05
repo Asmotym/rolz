@@ -193,6 +193,19 @@
       "disconnected": "Offline"
     }
   },
+  "roomDevTools": {
+    "open": "Raum-Testwerkzeuge öffnen",
+    "title": "Raum-Testwerkzeuge",
+    "devOnly": "Nur für die Entwicklung. Diese Aktionen erstellen echte Raumnachrichten im Namen eines anderen Mitglieds.",
+    "noOtherMembers": "Füge diesem Raum ein weiteres Mitglied hinzu, um Interaktionen zu testen.",
+    "actAs": "Handeln als Mitglied",
+    "messageTitle": "Nachricht senden",
+    "messageLabel": "Nachricht",
+    "sendMessage": "Als Mitglied senden",
+    "diceTitle": "Würfeln",
+    "rollDice": "Als Mitglied würfeln",
+    "invalidDice": "Gib eine gültige Würfelschreibweise ein, zum Beispiel 1d20+3."
+  },
   "messages": {
     "rolled": "{name} würfelte {notation}",
     "rolledWithDescription": "{name} würfelte {notation} ({description})",

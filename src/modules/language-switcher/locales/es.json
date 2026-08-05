@@ -193,6 +193,19 @@
       "disconnected": "Sin conexión"
     }
   },
+  "roomDevTools": {
+    "open": "Abrir herramientas de prueba de sala",
+    "title": "Herramientas de prueba de sala",
+    "devOnly": "Solo para desarrollo. Estas acciones crean mensajes reales en la sala en nombre de otro miembro.",
+    "noOtherMembers": "Añade otro miembro a esta sala para probar las interacciones.",
+    "actAs": "Actuar como miembro",
+    "messageTitle": "Enviar un mensaje",
+    "messageLabel": "Mensaje",
+    "sendMessage": "Enviar como miembro",
+    "diceTitle": "Tirar dados",
+    "rollDice": "Tirar como miembro",
+    "invalidDice": "Introduce una notación de dados válida, como 1d20+3."
+  },
   "messages": {
     "rolled": "{name} tiró {notation}",
     "rolledWithDescription": "{name} tiró {notation} ({description})",

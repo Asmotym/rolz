@@ -40,6 +40,8 @@
               :current-user="currentUser"
               @send-message="handleSendMessage"
               @send-dice="handleDiceRoll"
+              @send-message-as="handleSendMessageAs"
+              @send-dice-as="handleDiceRollAs"
               @use-bonus-point="handleUseBonusPointOnRoll"
               @load-older="handleLoadOlderMessages"
               @trim-history="handleTrimMessages"
@@ -262,6 +264,39 @@ async function handleDiceRoll(roll: DiceRoll, skipBonusPointRules = false) {
   } catch (error) {
     console.error(error);
   }
+}
+
+async function handleSendMessageAs(userId: string, content: string) {
+  if (!import.meta.env.DEV || !roomsStore.selectedRoomId || !isOtherRoomMember(userId)) return;
+  const trimmed = content.trim();
+  if (!trimmed) return;
+  try {
+    await roomsStore.sendChatMessage({
+      roomId: roomsStore.selectedRoomId,
+      userId,
+      content: trimmed,
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function handleDiceRollAs(userId: string, roll: DiceRoll, skipBonusPointRules = false) {
+  if (!import.meta.env.DEV || !roomsStore.selectedRoomId || !isOtherRoomMember(userId)) return;
+  try {
+    await roomsStore.sendDiceRoll({
+      roomId: roomsStore.selectedRoomId,
+      userId,
+      roll,
+      skipBonusPointRules,
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function isOtherRoomMember(userId: string) {
+  return userId !== currentUser.value?.id && roomsStore.members.some((member) => member.userId === userId);
 }
 
 async function handleUseBonusPointOnRoll(message: RoomMessage) {

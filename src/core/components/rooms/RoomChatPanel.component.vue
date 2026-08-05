@@ -28,6 +28,16 @@
           </div>
         </div>
         <div class="d-flex align-center ga-2">
+          <v-btn
+            v-if="isDev"
+            icon="mdi-test-tube"
+            variant="tonal"
+            color="warning"
+            :disabled="!room || !currentUser"
+            :title="t('roomDevTools.open')"
+            :aria-label="t('roomDevTools.open')"
+            @click="devTestPanelOpen = true"
+          />
           <v-tooltip v-if="bonusPointsEnabled" location="bottom">
             <template #activator="{ props: tooltipProps }">
               <v-chip
@@ -280,10 +290,20 @@
     :current-user="currentUser"
     :initial-tab="settingsPanelTab"
   />
+  <RoomDevTestPanel
+    v-if="isDev"
+    v-model:open="devTestPanelOpen"
+    :members="roomsStore.members"
+    :current-user-id="currentUser?.id ?? null"
+    :sending="sending"
+    :bonus-points-enabled="bonusPointsEnabled"
+    @send-message="sendMessageAs"
+    @send-dice="sendDiceAs"
+  />
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDisplay } from 'vuetify';
@@ -312,6 +332,10 @@ type InfiniteScrollStatus = 'ok' | 'empty' | 'loading' | 'error';
 type InfiniteScrollDone = (status: InfiniteScrollStatus) => void;
 type InfiniteScrollResettable = { reset?: (side?: InfiniteScrollSide) => void };
 const isBrowser = typeof window !== 'undefined';
+const isDev = import.meta.env.DEV;
+const RoomDevTestPanel = isDev
+  ? defineAsyncComponent(() => import('./RoomDevTestPanel.component.vue'))
+  : null;
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -341,6 +365,8 @@ const realtimeIndicator = computed(() => {
 const emit = defineEmits<{
   (event: 'send-message', message: string, skipBonusPointRules: boolean): void;
   (event: 'send-dice', roll: DiceRoll, skipBonusPointRules: boolean): void;
+  (event: 'send-message-as', userId: string, message: string): void;
+  (event: 'send-dice-as', userId: string, roll: DiceRoll, skipBonusPointRules: boolean): void;
   (event: 'use-bonus-point', message: RoomMessage): void;
   (event: 'load-older'): void;
   (event: 'trim-history'): void;
@@ -356,6 +382,7 @@ const layoutBounds = ref<{ left: number; width: number } | null>(null);
 const settingsDialog = ref(false);
 const dicePrefixHelpDialog = ref(false);
 const mobileToolsOpen = ref(false);
+const devTestPanelOpen = ref(false);
 const settingsPanelTab = ref<SettingsTab>('room');
 const diceSidebarTab = ref<'dices' | 'rollAwards'>('dices');
 const pendingLoadDone = ref<InfiniteScrollDone | null>(null);
@@ -437,6 +464,7 @@ function resetRoomState() {
   showInviteCode.value = false;
   dicePrefixHelpDialog.value = false;
   mobileToolsOpen.value = false;
+  devTestPanelOpen.value = false;
   if (!props.room) {
     settingsDialog.value = false;
     return;
@@ -549,6 +577,14 @@ function sendMessage() {
   messageText.value = '';
   skipBonusPointRules.value = false;
   focusMessageInput();
+}
+
+function sendMessageAs(userId: string, content: string) {
+  emit('send-message-as', userId, content);
+}
+
+function sendDiceAs(userId: string, roll: DiceRoll, skipRules: boolean) {
+  emit('send-dice-as', userId, roll, skipRules);
 }
 
 function useBonusPointOnRoll(message: RoomMessage) {
