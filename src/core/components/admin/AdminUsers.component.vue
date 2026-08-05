@@ -16,7 +16,12 @@
           <tr v-for="user in users" :key="user.id">
             <td>
               <div class="d-flex align-center ga-3">
-                <v-avatar size="32"><v-img :src="user.avatar" :alt="user.username" /></v-avatar>
+                <UserProfileAvatar
+                  :user-id="user.id"
+                  :avatar="user.avatar"
+                  :display-name="user.username"
+                  :size="32"
+                />
                 <div>
                   <div>{{ user.username }}</div>
                   <div class="text-caption text-medium-emphasis">{{ user.id }}</div>
@@ -50,6 +55,7 @@ import { useI18n } from 'vue-i18n';
 import type { UserRole, UserSummary } from 'netlify/core/types/data.types';
 import { AdminService } from 'core/services/admin.service';
 import { useCurrentUserRole } from 'core/composables/useCurrentUserRole';
+import UserProfileAvatar from 'core/components/UserProfileAvatar.component.vue';
 
 const { t } = useI18n();
 const { isOwner, user: currentUser } = useCurrentUserRole();

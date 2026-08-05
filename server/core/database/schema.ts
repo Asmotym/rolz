@@ -77,6 +77,7 @@ async function createTables(): Promise<void> {
             discord_user_id VARCHAR(64) PRIMARY KEY,
             username VARCHAR(191) NOT NULL,
             avatar TEXT NOT NULL,
+            about_me VARCHAR(500) NOT NULL DEFAULT '',
             theme VARCHAR(16) NOT NULL DEFAULT 'dark',
             theme_style VARCHAR(16) NOT NULL DEFAULT 'aventyr',
             locale VARCHAR(8) NOT NULL DEFAULT 'en',
@@ -354,6 +355,15 @@ async function ensureAllColumnsCreated(): Promise<void> {
     logger.info('Ensuring all columns are created...');
 
     // users table
+    if (!(await columnExists('users', 'about_me'))) {
+        logger.info('Creating missing "about_me" column in "users" table...');
+
+        await query(`
+            ALTER TABLE users
+            ADD COLUMN about_me VARCHAR(500) NOT NULL DEFAULT '' AFTER avatar
+        `);
+    }
+
     if (!(await columnExists('users', 'theme'))) {
         logger.info('Creating missing "theme" column in "users" table...');
 

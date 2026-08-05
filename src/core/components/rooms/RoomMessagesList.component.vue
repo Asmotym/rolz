@@ -5,14 +5,14 @@
     class="message-row"
     :class="{ 'is-self': message.userId === currentUserId }"
   >
-    <v-avatar size="36" class="mr-3">
-      <template v-if="message.avatar">
-        <v-img :src="message.avatar" :alt="formatDisplayName(message.username, message.nickname)" />
-      </template>
-      <template v-else>
-        <v-icon>mdi-account</v-icon>
-      </template>
-    </v-avatar>
+    <UserProfileAvatar
+      :user-id="message.userId"
+      :avatar="message.avatar"
+      :display-name="formatDisplayName(message.username, message.nickname)"
+      :room-id="roomId"
+      :size="36"
+      :classes="[message.userId === currentUserId ? 'ml-3' : 'mr-3']"
+    />
     <div
       class="message-content"
       :class="{ 'has-critical': Boolean(getCriticalRule(message)) }"
@@ -88,9 +88,11 @@ import type { RoomBonusPointRule, RoomCriticalRule, RoomMessage } from 'netlify/
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
 import { findMatchingRoomCritical, getCriticalMessageStyle } from 'core/utils/room-criticals.utils';
 import { getDiceFaceInfo, isNaturalExtremeRoll } from 'netlify/core/utils/bonus-point-dice';
+import UserProfileAvatar from 'core/components/UserProfileAvatar.component.vue';
 
 const props = defineProps<{
   messages: RoomMessage[];
+  roomId: string;
   currentUserId: string | null;
   roomCriticals: RoomCriticalRule[];
   canUseBonusPoint: boolean;

@@ -120,7 +120,7 @@ db-update:
 watch:
 	@echo "Starting frontend, backend, and API documentation watch services..."
 	@echo "Starting MySQL and API documentation containers..."
-	@$(COMPOSE_CMD) up -d mysql api-docs
+	@$(COMPOSE_CMD) up -d mysql api-docs phpmyadmin
 	@echo "Waiting for MySQL to be ready..."
 	@$(COMPOSE_CMD) exec -T mysql sh -c 'until mysqladmin ping -h "$${MYSQL_HOST:-127.0.0.1}" -u root -p"$${MYSQL_ROOT_PASSWORD}" --silent; do sleep 1; done'
 	@echo "Executing database bootstrap script..."

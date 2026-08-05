@@ -83,6 +83,7 @@
             >
               <RoomMessagesList
                 :messages="messages"
+                :room-id="room.id"
                 :current-user-id="currentUser?.id ?? null"
                 :room-criticals="room?.criticals ?? []"
                 :can-use-bonus-point="canUseBonusPoints"

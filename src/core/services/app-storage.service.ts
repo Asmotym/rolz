@@ -107,6 +107,7 @@ function isDiscordUser(value: unknown): value is DiscordUser {
     typeof value.id === 'string' &&
     typeof value.username === 'string' &&
     typeof value.avatar === 'string' &&
+    (value.aboutMe === undefined || typeof value.aboutMe === 'string') &&
     (value.theme === undefined || isAppTheme(value.theme)) &&
     (value.themeStyle === undefined || isAppThemeStyle(value.themeStyle)) &&
     (value.locale === undefined || isAppLocale(value.locale)) &&

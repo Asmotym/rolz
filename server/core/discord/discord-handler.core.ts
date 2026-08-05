@@ -61,7 +61,14 @@ async function handleUserQuery(auth: DiscordAuth) {
             locale,
         });
         const createdUser = await getUser(discordUser.id);
-        return { ...discordUser, theme, themeStyle, locale, role: createdUser?.role ?? 'user' };
+        return {
+            ...discordUser,
+            aboutMe: createdUser?.about_me ?? '',
+            theme,
+            themeStyle,
+            locale,
+            role: createdUser?.role ?? 'user'
+        };
     } else {
         logger.info('User found in database, updating user info');
         const profileChanged = existingUser.username !== discordUser.username
@@ -75,6 +82,7 @@ async function handleUserQuery(auth: DiscordAuth) {
         }
         return {
             ...discordUser,
+            aboutMe: existingUser.about_me ?? '',
             theme: normalizeTheme(existingUser.theme),
             themeStyle: normalizeThemeStyle(existingUser.theme_style),
             locale: normalizeLocale(existingUser.locale),

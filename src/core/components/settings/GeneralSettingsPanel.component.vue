@@ -16,15 +16,14 @@
         {{ t('settings.general.profileTitle') }}
       </v-card-title>
       <v-card-text v-if="currentUser" class="profile-content">
-        <v-avatar size="112" color="primary" class="profile-avatar">
-          <v-img
-            v-if="currentUser.avatar"
-            :src="currentUser.avatar"
-            :alt="t('settings.general.avatarAlt', { name: currentUser.username })"
-            cover
-          />
-          <v-icon v-else icon="mdi-account" size="64" />
-        </v-avatar>
+        <UserProfileAvatar
+          :user-id="currentUser.id"
+          :avatar="currentUser.avatar"
+          :display-name="currentUser.username"
+          :size="112"
+          color="primary"
+          class="profile-avatar"
+        />
 
         <div class="profile-details">
           <div class="mb-4">
@@ -71,6 +70,37 @@
               />
             </template>
           </v-text-field>
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <v-card variant="tonal" class="about-card mb-6">
+      <v-card-title class="text-h6">
+        {{ t('settings.general.aboutTitle') }}
+      </v-card-title>
+      <v-card-text>
+        <p class="text-body-2 text-medium-emphasis mb-4">
+          {{ t('settings.general.aboutDescription') }}
+        </p>
+        <v-textarea
+          v-model="aboutMeDraft"
+          :label="t('settings.general.aboutLabel')"
+          :maxlength="ABOUT_ME_MAX_LENGTH"
+          :counter="ABOUT_ME_MAX_LENGTH"
+          rows="4"
+          auto-grow
+          variant="outlined"
+          :disabled="!currentUser || savingAboutMe"
+        />
+        <div class="d-flex justify-end">
+          <v-btn
+            color="primary"
+            :loading="savingAboutMe"
+            :disabled="!currentUser || savingAboutMe || !aboutMeDirty"
+            @click="saveAboutMeChanges"
+          >
+            {{ t('settings.general.aboutSave') }}
+          </v-btn>
         </div>
       </v-card-text>
     </v-card>
@@ -131,6 +161,8 @@ import { useAppTheme } from 'core/composables/useAppTheme';
 import { DiscordService } from 'modules/discord-auth/services/discord.service';
 import { APP_THEME_STYLES, type AppThemeStyle } from 'netlify/core/types/theme.types';
 import type { ThemeDefinition } from 'vuetify';
+import UserProfileAvatar from 'core/components/UserProfileAvatar.component.vue';
+import { saveAboutMe } from 'core/services/user-profiles.service';
 import {
   aventyrDark,
   aventyrLight,
@@ -158,6 +190,10 @@ const showDiscordId = ref(false);
 const copying = ref(false);
 const savingTheme = ref(false);
 const feedback = ref<FeedbackState>(null);
+const ABOUT_ME_MAX_LENGTH = 500;
+const aboutMeDraft = ref('');
+const savingAboutMe = ref(false);
+const aboutMeDirty = computed(() => aboutMeDraft.value.trim() !== (currentUser.value?.aboutMe ?? ''));
 const themeDefinitions: Record<AppThemeStyle, { dark: ThemeDefinition; light: ThemeDefinition }> = {
   aventyr: { dark: aventyrDark, light: aventyrLight },
   arcane: { dark: arcaneDark, light: arcaneLight },
@@ -221,12 +257,31 @@ async function changeThemeStyle(themeStyle: AppThemeStyle) {
   }
 }
 
+async function saveAboutMeChanges() {
+  const user = currentUser.value;
+  if (!user || savingAboutMe.value) return;
+  savingAboutMe.value = true;
+  feedback.value = null;
+  try {
+    const profile = await saveAboutMe(user.id, aboutMeDraft.value);
+    aboutMeDraft.value = profile.aboutMe;
+    discordService.updateStoredUserProfile({ aboutMe: profile.aboutMe });
+    feedback.value = { type: 'success', message: t('settings.general.aboutSaveSuccess') };
+  } catch {
+    feedback.value = { type: 'error', message: t('settings.general.aboutSaveError') };
+  } finally {
+    savingAboutMe.value = false;
+  }
+}
+
 watch(
   () => currentUser.value?.id,
   () => {
     showDiscordId.value = false;
     feedback.value = null;
+    aboutMeDraft.value = currentUser.value?.aboutMe ?? '';
   },
+  { immediate: true },
 );
 </script>
 

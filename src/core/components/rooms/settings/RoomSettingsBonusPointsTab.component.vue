@@ -237,14 +237,14 @@
             class="bonus-balance-item"
           >
             <template #prepend>
-              <v-avatar size="32">
-                <v-img
-                  v-if="balance.avatar"
-                  :src="balance.avatar"
-                  :alt="context.getBonusPointBalanceDisplayName(balance)"
-                />
-                <v-icon v-else>mdi-account</v-icon>
-              </v-avatar>
+              <UserProfileAvatar
+                :user-id="balance.userId"
+                :avatar="balance.avatar"
+                :display-name="context.getBonusPointBalanceDisplayName(balance)"
+                :room-id="context.room?.id"
+                :size="32"
+                :classes="['mr-3']"
+              />
             </template>
             <v-list-item-title>{{ context.getBonusPointBalanceDisplayName(balance) }}</v-list-item-title>
             <template #append>
@@ -298,6 +298,7 @@
 </template>
 
 <script setup lang="ts">
+import UserProfileAvatar from 'core/components/UserProfileAvatar.component.vue';
 
 defineProps<{
   context: any;

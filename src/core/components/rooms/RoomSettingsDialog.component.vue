@@ -1318,6 +1318,9 @@ async function handleSaveRollAward() {
 }
 
 const settingsContext = {
+  get room() {
+    return props.room;
+  },
   get currentUser() {
     return props.currentUser;
   },

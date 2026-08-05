@@ -9,6 +9,29 @@ export interface UserSummary {
     updatedAt?: string;
 }
 
+export interface UserProfileRollAward {
+    id: string;
+    name: string;
+    description?: string | null;
+    count: number;
+}
+
+export interface UserProfileRoomContext {
+    roomId: string;
+    bonusPoints?: {
+        current: number;
+        maximum: number;
+    };
+    rollAwards?: UserProfileRollAward[];
+}
+
+export interface PublicUserProfile {
+    username: string;
+    avatar: string;
+    aboutMe: string;
+    room?: UserProfileRoomContext;
+}
+
 export type ArticleStatus = 'draft' | 'unpublished' | 'published';
 
 export interface ArticleTag {

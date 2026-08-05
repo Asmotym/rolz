@@ -129,6 +129,10 @@ import type { RoomDetails, RoomMessage, RoomRollAward } from 'netlify/core/types
 import { formatDisplayName } from 'core/utils/room-formatting.utils';
 import { RoomRollAwardsManagerKey, type RoomRollAwardsManager } from 'core/composables/useRoomRollAwardsManager';
 import { RoomsService } from 'core/services/rooms.service';
+import {
+  evaluateRoomRollAward,
+  getRollAwardNotations,
+} from 'netlify/core/utils/room-roll-awards';
 
 const props = defineProps<{
   room: RoomDetails | null;
@@ -152,7 +156,6 @@ const rollAwardsManager = injectedRollAwardsManager;
 
 const canOpenSettings = computed(() => Boolean(props.room && props.currentUser));
 const showOnlyObtainedAwards = ref(false);
-const DICE_NOTATION_FACE_REGEX = /^(\d+)?d(\d+)([+-]\d+)?$/i;
 const diceMessages = ref<DiceMessageSummary[]>([]);
 const diceRollsLoading = ref(false);
 const diceRollsError = ref<string | null>(null);
@@ -162,10 +165,7 @@ let diceReloading = false;
 let diceReloadQueued = false;
 
 function getAwardNotations(award: RoomRollAward): string[] {
-  if (Array.isArray(award.diceNotations) && award.diceNotations.length) {
-    return award.diceNotations;
-  }
-  return award.diceNotation ? [award.diceNotation] : [];
+  return getRollAwardNotations(award);
 }
 
 function formatAwardNotations(award: RoomRollAward): string {
@@ -177,7 +177,6 @@ interface DiceMessageSummary {
   rolls: number[];
   name: string;
   notation: string | null;
-  face: string | null;
   createdAt: string;
 }
 
@@ -314,12 +313,10 @@ function normalizeDiceMessages(messages: RoomMessage[]): DiceMessageSummary[] {
     .filter((message) => message.type === 'dice' && message.userId && Array.isArray(message.diceRolls))
     .map((message) => {
       const notation = message.diceNotation?.trim().toLowerCase() ?? null;
-      const face = extractDieFace(notation);
       return {
         userId: message.userId as string,
         rolls: (message.diceRolls ?? []).map((roll) => Number(roll)).filter((roll) => Number.isFinite(roll)),
         notation,
-        face,
         name: formatDisplayName(message.username, message.nickname),
         createdAt: message.createdAt,
       };
@@ -342,60 +339,16 @@ function isCurrentUser(userId: string) {
 }
 
 function evaluateAward(award: RoomRollAward, rolls: DiceMessageSummary[]): { leaders: AwardLeaderSummary['leaders']; maxHits: number } {
-  if (!Array.isArray(award.diceResults) || award.diceResults.length === 0) {
-    return { leaders: [], maxHits: 0 };
-  }
-  const targets = new Set(award.diceResults.map((result) => Number(result)));
-  if (!targets.size) {
-    return { leaders: [], maxHits: 0 };
-  }
-  const requiredFaces = getAwardNotations(award)
-    .map((notation) => extractDieFace(notation))
-    .filter((face): face is string => Boolean(face));
-  const counts = new Map<string, { userId: string; name: string; count: number }>();
-  for (const message of rolls) {
-    if (!notationMatchesFilter(message.face, requiredFaces)) continue;
-    const hits = message.rolls.reduce((total, roll) => {
-      const normalized = Math.floor(roll);
-      return targets.has(normalized) ? total + 1 : total;
-    }, 0);
-    if (hits > 0) {
-      const existing = counts.get(message.userId);
-      if (existing) {
-        existing.count += hits;
-      } else {
-        counts.set(message.userId, { userId: message.userId, name: message.name, count: hits });
-      }
-    }
-  }
-
-  if (!counts.size) {
-    return { leaders: [], maxHits: 0 };
-  }
-
-  let maxHits = 0;
-  counts.forEach((entry) => {
-    if (entry.count > maxHits) {
-      maxHits = entry.count;
-    }
-  });
-
-  const leaders = Array.from(counts.values()).filter((entry) => entry.count === maxHits && maxHits > 0);
-  return { leaders, maxHits };
-}
-
-function extractDieFace(value?: string | null): string | null {
-  const normalized = value?.trim().toLowerCase();
-  if (!normalized) return null;
-  const match = normalized.match(DICE_NOTATION_FACE_REGEX);
-  if (!match) return null;
-  return match[2];
-}
-
-function notationMatchesFilter(messageFace: string | null, awardFaces: string[]): boolean {
-  if (!awardFaces.length) return true;
-  if (!messageFace) return false;
-  return awardFaces.includes(messageFace);
+  const evaluation = evaluateRoomRollAward(award, rolls);
+  const names = new Map(rolls.map((roll) => [roll.userId, roll.name]));
+  return {
+    leaders: evaluation.leaderUserIds.map((userId) => ({
+      userId,
+      name: names.get(userId) ?? t('common.unknownAdventurer'),
+      count: evaluation.counts.get(userId) ?? 0,
+    })),
+    maxHits: evaluation.maxHits,
+  };
 }
 
 function handleManageClick() {

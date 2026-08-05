@@ -16,6 +16,7 @@ export interface DiscordUser {
     id: string;
     username: string;
     avatar: string;
+    aboutMe?: string;
     theme?: AppTheme;
     themeStyle?: AppThemeStyle;
     locale?: AppLocale;

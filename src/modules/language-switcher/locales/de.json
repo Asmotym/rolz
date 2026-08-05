@@ -17,6 +17,17 @@
     "unknownAdventurer": "Unbekannter Abenteurer",
     "unknownDate": "Unbekanntes Datum"
   },
+  "profile": {
+    "open": "Profil von {name} öffnen",
+    "loading": "Profil wird geladen…",
+    "loadError": "Dieses Profil konnte nicht geladen werden.",
+    "aboutMe": "Über mich",
+    "aboutEmpty": "Dieser Nutzer hat noch keinen Profiltext hinzugefügt.",
+    "roomInformation": "In diesem Raum",
+    "bonusPoints": "Bonuspunkte: {current}/{maximum}",
+    "rollAwards": "Würfelauszeichnungen",
+    "awardCount": "{count} Treffer"
+  },
   "navigation": {
     "home": "Startseite",
     "settings": "Einstellungen"
@@ -43,6 +54,12 @@
       "copyDiscordId": "Discord-ID kopieren",
       "copySuccess": "Discord-ID wurde in die Zwischenablage kopiert.",
       "copyError": "Discord-ID konnte nicht kopiert werden. Bitte manuell kopieren.",
+      "aboutTitle": "Über mich",
+      "aboutLabel": "Über mich",
+      "aboutDescription": "Teile eine kurze öffentliche Vorstellung mit anderen Aventyr-Nutzern.",
+      "aboutSave": "Über mich speichern",
+      "aboutSaveSuccess": "Über mich wurde gespeichert.",
+      "aboutSaveError": "Über mich konnte nicht gespeichert werden.",
       "themeTitle": "Darstellung",
       "themeLabel": "Theme",
       "themeDescription": "Wähle den visuellen Stil von Aventyr. Deine Hell- oder Dunkelmodus-Einstellung bleibt unverändert."

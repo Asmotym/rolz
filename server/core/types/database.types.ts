@@ -6,6 +6,7 @@ export interface DatabaseUser {
     discord_user_id?: string;
     username: string;
     avatar: string;
+    about_me?: string;
     theme?: AppTheme;
     theme_style?: AppThemeStyle;
     locale?: AppLocale;

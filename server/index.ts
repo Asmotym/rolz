@@ -44,6 +44,7 @@ import {
 } from './observability/server-observability';
 import { roomRealtimeHub } from './realtime/room-realtime.server';
 import { publishRoomsActionResult } from './realtime/room-action-events';
+import { getPublicUserProfile, updateAboutMe } from './services/user-profiles.service';
 
 const logger = createLogger('Server');
 const app = express();
@@ -161,6 +162,45 @@ async function ensureAuthenticatedSameUser(
     }
     return true;
 }
+
+app.get('/api/users/:userId/profile', async (req, res) => {
+    const requesterUserId = await requireRequesterId(req, res);
+    if (!requesterUserId) return;
+    const { userId } = req.params;
+    if (!userId) return sendErrorResponse(res, 400, 'User id is required');
+    const roomId = typeof req.query.roomId === 'string' && req.query.roomId.trim()
+        ? req.query.roomId.trim()
+        : undefined;
+
+    try {
+        const profile = await getPublicUserProfile({
+            targetUserId: userId,
+            requesterUserId,
+            roomId
+        });
+        res.setHeader('Cache-Control', 'no-store');
+        res.json({ success: true, data: profile });
+    } catch (error) {
+        respondWithServiceError(res, error, 'user_profile.fetch', { userId, roomId });
+    }
+});
+
+app.patch('/api/users/:userId/profile', async (req, res) => {
+    const { userId } = req.params;
+    if (!userId) return sendErrorResponse(res, 400, 'User id is required');
+    if (!(await ensureAuthenticatedSameUser(req, res, userId))) return;
+    if (!req.body || typeof req.body !== 'object' || !Object.prototype.hasOwnProperty.call(req.body, 'aboutMe')) {
+        return sendErrorResponse(res, 400, 'About Me is required');
+    }
+
+    try {
+        const profile = await updateAboutMe(userId, (req.body as { aboutMe?: unknown }).aboutMe);
+        res.setHeader('Cache-Control', 'no-store');
+        res.json({ success: true, data: profile });
+    } catch (error) {
+        respondWithServiceError(res, error, 'user_profile.update', { userId });
+    }
+});
 
 app.get('/api/users/:userId/api-key', async (req, res) => {
     const { userId } = req.params;

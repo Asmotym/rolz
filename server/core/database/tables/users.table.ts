@@ -17,7 +17,7 @@ export function normalizeUserRole(role: unknown): UserRole {
 
 export async function getUser(discordUserId: string): Promise<DatabaseUser | undefined> {
     const result = await query<DatabaseUser[]>(
-        `SELECT discord_user_id, username, avatar, theme, theme_style, locale, role, rights_update, rights_testing_ground, created_at, updated_at
+        `SELECT discord_user_id, username, avatar, about_me, theme, theme_style, locale, role, rights_update, rights_testing_ground, created_at, updated_at
          FROM users
          WHERE discord_user_id = ?
          LIMIT 1`,
@@ -38,13 +38,14 @@ export async function getUser(discordUserId: string): Promise<DatabaseUser | und
 
 export async function insertUser(user: DatabaseUser): Promise<void> {
     await execute(
-        `INSERT INTO users (discord_user_id, username, avatar, theme, theme_style, locale, role, rights_update, rights_testing_ground)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO users (discord_user_id, username, avatar, about_me, theme, theme_style, locale, role, rights_update, rights_testing_ground)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE discord_user_id = discord_user_id`,
         [
             user.discord_user_id ?? null,
             user.username ?? null,
             user.avatar ?? null,
+            user.about_me ?? '',
             normalizeTheme(user.theme),
             normalizeThemeStyle(user.theme_style),
             normalizeLocale(user.locale),
@@ -65,6 +66,7 @@ export async function updateUser(discordUserId: string, data: Partial<DatabaseUs
          SET
              username = COALESCE(?, username),
              avatar = COALESCE(?, avatar),
+             about_me = COALESCE(?, about_me),
              theme = COALESCE(?, theme),
              theme_style = COALESCE(?, theme_style),
              locale = COALESCE(?, locale),
@@ -76,6 +78,7 @@ export async function updateUser(discordUserId: string, data: Partial<DatabaseUs
         [
             data.username ?? null,
             data.avatar ?? null,
+            typeof data.about_me === 'undefined' ? null : data.about_me,
             theme,
             themeStyle,
             locale,

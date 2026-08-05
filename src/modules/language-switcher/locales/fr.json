@@ -17,6 +17,17 @@
     "unknownAdventurer": "Aventurier inconnu",
     "unknownDate": "Date inconnue"
   },
+  "profile": {
+    "open": "Ouvrir le profil de {name}",
+    "loading": "Chargement du profil…",
+    "loadError": "Impossible de charger ce profil.",
+    "aboutMe": "À propos de moi",
+    "aboutEmpty": "Cet utilisateur n’a pas encore ajouté de présentation.",
+    "roomInformation": "Dans cette salle",
+    "bonusPoints": "Points bonus : {current}/{maximum}",
+    "rollAwards": "Récompenses de lancer",
+    "awardCount": "{count} résultats"
+  },
   "navigation": {
     "home": "Accueil",
     "settings": "Paramètres"
@@ -43,6 +54,12 @@
       "copyDiscordId": "Copier l’identifiant Discord",
       "copySuccess": "Identifiant Discord copié dans le presse-papiers.",
       "copyError": "Impossible de copier l’identifiant Discord. Copiez-le manuellement.",
+      "aboutTitle": "À propos de moi",
+      "aboutLabel": "À propos de moi",
+      "aboutDescription": "Partagez une courte présentation publique visible par les autres utilisateurs d’Aventyr.",
+      "aboutSave": "Enregistrer",
+      "aboutSaveSuccess": "Présentation enregistrée.",
+      "aboutSaveError": "Impossible d’enregistrer la présentation.",
       "themeTitle": "Apparence",
       "themeLabel": "Thème",
       "themeDescription": "Choisissez le style visuel d’Aventyr. Votre réglage clair ou sombre reste inchangé."

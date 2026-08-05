@@ -255,6 +255,12 @@ export class DiscordService {
         this.storeUser({ ...user, ...preferences });
     }
 
+    public updateStoredUserProfile(profile: { aboutMe: string }) {
+        const user = this.user.value;
+        if (!user) return;
+        this.storeUser({ ...user, ...profile });
+    }
+
     protected storeAuth(auth: DiscordAuth) {
         appStorage.setDiscordAuth(auth);
     }

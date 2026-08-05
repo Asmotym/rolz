@@ -18,6 +18,17 @@
     "unknownAdventurer": "Unknown Adventurer",
     "unknownDate": "Unknown date"
   },
+  "profile": {
+    "open": "Open {name}'s profile",
+    "loading": "Loading profile…",
+    "loadError": "Unable to load this profile.",
+    "aboutMe": "About me",
+    "aboutEmpty": "This user has not added an About Me yet.",
+    "roomInformation": "In this room",
+    "bonusPoints": "Bonus points: {current}/{maximum}",
+    "rollAwards": "Roll awards",
+    "awardCount": "{count} hits"
+  },
   "navigation": {
     "home": "Home",
     "settings": "Settings",
@@ -127,6 +138,12 @@
       "copyDiscordId": "Copy Discord ID",
       "copySuccess": "Discord ID copied to clipboard.",
       "copyError": "Unable to copy the Discord ID. Please copy it manually.",
+      "aboutTitle": "About me",
+      "aboutLabel": "About me",
+      "aboutDescription": "Share a short public introduction that other Aventyr users can see.",
+      "aboutSave": "Save About Me",
+      "aboutSaveSuccess": "About Me saved.",
+      "aboutSaveError": "Unable to save About Me.",
       "themeTitle": "Appearance",
       "themeLabel": "Theme",
       "themeDescription": "Choose the visual style used across Aventyr. Your light or dark mode setting stays unchanged."

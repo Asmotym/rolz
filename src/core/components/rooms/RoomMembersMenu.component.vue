@@ -68,14 +68,14 @@
             class="members-popover__item"
           >
             <template #prepend>
-              <v-avatar size="36" class="mr-3">
-                <template v-if="member.avatar">
-                  <v-img :src="member.avatar" :alt="member.username || member.userId" />
-                </template>
-                <template v-else>
-                  <v-icon>mdi-account</v-icon>
-                </template>
-              </v-avatar>
+              <UserProfileAvatar
+                :user-id="member.userId"
+                :avatar="member.avatar"
+                :display-name="formatDisplayName(member.username, member.nickname)"
+                :room-id="room.id"
+                :size="36"
+                :classes="['mr-3']"
+              />
             </template>
             <v-list-item-title class="members-popover__name">
               <span>{{ formatDisplayName(member.username, member.nickname) }}</span>
@@ -112,6 +112,7 @@ import { useI18n } from 'vue-i18n';
 import type { RoomBonusPointBalance, RoomDetails } from 'netlify/core/types/data.types';
 import { useRoomsStore } from 'core/stores/rooms.store';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
+import UserProfileAvatar from 'core/components/UserProfileAvatar.component.vue';
 
 const props = defineProps<{
   room: RoomDetails;
