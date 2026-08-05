@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { RoomBonusPointRule, RoomCriticalRule, RoomMessage } from 'netlify/core/types/data.types';
 import { formatDisplayName, formatTimestamp } from 'core/utils/room-formatting.utils';
@@ -104,7 +104,6 @@ const props = defineProps<{
   roomCriticals: RoomCriticalRule[];
   criticalAnimationsEnabled: boolean;
   canUseBonusPoint: boolean;
-  allowExtremeBonusPointSpend: boolean;
   bonusPointRules: RoomBonusPointRule[];
   bonusPointActionLoadingId: string | null;
 }>();
@@ -125,17 +124,6 @@ const criticalSnapshots = new Map<string, CriticalMessageSnapshot>();
 const criticalAnimationTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const animatingCriticalMessageIds = ref<Set<string>>(new Set());
 let animationGeneration = 0;
-
-const latestCurrentUserDiceMessageId = computed(() => {
-  const sorted = [...props.messages]
-    .filter((message) => (
-      message.type === 'dice' &&
-      message.userId === props.currentUserId
-    ))
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  const latest = sorted[sorted.length - 1];
-  return latest?.id ?? null;
-});
 
 function getCriticalRule(message: RoomMessage) {
   return findMatchingRoomCritical(message, props.roomCriticals);
@@ -297,13 +285,19 @@ function canUseBonusPointOnMessage(message: RoomMessage) {
   const rule = diceInfo
     ? props.bonusPointRules.find((current) => current.diceNotation === diceInfo.faceNotation)
     : null;
+  const currentTotal = Number(message.diceTotal);
+  const isAtDiceBoundary = Boolean(
+    diceInfo &&
+    Number.isFinite(currentTotal) &&
+    (currentTotal === 1 || currentTotal === diceInfo.sides)
+  );
   return props.canUseBonusPoint &&
     message.type === 'dice' &&
     !message.bonusPointRulesSkipped &&
     message.userId === props.currentUserId &&
-    message.id === latestCurrentUserDiceMessageId.value &&
     Boolean(rule) &&
-    (props.allowExtremeBonusPointSpend || !isNaturalExtremeRoll(message.diceNotation, message.diceRolls));
+    !isAtDiceBoundary &&
+    !isNaturalExtremeRoll(message.diceNotation, message.diceRolls);
 }
 </script>
 

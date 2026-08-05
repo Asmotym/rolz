@@ -611,6 +611,9 @@ async function handleUseBonusPointOnRoll(payload: { roomId: string; userId: stri
 
     const adjustment = getSignedBonusPointAdjustment(spendRule);
     const currentTotal = Number(message.dice_total ?? 0);
+    if (currentTotal === 1 || currentTotal === diceInfo.sides) {
+        throw new ConflictError('Bonus points cannot be used when the roll is already at its minimum or maximum.');
+    }
     if (!room.bonus_points_allow_extreme_spend && isNaturalExtremeRoll(message.dice_notation, parseMessageRolls(message.dice_rolls))) {
         throw new ConflictError('Bonus points cannot be used on natural minimum or maximum rolls.');
     }

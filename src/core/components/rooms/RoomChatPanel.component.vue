@@ -98,7 +98,6 @@
                 :room-criticals="room?.criticals ?? []"
                 :critical-animations-enabled="roomsStore.realtimeHydrated && !historyLoading"
                 :can-use-bonus-point="canUseBonusPoints"
-                :allow-extreme-bonus-point-spend="allowExtremeBonusPointSpend"
                 :bonus-point-rules="roomsStore.bonusPointRules"
                 :bonus-point-action-loading-id="roomsStore.bonusPointRollUpdatingId"
                 @use-bonus-point="useBonusPointOnRoll"
@@ -418,7 +417,6 @@ const currentUserBonusPoints = computed(() => {
   return roomsStore.bonusPointBalances.find((balance) => balance.userId === props.currentUser?.id)?.points ?? 0;
 });
 const bonusPointsEnabled = computed(() => Boolean(roomsStore.bonusPointSettings?.enabled ?? props.room?.bonusPointSettings?.enabled));
-const allowExtremeBonusPointSpend = computed(() => Boolean(roomsStore.bonusPointSettings?.allowExtremeSpend ?? props.room?.bonusPointSettings?.allowExtremeSpend));
 const canUseBonusPoints = computed(() => (
   bonusPointsEnabled.value &&
   currentUserBonusPoints.value > 0 &&
