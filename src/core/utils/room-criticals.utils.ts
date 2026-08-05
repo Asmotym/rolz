@@ -46,6 +46,14 @@ export function findMatchingRoomCritical(message: RoomMessage, rules: RoomCritic
   return matched;
 }
 
+export function getRoomCriticalSignature(rule: RoomCriticalRule | null): string | null {
+  if (!rule) {
+    return null;
+  }
+
+  return `${rule.operator}:${rule.threshold}:${rule.color.trim().toLowerCase()}`;
+}
+
 export function getCriticalMessageStyle(rule: RoomCriticalRule | null): Record<string, string> {
   if (!rule) {
     return {};
@@ -55,5 +63,8 @@ export function getCriticalMessageStyle(rule: RoomCriticalRule | null): Record<s
     '--message-bg': toRgba(rule.color, 0.24),
     '--message-border-color': toRgba(rule.color, 0.7),
     '--dice-message-bg': toRgba(rule.color, 0.14),
+    '--critical-reveal-bg': toRgba(rule.color, 0.42),
+    '--critical-glow': toRgba(rule.color, 0.5),
+    '--critical-sweep': toRgba(rule.color, 0.72),
   };
 }

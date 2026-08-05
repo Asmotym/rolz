@@ -96,6 +96,7 @@
                 :room-id="room.id"
                 :current-user-id="currentUser?.id ?? null"
                 :room-criticals="room?.criticals ?? []"
+                :critical-animations-enabled="roomsStore.realtimeHydrated && !historyLoading"
                 :can-use-bonus-point="canUseBonusPoints"
                 :allow-extreme-bonus-point-spend="allowExtremeBonusPointSpend"
                 :bonus-point-rules="roomsStore.bonusPointRules"
