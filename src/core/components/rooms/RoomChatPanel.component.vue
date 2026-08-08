@@ -29,7 +29,7 @@
         </div>
         <div class="d-flex align-center ga-2">
           <v-btn
-            v-if="isDev"
+            v-if="canUseRoomDevTools"
             icon="mdi-test-tube"
             variant="tonal"
             color="warning"
@@ -291,7 +291,7 @@
     :initial-tab="settingsPanelTab"
   />
   <RoomDevTestPanel
-    v-if="isDev"
+    v-if="canUseRoomDevTools"
     v-model:open="devTestPanelOpen"
     :members="roomsStore.members"
     :current-user-id="currentUser?.id ?? null"
@@ -345,6 +345,10 @@ const props = defineProps<{
   historyLoading: boolean;
   canLoadOlder: boolean;
 }>();
+
+const canUseRoomDevTools = computed(() => (
+  isDev && (props.currentUser?.role === 'owner' || props.currentUser?.role === 'admin')
+));
 
 const { t } = useI18n();
 const { mdAndUp } = useDisplay();
@@ -579,10 +583,12 @@ function sendMessage() {
 }
 
 function sendMessageAs(userId: string, content: string) {
+  if (!canUseRoomDevTools.value) return;
   emit('send-message-as', userId, content);
 }
 
 function sendDiceAs(userId: string, roll: DiceRoll, skipRules: boolean) {
+  if (!canUseRoomDevTools.value) return;
   emit('send-dice-as', userId, roll, skipRules);
 }
 

@@ -267,7 +267,7 @@ async function handleDiceRoll(roll: DiceRoll, skipBonusPointRules = false) {
 }
 
 async function handleSendMessageAs(userId: string, content: string) {
-  if (!import.meta.env.DEV || !roomsStore.selectedRoomId || !isOtherRoomMember(userId)) return;
+  if (!canUseRoomDevTools() || !roomsStore.selectedRoomId || !isOtherRoomMember(userId)) return;
   const trimmed = content.trim();
   if (!trimmed) return;
   try {
@@ -282,7 +282,7 @@ async function handleSendMessageAs(userId: string, content: string) {
 }
 
 async function handleDiceRollAs(userId: string, roll: DiceRoll, skipBonusPointRules = false) {
-  if (!import.meta.env.DEV || !roomsStore.selectedRoomId || !isOtherRoomMember(userId)) return;
+  if (!canUseRoomDevTools() || !roomsStore.selectedRoomId || !isOtherRoomMember(userId)) return;
   try {
     await roomsStore.sendDiceRoll({
       roomId: roomsStore.selectedRoomId,
@@ -297,6 +297,11 @@ async function handleDiceRollAs(userId: string, roll: DiceRoll, skipBonusPointRu
 
 function isOtherRoomMember(userId: string) {
   return userId !== currentUser.value?.id && roomsStore.members.some((member) => member.userId === userId);
+}
+
+function canUseRoomDevTools() {
+  const role = currentUser.value?.role;
+  return import.meta.env.DEV && (role === 'owner' || role === 'admin');
 }
 
 async function handleUseBonusPointOnRoll(message: RoomMessage) {
